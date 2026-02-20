@@ -14,7 +14,9 @@
         .status-text { font-size: 0.9rem; margin-top: 15px; opacity: 0.9; display: block; font-weight: bold; }
         .verified-badge { color: #1877F2; font-weight: bold; }
         .checkmark { background: #1877F2; color: white; border-radius: 50%; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; margin-right: 5px; }
-        #adminPanel { border: 2px solid #dc3545; display: none; margin-top: 20px; }
+        #adminPanel { border: 2px solid #dc3545; display: none; }
+        .member-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .member-item:last-child { border-bottom: none; }
     </style>
 </head>
 <body>
@@ -49,14 +51,22 @@
     </div>
 
     <div class="card" id="adminPanel">
-        <h3 style="margin-top:0; color: #dc3545;">Admin Verification Tool</h3>
-        <p>Logged in as Admin. Enter an address to verify it.</p>
-        <input type="text" id="verifyAddr" placeholder="User Wallet Address (0x...)">
-        <button id="verifyBtn" style="background: #dc3545;">Verify Identity</button>
+        <h3 style="margin-top:0; color: #dc3545;">Admin Control Center</h3>
+        <p>Logged in as Admin. Manage the registry below.</p>
+        
+        <div style="margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
+            <h4>Verify User</h4>
+            <input type="text" id="verifyAddr" placeholder="User Address to Verify (0x...)">
+            <button id="verifyBtn" style="background: #dc3545;">Issue Verification</button>
+        </div>
+
+        <h4>Recent Registrations</h4>
+        <div id="memberList" style="max-height: 200px; overflow-y: auto; background: #fff5f5; border-radius: 8px; padding: 10px;">
+            <p style="color: #666; font-style: italic; text-align: center;">Scanning blockchain for members...</p>
+        </div>
     </div>
 
     <script>
-        // 1. RAW ADDRESS WORKAROUND
         const RAW_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
         const LIGHTCHAIN_SETUP = {
             chainId: '0x1f8', 
@@ -73,9 +83,7 @@
         async function connectWallet() {
             if (!window.ethereum) return alert("MetaMask not detected!");
             try {
-                // Auto-fix the checksum issue
                 const CONTRACT_ADDRESS = ethers.getAddress(RAW_CONTRACT);
-                
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 provider = new ethers.BrowserProvider(window.ethereum);
                 const chainId = await window.ethereum.request({ method: 'eth_chainId' });
@@ -96,11 +104,40 @@
                 document.getElementById('disconnectBtn').style.display = 'inline-block';
                 document.getElementById('switchNetBtn').style.display = 'none';
 
-                // Admin check for the panel
                 const adminStatus = await contract.isAdmin(userAddr);
-                if(adminStatus) document.getElementById('adminPanel').style.display = 'block';
+                if(adminStatus) {
+                    document.getElementById('adminPanel').style.display = 'block';
+                    loadMemberList();
+                }
 
             } catch (err) { alert("Connection failed: " + err.message); }
+        }
+
+        async function loadMemberList() {
+            const listDiv = document.getElementById('memberList');
+            try {
+                // Fetch 'IdentityCreated' events from the last 10,000 blocks
+                const filter = contract.filters.IdentityCreated();
+                const events = await contract.queryFilter(filter, -10000);
+                
+                if (events.length === 0) {
+                    listDiv.innerHTML = "<p>No members registered yet.</p>";
+                    return;
+                }
+
+                listDiv.innerHTML = "";
+                events.forEach(event => {
+                    const addr = event.args[0];
+                    const name = event.args[1];
+                    const item = document.createElement('div');
+                    item.className = 'member-item';
+                    item.innerHTML = `
+                        <span><strong>${name}</strong> (${addr.substring(0,6)}...)</span>
+                        <button onclick="document.getElementById('verifyAddr').value='${addr}'" style="width: auto; padding: 5px 10px; font-size: 0.8rem; margin: 0;">Select</button>
+                    `;
+                    listDiv.appendChild(item);
+                });
+            } catch (e) { console.error(e); }
         }
 
         async function disconnect() {
@@ -110,17 +147,6 @@
             document.getElementById('connectBtn').style.display = 'inline-block';
             document.getElementById('disconnectBtn').style.display = 'none';
             document.getElementById('adminPanel').style.display = 'none';
-        }
-
-        async function switchNetwork() {
-            try {
-                await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: LIGHTCHAIN_SETUP.chainId }] });
-                window.location.reload();
-            } catch (err) {
-                if (err.code === 4902) {
-                    await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [LIGHTCHAIN_SETUP] });
-                }
-            }
         }
 
         document.getElementById('searchBtn').onclick = async () => {
@@ -139,9 +165,11 @@
             if (!ethers.isAddress(addr)) return alert("Invalid Address");
             try {
                 const tx = await contract.verifyIdentity(addr);
+                alert("Verification transaction sent! Waiting for block...");
                 await tx.wait();
-                alert("Identity Verified!");
-            } catch (e) { alert("Only Admins can verify users."); }
+                alert("Identity Successfully Verified!");
+                loadMemberList();
+            } catch (e) { alert("Error: Verify failed. Only admins can verify others."); }
         };
 
         document.getElementById('createBtn').onclick = async () => {
@@ -158,7 +186,7 @@
 
         document.getElementById('connectBtn').onclick = connectWallet;
         document.getElementById('disconnectBtn').onclick = disconnect;
-        document.getElementById('switchNetBtn').onclick = switchNetwork;
+        document.getElementById('switchNetBtn').onclick = () => window.location.reload();
     </script>
 </body>
 </html>
