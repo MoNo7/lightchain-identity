@@ -32,7 +32,7 @@
     <div id="leftSidebar">
         <div class="header-brand">
             <h1>Lightchain ID</h1>
-            <small>Portal v2.6</small>
+            <small>Portal v2.7</small>
         </div>
 
         <div id="userStatusHeader">
@@ -102,44 +102,48 @@
 
         let signer, contract, provider;
 
-        // V2.6 Persistence Logic: Waits for provider injection
+        // V2.7 Persistence & Account Listener
         window.addEventListener('DOMContentLoaded', async () => {
-            if (localStorage.getItem('isWalletConnected') === 'true') {
-                // Small timeout to ensure window.ethereum is fully active
-                setTimeout(async () => {
-                    if (window.ethereum) {
-                        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-                        if (accounts.length > 0) {
-                            await connectWallet();
-                        } else {
-                            localStorage.removeItem('isWalletConnected');
-                        }
+            if (window.ethereum) {
+                // Monitor Account Changes
+                window.ethereum.on('accountsChanged', (accounts) => {
+                    if (accounts.length > 0) {
+                        connectWallet();
+                    } else {
+                        disconnect();
                     }
-                }, 500); 
+                });
+
+                // Auto-reconnect on load if flagged
+                if (localStorage.getItem('isWalletConnected') === 'true') {
+                    setTimeout(async () => {
+                        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                        if (accounts.length > 0) await connectWallet();
+                    }, 500);
+                }
             }
         });
 
         async function connectWallet() {
             if (!window.ethereum) return;
             try {
-                const CONTRACT_ADDRESS = ethers.getAddress(RAW_CONTRACT);
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                
                 provider = new ethers.BrowserProvider(window.ethereum);
                 const network = await provider.getNetwork();
                 const chainIdHex = "0x" + network.chainId.toString(16);
 
                 if (chainIdHex !== LIGHTCHAIN_SETUP.chainId) {
                     document.getElementById('switchNetBtn').style.display = 'block';
+                    document.getElementById('walletStatus').innerText = "Wrong Network";
                     return;
                 }
 
                 signer = await provider.getSigner();
-                contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+                contract = new ethers.Contract(RAW_CONTRACT, ABI, signer);
                 const userAddr = accounts[0];
 
                 localStorage.setItem('isWalletConnected', 'true');
-
+                document.getElementById('switchNetBtn').style.display = 'none';
                 document.getElementById('walletStatus').innerHTML = `<span class="status-dot online"></span> ${userAddr.substring(0,8)}...`;
                 document.getElementById('connectBtn').style.display = 'none';
                 document.getElementById('disconnectBtn').style.display = 'block';
@@ -151,12 +155,15 @@
                     document.getElementById('userNameDisplay').innerHTML = `${profile[0]} ${check}`;
                     document.getElementById('regSection').style.display = 'none';
                 } else {
+                    document.getElementById('userStatusHeader').style.display = 'none';
                     document.getElementById('regSection').style.display = 'block';
                 }
 
                 const adminStatus = await contract.isAdmin(userAddr);
-                if(adminStatus) { document.getElementById('adminConsole').style.display = 'block'; loadMemberList(); }
-            } catch (err) { console.error("Reconnection failed:", err); }
+                document.getElementById('adminConsole').style.display = adminStatus ? 'block' : 'none';
+                if(adminStatus) loadMemberList();
+
+            } catch (err) { console.error("Identity update failed:", err); }
         }
 
         async function disconnect() {
