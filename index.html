@@ -11,7 +11,7 @@
         input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-size: 1rem; }
         button { background: #007bff; color: white; border: none; padding: 14px; border-radius: 10px; cursor: pointer; width: 100%; font-weight: 600; font-size: 1rem; transition: 0.3s; margin-top: 10px; }
         button:hover { background: #0056b3; transform: translateY(-2px); }
-        .status-text { font-size: 0.9rem; margin-top: 15px; opacity: 0.9; display: block; }
+        .status-text { font-size: 0.9rem; margin-top: 15px; opacity: 0.9; display: block; font-weight: bold; }
         .verified-badge { color: #1877F2; font-weight: bold; }
         .checkmark { background: #1877F2; color: white; border-radius: 50%; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; margin-right: 5px; }
     </style>
@@ -23,7 +23,7 @@
         <p style="margin: 10px 0 20px;">Secure On-Chain Identity on Lightchain AI Testnet</p>
         <button id="connectBtn" style="background: white; color: #007bff; max-width: 250px; margin: auto;">Connect MetaMask</button>
         <button id="switchNetBtn" style="display:none; background: #ffc107; color: #000; max-width: 250px; margin: 10px auto;">Switch to Lightchain</button>
-        <span id="walletStatus" class="status-text">Not Connected</span>
+        <span id="walletStatus" class="status-text">Status: Disconnected</span>
     </div>
 
     <div class="card">
@@ -47,7 +47,7 @@
     <script>
         const CONTRACT_ADDRESS = "0xE0087e581f11b9de0d61697a0cb0cdffca8f1f34";
         const LIGHTCHAIN_SETUP = {
-            chainId: '0x1f8', 
+            chainId: '0x1f8', // 504
             chainName: 'Lightchain AI Testnet',
             nativeCurrency: { name: 'LCAI', symbol: 'LCAI', decimals: 18 },
             rpcUrls: ['https://light-testnet-rpc.lightchain.ai'],
@@ -61,9 +61,9 @@
 
         async function connectWallet() {
             let provider;
-            if (window.ethereum && window.ethereum.providers) {
+            if (window.ethereum.providers) {
                 provider = window.ethereum.providers.find((p) => p.isMetaMask);
-            } else if (window.ethereum && window.ethereum.isMetaMask) {
+            } else {
                 provider = window.ethereum;
             }
 
@@ -75,19 +75,22 @@
                     const chainId = await provider.request({ method: 'eth_chainId' });
                     if (chainId !== LIGHTCHAIN_SETUP.chainId) {
                         document.getElementById('switchNetBtn').style.display = 'block';
-                        document.getElementById('walletStatus').innerText = "Please switch to Lightchain Testnet";
+                        document.getElementById('walletStatus').innerText = "Status: Wrong Network";
+                        return;
                     }
 
                     signer = await browserProvider.getSigner();
                     contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
 
-                    document.getElementById('walletStatus').innerText = "Connected: " + accounts[0];
+                    document.getElementById('walletStatus').innerText = "Status: Connected (" + accounts[0].substring(0,6) + "...)";
+                    document.getElementById('walletStatus').style.color = "#4ade80";
                     document.getElementById('connectBtn').innerText = "Wallet Linked";
+                    document.getElementById('switchNetBtn').style.display = 'none';
                 } catch (err) {
                     alert("Connection failed: " + err.message);
                 }
             } else {
-                alert("MetaMask not detected! Ensure it is installed and active.");
+                alert("MetaMask not detected!");
             }
         }
 
@@ -97,6 +100,7 @@
                     method: 'wallet_switchEthereumChain',
                     params: [{ chainId: LIGHTCHAIN_SETUP.chainId }],
                 });
+                window.location.reload();
             } catch (err) {
                 if (err.code === 4902) {
                     await window.ethereum.request({
@@ -110,7 +114,7 @@
         document.getElementById('searchBtn').onclick = async () => {
             const addr = document.getElementById('searchAddr').value;
             if (!ethers.isAddress(addr)) return alert("Invalid Address");
-            if (!contract) return alert("Connect Wallet First");
+            if (!contract) return alert("Please click 'Connect MetaMask' first!");
             
             try {
                 const profile = await contract.getIdentity(addr);
@@ -120,7 +124,7 @@
                     `<span class="verified-badge"><span class="checkmark">✓</span> Verified</span>` : 
                     `<span style="color:gray; font-style:italic;"> (Pending)</span>`;
             } catch (e) {
-                alert("Identity not found for this address.");
+                alert("No identity found for this address.");
             }
         };
 
@@ -130,10 +134,12 @@
             if(!contract) return alert("Connect Wallet First");
             try {
                 const tx = await contract.createIdentity(name, did);
+                document.getElementById('walletStatus').innerText = "Status: Transaction Pending...";
                 await tx.wait();
-                alert("Identity Registered!");
+                alert("Identity Registered successfully!");
+                location.reload();
             } catch (e) {
-                alert("Error: " + (e.reason || "Transaction failed"));
+                alert("Error: " + (e.reason || "Check if you already have an identity"));
             }
         };
 
