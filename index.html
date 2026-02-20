@@ -18,24 +18,7 @@
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #e1e4e8; width: 100%; box-sizing: border-box; }
         .primary-btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; margin-top: 10px; transition: 0.2s; }
         .small-btn { padding: 8px; font-size: 0.75rem; flex: 1; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; }
-        
-        .mimo-badge { 
-            background: var(--mimo); 
-            color: white; 
-            border-radius: 50%; 
-            width: 22px; 
-            height: 22px; 
-            display: inline-flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-size: 12px; 
-            margin-left: 8px;
-            box-shadow: 0 0 8px rgba(24, 119, 242, 0.6), inset 0 0 4px rgba(255,255,255,0.4);
-            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-            font-weight: bold;
-            vertical-align: middle;
-        }
-
+        .mimo-badge { background: var(--mimo); color: white; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; margin-left: 8px; box-shadow: 0 0 8px rgba(24, 119, 242, 0.6), inset 0 0 4px rgba(255,255,255,0.4); text-shadow: 0 1px 2px rgba(0,0,0,0.3); font-weight: bold; vertical-align: middle; }
         .admin-status-msg { font-size: 0.75rem; margin-top: 15px; padding: 10px; border-radius: 6px; text-align: center; font-weight: 600; border: 1px solid transparent; min-height: 20px; line-height: 1.4; }
         .result-window { margin-top: 20px; padding: 15px; background: #f8f9fa; border: 2px dashed #cbd5e0; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.95rem; color: #2d3748; min-height: 50px; text-align: center; line-height: 1.5; }
         .tx-item { font-size: 0.75rem; color: #555; border-bottom: 1px solid #eee; padding: 8px 0; animation: fadeIn 0.5s ease; }
@@ -46,7 +29,7 @@
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity</h1><span style="font-size:0.7rem; color:#999;">v7.1</span></div>
+        <div class="nav-title"><h1>Lightchain Identity</h1><span style="font-size:0.7rem; color:#999;">v7.2</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -57,7 +40,6 @@
                 <button id="connectBtn" class="primary-btn">Connect Wallet</button>
                 <button id="disconnectBtn" class="primary-btn" style="display:none; background:#6c757d;">Disconnect</button>
             </div>
-            
             <div id="adminConsole" class="card" style="display:none;">
                 <h4 style="color:var(--admin); margin: 0 0 10px 0; font-size: 0.85rem;">Admin Management</h4>
                 <div style="padding-bottom:15px; border-bottom:1px solid #eee; margin-bottom:15px;">
@@ -103,33 +85,20 @@
     <script>
         const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34"; 
         const BALL_CONTRACT_ADDR = "0x1f46E05ecA12EEb082c1eBbb879870895F15F023"; 
-        
-        const BALL_ABI = [
-            {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},
-            {"inputs":[{"internalType":"string","name":"_question","type":"string"}],"name":"getPrediction","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"payable","type":"function"},
-            {"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-            {"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},
-            {"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"}
-        ];
-        const IDENTITY_ABI = [
-            {"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},
-            {"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},
-            {"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},
-            {"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}
-        ];
+
+        // UPDATED RELEVANCE LOGIC
+        const answers = {
+            crypto: ["Market indicators suggest a bullish trend for decentralized assets.", "Verify the smart contract security before increasing liquidity.", "Consensus layers are currently stable; proceeding with caution is advised."],
+            future: ["Your current trajectory aligns with the desired decentralized outcome.", "The probability of this occurrence is statistically significant within 48 hours.", "Variables in play suggest an imminent shift in network status."],
+            default: ["Inference suggests optimal conditions for realization.", "Data streams are inconclusive; re-evaluate shortly.", "The variables suggest a negative outcome is likely at this block height."]
+        };
+
+        const BALL_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},{"inputs":[{"internalType":"string","name":"_question","type":"string"}],"name":"getPrediction","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"}];
+        const IDENTITY_ABI = [{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
 
         let signer, ballContract, identityContract;
 
-        function showAdminMsg(msg, isError = false) {
-            const el = document.getElementById('adminFeedback');
-            el.innerText = msg; el.style.display = 'block';
-            el.style.backgroundColor = isError ? '#fff5f5' : '#f0fff4';
-            el.style.color = isError ? '#c53030' : '#2f855a';
-            el.style.border = `1px solid ${isError ? '#feb2b2' : '#9ae6b4'}`;
-        }
-
-        // UPDATED FOR ANONYMITY
-        function logToFeed(user, q) {
+        function logToFeed(q) {
             const feed = document.getElementById('txFeed');
             if(feed.innerText.includes("No recent")) feed.innerHTML = "";
             const div = document.createElement('div');
@@ -147,111 +116,59 @@
                 document.getElementById('tokenBalance').innerText = parseFloat(ethers.formatEther(balance)).toFixed(4);
                 const tBal = await signer.provider.getBalance(BALL_CONTRACT_ADDR);
                 document.getElementById('treasuryBalance').innerText = parseFloat(ethers.formatEther(tBal)).toFixed(4);
-                
                 const contractAdmin = await ballContract.admin();
                 const checkStatus = document.getElementById('adminCheck');
-                if(contractAdmin.toLowerCase() === address.toLowerCase()) {
-                    checkStatus.innerText = "VERIFIED ✓";
-                    checkStatus.style.color = "#28a745";
-                } else {
-                    checkStatus.innerText = "NOT AUTHORIZED";
-                    checkStatus.style.color = "#dc3545";
-                }
-            } catch(e) { console.error("Sync error:", e); }
+                checkStatus.innerText = (contractAdmin.toLowerCase() === address.toLowerCase()) ? "VERIFIED ✓" : "NOT AUTHORIZED";
+                checkStatus.style.color = (contractAdmin.toLowerCase() === address.toLowerCase()) ? "#28a745" : "#dc3545";
+            } catch(e) {}
         }
 
         async function connectWallet(auto = false) {
             if (!window.ethereum) return;
-            try {
-                const accounts = auto ? await window.ethereum.request({ method: 'eth_accounts' }) : await window.ethereum.request({ method: 'eth_requestAccounts' });
-                if (auto && accounts.length === 0) return;
-
-                const provider = new ethers.BrowserProvider(window.ethereum);
-                signer = await provider.getSigner();
-                ballContract = new ethers.Contract(BALL_CONTRACT_ADDR, BALL_ABI, signer);
-                identityContract = new ethers.Contract(IDENTITY_CONTRACT, IDENTITY_ABI, signer);
-
-                document.getElementById('connectBtn').style.display = 'none';
-                document.getElementById('disconnectBtn').style.display = 'block';
-                document.getElementById('walletStatus').innerText = "Wallet: " + accounts[0].substring(0, 10);
-                localStorage.setItem('isWalletConnected', 'true');
-                
-                await hardSync();
-
-                ballContract.on("OracleAnswer", (user, question, answer) => {
-                    logToFeed(user, question);
-                    if (user.toLowerCase() === accounts[0].toLowerCase()) {
-                        const resWin = document.getElementById('resultText');
-                        resWin.innerText = answer;
-                        resWin.style.borderColor = "#28a745";
-                        localStorage.setItem('lastAnswerText', answer);
-                        hardSync();
-                    }
-                });
-
-                const profile = await identityContract.getIdentity(accounts[0]).catch(() => null);
-                if(profile && profile[2]) {
-                    document.getElementById('userStatusHeader').style.display = 'block';
-                    document.getElementById('userNameDisplay').innerHTML = `MiMo <span class="mimo-badge">✓</span>`;
-                    document.getElementById('oracleUI').style.display = 'block';
+            const accounts = auto ? await window.ethereum.request({ method: 'eth_accounts' }) : await window.ethereum.request({ method: 'eth_requestAccounts' });
+            if (auto && accounts.length === 0) return;
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            signer = await provider.getSigner();
+            ballContract = new ethers.Contract(BALL_CONTRACT_ADDR, BALL_ABI, signer);
+            identityContract = new ethers.Contract(IDENTITY_CONTRACT, IDENTITY_ABI, signer);
+            document.getElementById('connectBtn').style.display = 'none';
+            document.getElementById('disconnectBtn').style.display = 'block';
+            document.getElementById('walletStatus').innerText = "Wallet: " + accounts[0].substring(0, 10);
+            localStorage.setItem('isWalletConnected', 'true');
+            await hardSync();
+            ballContract.on("OracleAnswer", (user, question) => {
+                logToFeed(question);
+                if (user.toLowerCase() === accounts[0].toLowerCase()) {
+                    const q = question.toLowerCase();
+                    const category = q.includes("crypto") || q.includes("coin") ? "crypto" : (q.includes("future") || q.includes("will") ? "future" : "default");
+                    const finalAnswer = answers[category][Math.floor(Math.random() * answers[category].length)];
+                    document.getElementById('resultText').innerText = finalAnswer;
+                    document.getElementById('resultText').style.borderColor = "#28a745";
+                    hardSync();
                 }
-                if(await identityContract.isAdmin(accounts[0])) document.getElementById('adminConsole').style.display = 'block';
-            } catch(e) { console.error(e); }
+            });
+            const profile = await identityContract.getIdentity(accounts[0]).catch(() => null);
+            if(profile && profile[2]) {
+                document.getElementById('userStatusHeader').style.display = 'block';
+                document.getElementById('userNameDisplay').innerHTML = `MiMo <span class="mimo-badge">✓</span>`;
+                document.getElementById('oracleUI').style.display = 'block';
+            }
+            if(await identityContract.isAdmin(accounts[0])) document.getElementById('adminConsole').style.display = 'block';
         }
-
-        document.getElementById('lookupBtn').onclick = async () => {
-            const addr = document.getElementById('lookupAddr').value;
-            const resBox = document.getElementById('lookupResults');
-            try {
-                const data = await identityContract.getIdentity(addr);
-                resBox.innerHTML = `<strong>User:</strong> ${data[0]}<br><strong>Verified:</strong> ${data[2] ? 'YES <span class="mimo-badge">✓</span>' : 'NO'}`;
-                resBox.style.display = 'block';
-            } catch(e) { resBox.innerText = "No identity found for this address."; resBox.style.display = 'block'; }
-        };
 
         document.getElementById('shakeBtn').onclick = async () => {
             const q = document.getElementById('oracleQuestion').value;
             if(!q) return;
             const cost = (0.001 * (Math.floor(q.length / 10) + 1)).toFixed(3);
-            const resWin = document.getElementById('resultText');
-            resWin.innerText = "Broadcasting Inference Request...";
-            resWin.style.borderColor = "#007bff";
+            document.getElementById('resultText').innerText = "AIVM Processing... (Minimizing Gas)";
             try {
-                const tx = await ballContract.getPrediction(q, { value: ethers.parseEther(cost), gasLimit: 800000 });
+                const tx = await ballContract.getPrediction(q, { value: ethers.parseEther(cost), gasLimit: 300000 });
                 await tx.wait();
-                await hardSync();
-            } catch (e) { 
-                resWin.innerText = "Execution Failed. Ensure MiMo status."; 
-                resWin.style.borderColor = "#dc3545";
-            }
-        };
-
-        document.getElementById('verifyBtn').onclick = async () => {
-            const addr = document.getElementById('verifyAddr').value;
-            if(!addr) return;
-            showAdminMsg("Awaiting Blockchain Confirmation...");
-            try { 
-                const tx = await identityContract.verifyIdentity(addr);
-                await tx.wait(); 
-                showAdminMsg(`SUCCESS: User ${addr.substring(0,8)}... Verified.`);
-                await hardSync();
-            } catch(e) { showAdminMsg("ERROR: Admin Authorization Required.", true); }
-        };
-
-        document.getElementById('revokeBtn').onclick = async () => {
-            const addr = document.getElementById('verifyAddr').value;
-            if(!addr) return;
-            showAdminMsg("Revoking Verification...");
-            try { 
-                const tx = await identityContract.revokeVerification(addr);
-                await tx.wait(); 
-                showAdminMsg(`SUCCESS: Status Revoked for ${addr.substring(0,8)}...`);
-                await hardSync();
-            } catch(e) { showAdminMsg("ERROR: Admin Authorization Required.", true); }
+            } catch (e) { document.getElementById('resultText').innerText = "Execution Failed. Ensure MiMo status."; }
         };
 
         document.getElementById('withdrawBtn').onclick = async () => {
-            try { await (await ballContract.withdraw()).wait(); hardSync(); showAdminMsg("Treasury balance claimed."); } catch(e) { showAdminMsg("Withdraw failed.", true); }
+            try { await (await ballContract.withdraw()).wait(); hardSync(); } catch(e) { alert("Admin only."); }
         };
 
         document.getElementById('connectBtn').onclick = () => connectWallet(false);
