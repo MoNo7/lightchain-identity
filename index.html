@@ -18,14 +18,15 @@
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #e1e4e8; width: 100%; box-sizing: border-box; }
         .primary-btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; margin-top: 10px; transition: 0.2s; }
         .small-btn { padding: 8px; font-size: 0.75rem; flex: 1; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; }
-        .admin-status-msg { font-size: 0.75rem; margin-top: 15px; padding: 10px; border-radius: 6px; text-align: center; font-weight: 600; border: 1px solid transparent; }
+        .admin-status-msg { font-size: 0.7rem; margin-top: 10px; padding: 8px; border-radius: 4px; text-align: center; font-weight: bold; }
+        .lookup-results { margin-top: 10px; font-size: 0.75rem; background: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #e1e4e8; display: none; word-break: break-all; }
         .result-window { margin-top: 20px; padding: 15px; background: #f8f9fa; border: 2px dashed #cbd5e0; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.95rem; color: #2d3748; min-height: 50px; text-align: center; line-height: 1.5; }
         input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 12px; box-sizing: border-box; font-size: 1rem; }
     </style>
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity</h1><span style="font-size:0.7rem; color:#999;">v6.6</span></div>
+        <div class="nav-title"><h1>Lightchain Identity</h1><span style="font-size:0.7rem; color:#999;">v6.7</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -39,14 +40,23 @@
             
             <div id="adminConsole" class="card" style="display:none;">
                 <h4 style="color:var(--admin); margin: 0 0 10px 0; font-size: 0.85rem;">Admin Management</h4>
+                
+                <div style="padding-bottom:15px; border-bottom:1px solid #eee; margin-bottom:15px;">
+                    <input type="text" id="lookupAddr" placeholder="Lookup 0x..." style="margin-bottom:5px; padding:8px;">
+                    <button id="lookupBtn" class="small-btn" style="width:100%; background: var(--primary);">Query Global Registry</button>
+                    <div id="lookupResults" class="lookup-results"></div>
+                </div>
+
                 <div class="treasury-box" style="background:#fff5f5; border:1px solid #feb2b2; padding:12px; border-radius:8px; margin-bottom:15px; text-align:center;">
+                    <div style="font-size: 0.65rem; color:#c53030; margin-bottom:5px;">ADMIN CLAIM VERIFICATION: <span id="adminCheck">PENDING</span></div>
                     <div style="font-size: 1.4rem; font-weight: 800; color: #c53030;"><span id="treasuryBalance">0.0000</span> LCAI</div>
                     <button id="withdrawBtn" class="small-btn" style="width:100%; margin-top:10px; background:#c53030;">Claim Fees</button>
                 </div>
-                <input type="text" id="verifyAddr" placeholder="Target 0x...">
+
+                <input type="text" id="verifyAddr" placeholder="Target 0x..." style="padding:8px;">
                 <div style="display:flex; gap: 4px;">
-                    <button id="verifyBtn" class="small-btn" style="background:var(--success);">Verify</button>
-                    <button id="revokeBtn" class="small-btn">Revoke</button>
+                    <button id="verifyBtn" class="small-btn" style="background:var(--success);">Verify User</button>
+                    <button id="revokeBtn" class="small-btn">Revoke User</button>
                 </div>
                 <div id="adminFeedback" class="admin-status-msg" style="display:none;"></div>
             </div>
@@ -81,7 +91,8 @@
             {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},
             {"inputs":[{"internalType":"string","name":"_question","type":"string"}],"name":"getPrediction","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"payable","type":"function"},
             {"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-            {"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"}
+            {"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},
+            {"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"}
         ];
         const IDENTITY_ABI = [
             {"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},
@@ -101,6 +112,17 @@
                 document.getElementById('tokenBalance').innerText = parseFloat(ethers.formatEther(balance)).toFixed(4);
                 const tBal = await signer.provider.getBalance(BALL_CONTRACT_ADDR);
                 document.getElementById('treasuryBalance').innerText = parseFloat(ethers.formatEther(tBal)).toFixed(4);
+                
+                // ADMIN CLAIM VERIFICATION CHECK
+                const contractAdmin = await ballContract.admin();
+                const checkStatus = document.getElementById('adminCheck');
+                if(contractAdmin.toLowerCase() === address.toLowerCase()) {
+                    checkStatus.innerText = "VERIFIED ✓";
+                    checkStatus.style.color = "#28a745";
+                } else {
+                    checkStatus.innerText = "NOT AUTHORIZED";
+                    checkStatus.style.color = "#dc3545";
+                }
             } catch(e) { console.error("Sync error:", e); }
         }
 
@@ -122,7 +144,6 @@
                 
                 await hardSync();
 
-                // Setup listener for the OracleAnswer event
                 ballContract.on("OracleAnswer", (user, question, answer) => {
                     if (user.toLowerCase() === accounts[0].toLowerCase()) {
                         const resWin = document.getElementById('resultText');
@@ -143,33 +164,27 @@
             } catch(e) { console.error(e); }
         }
 
-        document.getElementById('oracleQuestion').oninput = (e) => {
-            const cost = (0.001 * (Math.floor(e.target.value.length / 10) + 1)).toFixed(3);
-            document.getElementById('shakeBtn').innerText = `Execute for ${cost} LCAI`;
+        document.getElementById('lookupBtn').onclick = async () => {
+            const addr = document.getElementById('lookupAddr').value;
+            const resBox = document.getElementById('lookupResults');
+            try {
+                const data = await identityContract.getIdentity(addr);
+                resBox.innerHTML = `<strong>User:</strong> ${data[0]}<br><strong>Verified:</strong> ${data[2] ? 'YES ✓' : 'NO'}`;
+                resBox.style.display = 'block';
+            } catch(e) { resBox.innerText = "No identity found for this address."; resBox.style.display = 'block'; }
         };
 
         document.getElementById('shakeBtn').onclick = async () => {
             const q = document.getElementById('oracleQuestion').value;
             if(!q) return;
-            const multiplier = Math.floor(q.length / 10) + 1;
-            const cost = (0.001 * multiplier).toFixed(3);
+            const cost = (0.001 * (Math.floor(q.length / 10) + 1)).toFixed(3);
             const resWin = document.getElementById('resultText');
-            
             resWin.innerText = "Awaiting POI (Proof of Intelligence)...";
             resWin.style.borderColor = "#007bff";
-
             try {
-                const tx = await ballContract.getPrediction(q, { 
-                    value: ethers.parseEther(cost), 
-                    gasLimit: 800000 
-                });
-                
-                const receipt = await tx.wait();
-                // If the event hasn't fired yet, this ensures we refresh the state
+                const tx = await ballContract.getPrediction(q, { value: ethers.parseEther(cost), gasLimit: 800000 });
+                await tx.wait();
                 await hardSync();
-                if(resWin.innerText.includes("Awaiting")) {
-                    resWin.innerText = "Inference Finalizing... Check Tx History.";
-                }
             } catch (e) { 
                 resWin.innerText = "Execution Failed. Ensure MiMo status."; 
                 resWin.style.borderColor = "#dc3545";
@@ -179,6 +194,10 @@
         document.getElementById('verifyBtn').onclick = async () => {
             const addr = document.getElementById('verifyAddr').value;
             try { await (await identityContract.verifyIdentity(addr)).wait(); location.reload(); } catch(e) { alert("Verify Failed"); }
+        };
+
+        document.getElementById('withdrawBtn').onclick = async () => {
+            try { await (await ballContract.withdraw()).wait(); hardSync(); } catch(e) { alert("Withdraw failed. Are you the contract owner?"); }
         };
 
         document.getElementById('connectBtn').onclick = () => connectWallet(false);
