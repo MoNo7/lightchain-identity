@@ -5,7 +5,7 @@
     <title>Lightchain AI Identity Portal</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f0f2f5; color: #1c1e21; display: flex; height: 100vh; overflow: hidden; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f0f2f5; color: #1c1e21; display: flex; height: 100 vh; overflow: hidden; }
         #leftSidebar { width: 320px; background: #fff; border-right: 1px solid #e1e4e8; display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; overflow-y: auto; }
         .main-utility-area { flex: 1; padding: 40px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; }
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #e1e4e8; width: 100%; box-sizing: border-box; }
@@ -16,13 +16,14 @@
         
         /* 8-Ball Styles */
         .eight-ball-container { text-align: center; margin-top: 30px; }
-        .eight-ball { width: 200px; height: 200px; background: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; margin: 0 auto; position: relative; cursor: pointer; transition: transform 0.1s; }
+        .eight-ball { width: 220px; height: 220px; background: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; margin: 0 auto; position: relative; cursor: pointer; transition: transform 0.1s; box-shadow: inset -15px -15px 40px rgba(255,255,255,0.1), 0 10px 20px rgba(0,0,0,0.3); }
         .eight-ball:active { transform: scale(0.95) rotate(5deg); }
-        .inner-circle { width: 100px; height: 100px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #000; font-size: 14px; padding: 10px; text-align: center; font-weight: bold; line-height: 1.2; }
-        .shake { animation: shake 0.5s; }
-        @keyframes shake { 0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); } 20% { transform: translate(-3px, 0px) rotate(1deg); } 100% { transform: translate(1px, 1px) rotate(0deg); } }
+        .inner-circle { width: 110px; height: 110px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #000; font-size: 13px; padding: 15px; text-align: center; font-weight: bold; line-height: 1.2; border: 4px solid #111; }
+        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
         
         button { background: #007bff; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; transition: 0.2s; margin-top: 10px; }
+        button:hover { background: #0056b3; }
         #adminConsole { display: none; margin-top: 10px; }
         .verified-badge-inline { background: #1877F2; color: white; border-radius: 50%; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; margin-left: 8px; vertical-align: middle; }
     </style>
@@ -32,7 +33,7 @@
     <div id="leftSidebar">
         <div class="header-brand">
             <h1>Lightchain ID</h1>
-            <small>Portal v2.9</small>
+            <small>Portal v3.0</small>
         </div>
         <div id="userStatusHeader"><div class="identity-name" id="userNameDisplay"></div></div>
         <div class="card" style="padding: 15px; margin-top: 10px;">
@@ -47,44 +48,53 @@
     </div>
 
     <div class="main-utility-area">
-        <div class="card" style="max-width: 600px; text-align: center;">
-            <h2 style="margin:0;">🎱 Verified Magic 8-Ball</h2>
-            <p id="lockMessage" style="color: #dc3545; font-weight: bold;">[ Locked: Verification Required ]</p>
+        <div class="card" style="max-width: 600px; text-align: center; min-height: 450px;">
+            <h2 style="margin:0;">🎱 On-Chain Magic 8-Ball</h2>
+            <p id="lockMessage" style="color: #dc3545; font-weight: bold; margin-top: 20px;">[ Verification Required to Consult the AIVM ]</p>
             
             <div class="eight-ball-container">
                 <div class="eight-ball" id="ball">
-                    <div class="inner-circle" id="response">Ask me...</div>
+                    <div class="inner-circle" id="response">?</div>
                 </div>
-                <button id="shakeBtn" style="display:none; max-width: 200px; margin: 20px auto;">Shake Ball</button>
+                <button id="shakeBtn" style="display:none; max-width: 250px; margin: 30px auto; background: #28a745;">Consult Oracle</button>
             </div>
         </div>
     </div>
 
     <script>
-        const RAW_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-        const ABI = [{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"}];
-        
-        const JOKES = ["Signs point to... probably not.", "The AIVM says YES.", "My sources say your gas fee is too low.", "Verified users only: Definitely!", "Error 404: Future not found.", "Ask again after the next block."];
+        const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
+        const BALL_CONTRACT_ADDR = "0x048F3aad9f21863F38AfFA89f0d707de2BDE8200";
 
-        let signer, contract;
+        const IDENTITY_ABI = [{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"}];
+        const BALL_ABI = [{"inputs":[],"name":"getPrediction","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"}];
+
+        let signer, identityContract, ballContract;
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            if (localStorage.getItem('isWalletConnected') === 'true' && window.ethereum) {
+                setTimeout(connectWallet, 500);
+            }
+        });
 
         async function connectWallet() {
             if (!window.ethereum) return;
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
             const provider = new ethers.BrowserProvider(window.ethereum);
             signer = await provider.getSigner();
-            contract = new ethers.Contract(RAW_CONTRACT, ABI, signer);
+            
+            identityContract = new ethers.Contract(IDENTITY_CONTRACT, IDENTITY_ABI, signer);
+            ballContract = new ethers.Contract(BALL_CONTRACT_ADDR, BALL_ABI, signer);
 
+            localStorage.setItem('isWalletConnected', 'true');
             document.getElementById('connectBtn').style.display = 'none';
             document.getElementById('disconnectBtn').style.display = 'block';
 
-            const profile = await contract.getIdentity(accounts[0]).catch(() => null);
+            const profile = await identityContract.getIdentity(accounts[0]).catch(() => null);
             if(profile && profile[0]) {
                 const check = profile[2] ? '<span class="verified-badge-inline">✓</span>' : '';
                 document.getElementById('userStatusHeader').style.display = 'block';
                 document.getElementById('userNameDisplay').innerHTML = `${profile[0]} ${check}`;
                 
-                // UNLOCK UTILITY IF VERIFIED
                 if(profile[2]) {
                     document.getElementById('lockMessage').style.display = 'none';
                     document.getElementById('shakeBtn').style.display = 'block';
@@ -92,20 +102,30 @@
             }
         }
 
-        document.getElementById('shakeBtn').onclick = () => {
+        document.getElementById('shakeBtn').onclick = async () => {
             const ball = document.getElementById('ball');
             const res = document.getElementById('response');
-            ball.classList.add('shake');
-            res.innerText = "Thinking...";
             
-            setTimeout(() => {
+            ball.classList.add('shake');
+            res.innerText = "Oracle is Thinking...";
+            
+            try {
+                // Fetch live from your newly deployed contract
+                const prediction = await ballContract.getPrediction();
+                
+                setTimeout(() => {
+                    ball.classList.remove('shake');
+                    res.innerText = prediction;
+                }, 800);
+            } catch (e) {
+                console.error(e);
+                res.innerText = "AIVM Error: Connection Lost";
                 ball.classList.remove('shake');
-                res.innerText = JOKES[Math.floor(Math.random() * JOKES.length)];
-            }, 600);
+            }
         };
 
         document.getElementById('connectBtn').onclick = connectWallet;
-        document.getElementById('disconnectBtn').onclick = () => location.reload();
+        document.getElementById('disconnectBtn').onclick = () => { localStorage.removeItem('isWalletConnected'); location.reload(); };
     </script>
 </body>
 </html>
