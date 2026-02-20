@@ -21,6 +21,7 @@
         .btn-group { display: flex; gap: 5px; }
         .small-btn { width: auto; padding: 6px 12px; font-size: 0.8rem; margin: 0; flex: 1; }
         #memberList { background: #fff5f5; border-radius: 8px; padding: 5px; margin-top: 10px; }
+        .notice { background: #e7f3ff; padding: 15px; border-radius: 10px; color: #0056b3; font-size: 0.9rem; border: 1px solid #bbdefb; }
     </style>
 </head>
 <body>
@@ -49,13 +50,17 @@
             </div>
         </div>
 
-        <div class="card">
+        <div class="card" id="registrationCard">
             <h3 id="regTitle">Register Your Identity</h3>
-            <input type="text" id="regName" placeholder="Desired Username">
-            <input type="text" id="regDID" placeholder="DID or Profile Link (Optional)">
-            <p style="font-size: 0.8rem; color: #666; margin: 0;">* Leave DID blank to auto-generate a default did:id</p>
-            <button id="createBtn" style="background: #28a745;">Register Identity</button>
-            <button id="updateBtn" style="display:none; background: #007bff;">Update Existing Identity</button>
+            <div id="regInputs">
+                <input type="text" id="regName" placeholder="Desired Username">
+                <input type="text" id="regDID" placeholder="DID or Profile Link (Optional)">
+                <p style="font-size: 0.8rem; color: #666; margin: 0;">* Leave DID blank to auto-generate a default did:id</p>
+                <button id="createBtn" style="background: #28a745;">Register Identity</button>
+            </div>
+            <div id="existingUserNotice" style="display:none;" class="notice">
+                <strong>Identity Locked:</strong> You have already registered an identity for this wallet. On-chain updates are currently disabled in the smart contract.
+            </div>
         </div>
     </div>
 
@@ -84,7 +89,6 @@
             blockExplorerUrls: ['https://testnet-explorer.lightchain.ai']
         };
 
-        // Note: I'm using the ABI from your existing contract
         const ABI = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"newAdmin","type":"address"}],"name":"AdminAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"oldAdmin","type":"address"}],"name":"AdminRemoved","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"userAddress","type":"address"},{"indexed":false,"internalType":"string","name":"username","type":"string"},{"indexed":false,"internalType":"string","name":"did","type":"string"}],"name":"IdentityCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"userAddress","type":"address"}],"name":"IdentityVerified","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"userAddress","type":"address"}],"name":"VerificationRevoked","type":"event"},{"inputs":[{"internalType":"address","name":"_newAdmin","type":"address"}],"name":"addAdmin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"_username","type":"string"},{"internalType":"string","name":"_did","type":"string"}],"name":"createIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"profiles","outputs":[{"internalType":"string","name":"username","type":"string"},{"internalType":"string","name":"did","type":"string"},{"internalType":"bool","name":"isVerified","type":"bool"},{"internalType":"bool","name":"exists","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_admin","type":"address"}],"name":"removeAdmin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"}];
 
         let signer, contract, provider;
@@ -113,47 +117,44 @@
                 document.getElementById('disconnectBtn').style.display = 'inline-block';
                 document.getElementById('switchNetBtn').style.display = 'none';
 
-                // Check if user already exists to switch to "Update" mode
+                // Adaptive Registration Card Logic
                 try {
                     const profile = await contract.getIdentity(userAddr);
                     if(profile[0]) {
-                        document.getElementById('regTitle').innerText = "Edit Your Identity";
-                        document.getElementById('regName').value = profile[0];
-                        document.getElementById('regDID').value = profile[1];
-                        document.getElementById('createBtn').style.display = 'none';
-                        document.getElementById('updateBtn').style.display = 'block';
+                        document.getElementById('regTitle').innerText = "Your Identity: " + profile[0];
+                        document.getElementById('regInputs').style.display = 'none';
+                        document.getElementById('existingUserNotice').style.display = 'block';
                     }
-                } catch(e) {}
+                } catch(e) {
+                    // Not registered yet, leave as is
+                }
 
                 const adminStatus = await contract.isAdmin(userAddr);
                 if(adminStatus) {
                     document.getElementById('adminPanel').style.display = 'flex';
-                    document.getElementById('adminAddrDisplay').innerText = userAddr.substring(0,20) + "...";
+                    document.getElementById('adminAddrDisplay').innerText = userAddr.substring(0,18) + "...";
                     loadMemberList();
                 }
             } catch (err) { alert("Connection failed: " + err.message); }
         }
 
-        async function registerOrUpdate(isUpdate) {
+        async function register() {
             let name = document.getElementById('regName').value;
             let did = document.getElementById('regDID').value;
+            if(!name) return alert("Username is required.");
+            
             const userAddr = await signer.getAddress();
-
-            // TEMP DID WORKAROUND: If blank, provide a did:id
             if (!did || did.trim() === "") {
                 did = "did:lcai:" + userAddr.toLowerCase();
             }
 
             try {
-                // If your contract only has createIdentity, we call it. 
-                // Note: If 'exists' is true, your contract's 'require' will fail. 
-                // You may need to update your Solidity later to allow updates!
                 const tx = await contract.createIdentity(name, did);
                 alert("Transaction sent! DID is: " + did);
                 await tx.wait();
                 location.reload();
             } catch (e) {
-                alert("Error: " + (e.reason || "Check if identity already exists. To edit, the contract owner must add an update function."));
+                alert("Error: " + (e.reason || "Registration failed. You may already have an account."));
             }
         }
 
@@ -197,8 +198,7 @@
             } catch (e) { alert("Identity not found."); }
         };
 
-        document.getElementById('createBtn').onclick = () => registerOrUpdate(false);
-        document.getElementById('updateBtn').onclick = () => registerOrUpdate(true);
+        document.getElementById('createBtn').onclick = register;
         document.getElementById('verifyBtn').onclick = async () => {
             try {
                 const tx = await contract.verifyIdentity(document.getElementById('verifyAddr').value);
@@ -213,4 +213,3 @@
     </script>
 </body>
 </html>
-
