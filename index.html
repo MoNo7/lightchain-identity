@@ -17,6 +17,7 @@
         #adminPanel { border: 2px solid #dc3545; display: none; }
         .member-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
         .member-item:last-child { border-bottom: none; }
+        #memberList { max-height: 250px; overflow-y: auto; background: #fff5f5; border-radius: 8px; padding: 10px; }
     </style>
 </head>
 <body>
@@ -52,16 +53,16 @@
 
     <div class="card" id="adminPanel">
         <h3 style="margin-top:0; color: #dc3545;">Admin Control Center</h3>
-        <p>Logged in as Admin. Manage the registry below.</p>
+        <p>Logged in as Admin: <strong>0x4D36...c6a2c</strong></p>
         
         <div style="margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
             <h4>Verify User</h4>
             <input type="text" id="verifyAddr" placeholder="User Address to Verify (0x...)">
-            <button id="verifyBtn" style="background: #dc3545;">Issue Verification</button>
+            <button id="verifyBtn" style="background: #dc3545;">Issue Verification Badge</button>
         </div>
 
         <h4>Recent Registrations</h4>
-        <div id="memberList" style="max-height: 200px; overflow-y: auto; background: #fff5f5; border-radius: 8px; padding: 10px;">
+        <div id="memberList">
             <p style="color: #666; font-style: italic; text-align: center;">Scanning blockchain for members...</p>
         </div>
     </div>
@@ -116,12 +117,12 @@
         async function loadMemberList() {
             const listDiv = document.getElementById('memberList');
             try {
-                // Fetch 'IdentityCreated' events from the last 10,000 blocks
+                // Expanded block range to find your early registration
                 const filter = contract.filters.IdentityCreated();
-                const events = await contract.queryFilter(filter, -10000);
+                const events = await contract.queryFilter(filter, -500000); 
                 
                 if (events.length === 0) {
-                    listDiv.innerHTML = "<p>No members registered yet.</p>";
+                    listDiv.innerHTML = "<p style='text-align:center;'>No members found in recent history.</p>";
                     return;
                 }
 
@@ -135,9 +136,9 @@
                         <span><strong>${name}</strong> (${addr.substring(0,6)}...)</span>
                         <button onclick="document.getElementById('verifyAddr').value='${addr}'" style="width: auto; padding: 5px 10px; font-size: 0.8rem; margin: 0;">Select</button>
                     `;
-                    listDiv.appendChild(item);
+                    listDiv.prepend(item); // Newest at top
                 });
-            } catch (e) { console.error(e); }
+            } catch (e) { listDiv.innerHTML = "Error loading list."; }
         }
 
         async function disconnect() {
@@ -147,17 +148,18 @@
             document.getElementById('connectBtn').style.display = 'inline-block';
             document.getElementById('disconnectBtn').style.display = 'none';
             document.getElementById('adminPanel').style.display = 'none';
+            document.getElementById('searchResult').style.display = 'none';
         }
 
         document.getElementById('searchBtn').onclick = async () => {
             const addr = document.getElementById('searchAddr').value;
-            if (!ethers.isAddress(addr) || !contract) return alert("Connect and enter valid address.");
+            if (!ethers.isAddress(addr) || !contract) return alert("Valid address and connection required.");
             try {
                 const p = await contract.getIdentity(addr);
                 document.getElementById('searchResult').style.display = 'block';
                 document.getElementById('resName').innerText = p[0];
-                document.getElementById('resStatus').innerHTML = p[2] ? '<span class="verified-badge">✓ Verified</span>' : '(Pending)';
-            } catch (e) { alert("Not found"); }
+                document.getElementById('resStatus').innerHTML = p[2] ? '<span class="verified-badge"><span class="checkmark">✓</span> Verified</span>' : '(Pending)';
+            } catch (e) { alert("Identity not found."); }
         };
 
         document.getElementById('verifyBtn').onclick = async () => {
@@ -165,11 +167,11 @@
             if (!ethers.isAddress(addr)) return alert("Invalid Address");
             try {
                 const tx = await contract.verifyIdentity(addr);
-                alert("Verification transaction sent! Waiting for block...");
+                alert("Transaction pending... please wait.");
                 await tx.wait();
-                alert("Identity Successfully Verified!");
+                alert("Identity Verified!");
                 loadMemberList();
-            } catch (e) { alert("Error: Verify failed. Only admins can verify others."); }
+            } catch (e) { alert("Verification failed. Check your admin permissions."); }
         };
 
         document.getElementById('createBtn').onclick = async () => {
@@ -181,7 +183,7 @@
                 await tx.wait();
                 alert("Identity Registered!");
                 location.reload();
-            } catch (e) { alert("Already registered or transaction failed."); }
+            } catch (e) { alert("Transaction failed. You may already be registered."); }
         };
 
         document.getElementById('connectBtn').onclick = connectWallet;
