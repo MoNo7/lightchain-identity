@@ -20,7 +20,7 @@
         .small-btn { padding: 8px; font-size: 0.75rem; flex: 1; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; }
         .mimo-badge { background: var(--mimo); color: white; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; margin-left: 8px; box-shadow: 0 0 8px rgba(24, 119, 242, 0.6); font-weight: bold; vertical-align: middle; }
         .lookup-results { margin-top: 10px; font-size: 0.75rem; background: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #e1e4e8; display: none; word-break: break-all; }
-        .result-window { margin-top: 20px; padding: 15px; background: #f8f9fa; border: 2px dashed #cbd5e0; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.95rem; color: #2d3748; text-align: center; line-height: 1.4; }
+        .result-window { margin-top: 20px; padding: 20px; background: #f8f9fa; border: 2px dashed #cbd5e0; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 1rem; color: #2d3748; text-align: center; line-height: 1.5; }
         .tx-item { font-size: 0.75rem; color: #555; border-bottom: 1px solid #eee; padding: 8px 0; animation: fadeIn 0.5s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
         .tx-item strong { color: #0056b3; display: block; }
@@ -29,18 +29,11 @@
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity</h1><span style="font-size:0.7rem; color:#999;">v7.5</span></div>
+        <div class="nav-title"><h1>Lightchain Identity</h1><span style="font-size:0.7rem; color:#999;">v7.6</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
         <div id="leftSidebar">
-            <div class="card">
-                <h4 style="margin: 0 0 10px 0; font-size: 0.85rem; color: var(--primary);">Global Identity Search</h4>
-                <input type="text" id="lookupAddr" placeholder="Search 0x...">
-                <button id="lookupBtn" class="small-btn" style="width:100%; background: var(--primary);">Query Registry</button>
-                <div id="lookupResults" class="lookup-results"></div>
-            </div>
-
             <div id="userStatusHeader" style="display:none; text-align:center; margin-bottom:15px;"><div id="userNameDisplay" style="font-weight:bold;"></div></div>
             <div class="card">
                 <div id="walletStatus" style="font-size: 0.75rem; margin-bottom:10px; color:#666;">Synchronizing...</div>
@@ -50,6 +43,14 @@
 
             <div id="adminConsole" class="card" style="display:none;">
                 <h4 style="color:var(--admin); margin: 0 0 10px 0; font-size: 0.85rem;">Admin Management</h4>
+                
+                <div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #eee;">
+                    <h5 style="margin: 0 0 8px 0; font-size: 0.75rem;">Global Registry Search</h5>
+                    <input type="text" id="lookupAddr" placeholder="Search 0x..." style="margin-bottom:5px;">
+                    <button id="lookupBtn" class="small-btn" style="width:100%; background: var(--primary);">Query Database</button>
+                    <div id="lookupResults" class="lookup-results"></div>
+                </div>
+
                 <div class="treasury-box" style="background:#fff5f5; border:1px solid #feb2b2; padding:12px; border-radius:8px; margin-bottom:15px; text-align:center;">
                     <div style="font-size: 0.65rem; color:#c53030; margin-bottom:5px;">OWNER CLAIM STATUS: <span id="adminCheck">PENDING</span></div>
                     <div style="font-size: 1.4rem; font-weight: 800; color: #c53030;"><span id="treasuryBalance">0.0000</span> LCAI</div>
@@ -90,11 +91,12 @@
         const BALL_CONTRACT_ADDR = "0x6C921cbC1C12Af06fE22df549cA89053928afe64"; 
 
         const answers = {
-            crypto: ["Decentralized consensus indicates a strong bullish divergence for native assets.", "Security audit required: The smart contract logic shows high complexity parameters.", "Liquidity provision on Lightchain is currently yielding optimal POI (Proof of Intelligence) scores."],
+            crypto: ["Decentralized consensus indicates a strong bullish divergence for native assets.", "Security audit required: The smart contract logic shows high complexity parameters.", "Liquidity provision on Lightchain is currently yielding optimal POI scores."],
             identity: ["MiMo verification successful. Your DID is now anchored to the AIVM layer.", "Identity privacy protocols are active. Zero-knowledge proofs are shielding your metadata.", "Registry query complete: The subject wallet has achieved 'Trusted Admin' status."],
+            tools: ["A hammer is a primary mechanical tool used to deliver impact force. It converts kinetic energy into high-pressure impulses for driving fasteners or shaping materials.", "The purpose of a tool like a hammer is the amplification of human manual force via a lever-based impact head.", "In engineering terms, a hammer provides the necessary percussion to overcome static friction in construction tasks."],
             physics: ["Water is wet because of strong hydrogen bonding between H2O molecules.", "The AIVM has calculated the physical variables; the outcome follows entropy.", "Quantum fluctuations in the data stream suggest a non-linear path."],
             future: ["AIVM trajectory analysis predicts high probability of success in this epoch.", "Variables are shifting; the upcoming block height will determine resolution.", "Your current path is synchronized with the most probable positive timeline."],
-            default: ["The AIVM has processed your request. The result is positive.", "Consensus reached: Proceed with the planned operation.", "Network latency is low; operation is statistically favored."]
+            default: ["The AIVM has processed your request. The logic suggests a favorable result.", "Consensus reached: The requested operation is statistically supported.", "Analysis complete: System parameters indicate a high confidence in success."]
         };
 
         const BALL_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},{"inputs":[{"internalType":"string","name":"_question","type":"string"}],"name":"getPrediction","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"}];
@@ -142,12 +144,17 @@
                 localStorage.setItem('isWalletConnected', 'true');
                 await hardSync();
 
-                // ANONYMOUS ACTIVITY LOG LISTENER
                 ballContract.on("OracleAnswer", (user, question) => {
                     logToFeed(question);
                     if (user.toLowerCase() === accounts[0].toLowerCase()) {
                         const qLower = question.toLowerCase();
-                        let cat = qLower.includes("crypto") ? "crypto" : qLower.includes("identity") ? "identity" : qLower.includes("water") ? "physics" : qLower.includes("future") ? "future" : "default";
+                        let cat = "default";
+                        if (qLower.includes("crypto") || qLower.includes("coin")) cat = "crypto";
+                        else if (qLower.includes("identity") || qLower.includes("mimo")) cat = "identity";
+                        else if (qLower.includes("hammer") || qLower.includes("tool") || qLower.includes("purpose")) cat = "tools";
+                        else if (qLower.includes("water") || qLower.includes("physics")) cat = "physics";
+                        else if (qLower.includes("future") || qLower.includes("will")) cat = "future";
+                        
                         document.getElementById('resultText').innerText = answers[cat][Math.floor(Math.random() * answers[cat].length)];
                         hardSync();
                     }
@@ -163,7 +170,6 @@
             } catch(e) {}
         }
 
-        // GLOBAL IDENTITY SEARCH LOGIC
         document.getElementById('lookupBtn').onclick = async () => {
             const addr = document.getElementById('lookupAddr').value;
             const resBox = document.getElementById('lookupResults');
@@ -179,7 +185,7 @@
             const q = document.getElementById('oracleQuestion').value;
             if(!q) return;
             const cost = (0.001 * (Math.floor(q.length / 10) + 1)).toFixed(3);
-            document.getElementById('resultText').innerText = "Consulting Lightchain AIVM...";
+            document.getElementById('resultText').innerText = "Inference Engine Processing...";
             try {
                 const tx = await ballContract.getPrediction(q, { value: ethers.parseEther(cost), gasLimit: 500000 });
                 await tx.wait();
