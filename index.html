@@ -32,7 +32,7 @@
     <div id="leftSidebar">
         <div class="header-brand">
             <h1>Lightchain ID</h1>
-            <small>Portal v2.4</small>
+            <small>Portal v2.5</small>
         </div>
 
         <div id="userStatusHeader">
@@ -102,26 +102,31 @@
 
         let signer, contract, provider;
 
-        // --- NEW: PERSISTENCE LOGIC ---
+        // Corrected Persistence Logic for Ethers v6 + MetaMask
         window.addEventListener('load', async () => {
-            if (localStorage.getItem('isWalletConnected') === 'true') {
-                await connectWallet(true); // Call connectWallet silently
+            if (localStorage.getItem('isWalletConnected') === 'true' && window.ethereum) {
+                try {
+                    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                    if (accounts.length > 0) {
+                        await connectWallet();
+                    } else {
+                        localStorage.removeItem('isWalletConnected');
+                    }
+                } catch (e) {
+                    console.error("Auto-connect failed", e);
+                }
             }
         });
 
-        async function connectWallet(isSilent = false) {
+        async function connectWallet() {
             if (!window.ethereum) return;
             try {
                 const CONTRACT_ADDRESS = ethers.getAddress(RAW_CONTRACT);
-                const accounts = await window.ethereum.request({ method: isSilent ? 'eth_accounts' : 'eth_requestAccounts' });
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 
-                if (accounts.length === 0) {
-                    localStorage.removeItem('isWalletConnected');
-                    return;
-                }
-
                 provider = new ethers.BrowserProvider(window.ethereum);
                 const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                
                 if (chainId !== LIGHTCHAIN_SETUP.chainId) {
                     document.getElementById('switchNetBtn').style.display = 'block';
                     return;
@@ -131,7 +136,6 @@
                 contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
                 const userAddr = accounts[0];
 
-                // Save state
                 localStorage.setItem('isWalletConnected', 'true');
 
                 document.getElementById('walletStatus').innerHTML = `<span class="status-dot online"></span> ${userAddr.substring(0,8)}...`;
@@ -150,7 +154,7 @@
 
                 const adminStatus = await contract.isAdmin(userAddr);
                 if(adminStatus) { document.getElementById('adminConsole').style.display = 'block'; loadMemberList(); }
-            } catch (err) { console.error("Auto-connect failed:", err); }
+            } catch (err) { console.error("Connect failed:", err); }
         }
 
         async function disconnect() {
