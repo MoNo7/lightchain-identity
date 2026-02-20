@@ -15,9 +15,11 @@
         .verified-badge { color: #1877F2; font-weight: bold; }
         .checkmark { background: #1877F2; color: white; border-radius: 50%; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; margin-right: 5px; }
         #adminPanel { border: 2px solid #dc3545; display: none; }
-        .member-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .member-item { padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
         .member-item:last-child { border-bottom: none; }
-        #memberList { max-height: 250px; overflow-y: auto; background: #fff5f5; border-radius: 8px; padding: 10px; }
+        .btn-group { display: flex; gap: 5px; }
+        .small-btn { width: auto; padding: 6px 12px; font-size: 0.85rem; margin: 0; }
+        #memberList { max-height: 300px; overflow-y: auto; background: #fff5f5; border-radius: 8px; padding: 10px; }
     </style>
 </head>
 <body>
@@ -53,17 +55,19 @@
 
     <div class="card" id="adminPanel">
         <h3 style="margin-top:0; color: #dc3545;">Admin Control Center</h3>
-        <p>Logged in as Admin: <strong>0x4D36...c6a2c</strong></p>
         
         <div style="margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
-            <h4>Verify User</h4>
-            <input type="text" id="verifyAddr" placeholder="User Address to Verify (0x...)">
-            <button id="verifyBtn" style="background: #dc3545;">Issue Verification Badge</button>
+            <h4>Quick Manual Action</h4>
+            <input type="text" id="verifyAddr" placeholder="User Address (0x...)">
+            <div style="display:flex; gap: 10px;">
+                <button id="verifyBtn" style="background: #dc3545;">Verify</button>
+                <button id="revokeBtn" style="background: #6c757d;">Revoke</button>
+            </div>
         </div>
 
         <h4>Recent Registrations</h4>
         <div id="memberList">
-            <p style="color: #666; font-style: italic; text-align: center;">Scanning blockchain for members...</p>
+            <p style="color: #666; font-style: italic; text-align: center;">Scanning blockchain...</p>
         </div>
     </div>
 
@@ -110,21 +114,15 @@
                     document.getElementById('adminPanel').style.display = 'block';
                     loadMemberList();
                 }
-
             } catch (err) { alert("Connection failed: " + err.message); }
         }
 
         async function loadMemberList() {
             const listDiv = document.getElementById('memberList');
             try {
-                // Expanded block range to find your early registration
                 const filter = contract.filters.IdentityCreated();
                 const events = await contract.queryFilter(filter, -500000); 
-                
-                if (events.length === 0) {
-                    listDiv.innerHTML = "<p style='text-align:center;'>No members found in recent history.</p>";
-                    return;
-                }
+                if (events.length === 0) { listDiv.innerHTML = "<p>No members found.</p>"; return; }
 
                 listDiv.innerHTML = "";
                 events.forEach(event => {
@@ -134,11 +132,23 @@
                     item.className = 'member-item';
                     item.innerHTML = `
                         <span><strong>${name}</strong> (${addr.substring(0,6)}...)</span>
-                        <button onclick="document.getElementById('verifyAddr').value='${addr}'" style="width: auto; padding: 5px 10px; font-size: 0.8rem; margin: 0;">Select</button>
+                        <div class="btn-group">
+                            <button class="small-btn" onclick="document.getElementById('verifyAddr').value='${addr}'">Select</button>
+                            <button class="small-btn" style="background:#6c757d" onclick="quickRevoke('${addr}')">Revoke</button>
+                        </div>
                     `;
-                    listDiv.prepend(item); // Newest at top
+                    listDiv.prepend(item);
                 });
             } catch (e) { listDiv.innerHTML = "Error loading list."; }
+        }
+
+        async function quickRevoke(addr) {
+            try {
+                const tx = await contract.revokeVerification(addr);
+                alert("Revoke pending...");
+                await tx.wait();
+                alert("Verification Revoked!");
+            } catch (e) { alert("Error: " + e.message); }
         }
 
         async function disconnect() {
@@ -148,7 +158,6 @@
             document.getElementById('connectBtn').style.display = 'inline-block';
             document.getElementById('disconnectBtn').style.display = 'none';
             document.getElementById('adminPanel').style.display = 'none';
-            document.getElementById('searchResult').style.display = 'none';
         }
 
         document.getElementById('searchBtn').onclick = async () => {
@@ -164,26 +173,27 @@
 
         document.getElementById('verifyBtn').onclick = async () => {
             const addr = document.getElementById('verifyAddr').value;
-            if (!ethers.isAddress(addr)) return alert("Invalid Address");
             try {
                 const tx = await contract.verifyIdentity(addr);
-                alert("Transaction pending... please wait.");
                 await tx.wait();
                 alert("Identity Verified!");
-                loadMemberList();
-            } catch (e) { alert("Verification failed. Check your admin permissions."); }
+            } catch (e) { alert("Action failed."); }
+        };
+
+        document.getElementById('revokeBtn').onclick = async () => {
+            const addr = document.getElementById('verifyAddr').value;
+            await quickRevoke(addr);
         };
 
         document.getElementById('createBtn').onclick = async () => {
             const n = document.getElementById('regName').value;
             const d = document.getElementById('regDID').value;
-            if(!contract) return alert("Connect Wallet First");
             try {
                 const tx = await contract.createIdentity(n, d);
                 await tx.wait();
                 alert("Identity Registered!");
                 location.reload();
-            } catch (e) { alert("Transaction failed. You may already be registered."); }
+            } catch (e) { alert("Transaction failed."); }
         };
 
         document.getElementById('connectBtn').onclick = connectWallet;
