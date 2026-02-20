@@ -5,7 +5,7 @@
     <title>Lightchain AI Identity Portal</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f0f2f5; color: #1c1e21; display: flex; height: 100 vh; overflow: hidden; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f0f2f5; color: #1c1e21; display: flex; height: 100vh; overflow: hidden; }
         #leftSidebar { width: 320px; background: #fff; border-right: 1px solid #e1e4e8; display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; overflow-y: auto; }
         .main-utility-area { flex: 1; padding: 40px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; }
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #e1e4e8; width: 100%; box-sizing: border-box; }
@@ -13,6 +13,8 @@
         .header-brand h1 { font-size: 1.4rem; color: #0056b3; margin: 0; }
         #userStatusHeader { text-align: center; padding: 10px 0; border-bottom: 1px solid #eee; margin-bottom: 15px; display: none; }
         .identity-name { font-size: 1.1rem; font-weight: bold; color: #1c1e21; display: flex; align-items: center; justify-content: center; }
+        
+        .stats-badge { background: #e7f3ff; color: #0056b3; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; margin-top: 10px; display: inline-block; }
         
         /* 8-Ball Styles */
         .eight-ball-container { text-align: center; margin-top: 30px; }
@@ -33,7 +35,7 @@
     <div id="leftSidebar">
         <div class="header-brand">
             <h1>Lightchain ID</h1>
-            <small>Portal v3.0</small>
+            <small>Portal v3.1</small>
         </div>
         <div id="userStatusHeader"><div class="identity-name" id="userNameDisplay"></div></div>
         <div class="card" style="padding: 15px; margin-top: 10px;">
@@ -48,9 +50,11 @@
     </div>
 
     <div class="main-utility-area">
-        <div class="card" style="max-width: 600px; text-align: center; min-height: 450px;">
+        <div class="card" style="max-width: 600px; text-align: center; min-height: 480px;">
             <h2 style="margin:0;">🎱 On-Chain Magic 8-Ball</h2>
-            <p id="lockMessage" style="color: #dc3545; font-weight: bold; margin-top: 20px;">[ Verification Required to Consult the AIVM ]</p>
+            <div class="stats-badge">Global Predictions: <span id="globalCount">0</span></div>
+            
+            <p id="lockMessage" style="color: #dc3545; font-weight: bold; margin-top: 20px;">[ Verification Required ]</p>
             
             <div class="eight-ball-container">
                 <div class="eight-ball" id="ball">
@@ -63,12 +67,19 @@
 
     <script>
         const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-        const BALL_CONTRACT_ADDR = "0x048F3aad9f21863F38AfFA89f0d707de2BDE8200";
+        const BALL_CONTRACT_ADDR = "0x7748755cE54f87C33bA4c243F072ef62bAb4717F"; 
 
         const IDENTITY_ABI = [{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"}];
-        const BALL_ABI = [{"inputs":[],"name":"getPrediction","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"}];
+        const BALL_ABI = [{"inputs":[],"name":"getPrediction","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}];
 
         let signer, identityContract, ballContract;
+
+        async function updateGlobalCount() {
+            if (ballContract) {
+                const count = await ballContract.totalPredictions();
+                document.getElementById('globalCount').innerText = count.toString();
+            }
+        }
 
         window.addEventListener('DOMContentLoaded', async () => {
             if (localStorage.getItem('isWalletConnected') === 'true' && window.ethereum) {
@@ -89,6 +100,8 @@
             document.getElementById('connectBtn').style.display = 'none';
             document.getElementById('disconnectBtn').style.display = 'block';
 
+            updateGlobalCount();
+
             const profile = await identityContract.getIdentity(accounts[0]).catch(() => null);
             if(profile && profile[0]) {
                 const check = profile[2] ? '<span class="verified-badge-inline">✓</span>' : '';
@@ -105,21 +118,25 @@
         document.getElementById('shakeBtn').onclick = async () => {
             const ball = document.getElementById('ball');
             const res = document.getElementById('response');
-            
             ball.classList.add('shake');
-            res.innerText = "Oracle is Thinking...";
+            res.innerText = "Writing to Chain...";
             
             try {
-                // Fetch live from your newly deployed contract
-                const prediction = await ballContract.getPrediction();
+                // This will now prompt a transaction signature
+                const tx = await ballContract.getPrediction();
+                const receipt = await tx.wait();
                 
+                // We fetch the result (Since Solidity returns can be tricky on-chain, 
+                // we'll fetch the count again to confirm the update)
+                updateGlobalCount();
+                
+                // For a 8-ball, we just need to let the user know it was recorded
                 setTimeout(() => {
                     ball.classList.remove('shake');
-                    res.innerText = prediction;
+                    res.innerText = " Wisdom Recorded!";
                 }, 800);
             } catch (e) {
-                console.error(e);
-                res.innerText = "AIVM Error: Connection Lost";
+                res.innerText = "Oracle Error";
                 ball.classList.remove('shake');
             }
         };
