@@ -14,6 +14,7 @@
         .status-text { font-size: 0.9rem; margin-top: 15px; opacity: 0.9; display: block; font-weight: bold; }
         .verified-badge { color: #1877F2; font-weight: bold; }
         .checkmark { background: #1877F2; color: white; border-radius: 50%; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; margin-right: 5px; }
+        #adminPanel { border: 2px solid #dc3545; display: none; }
     </style>
 </head>
 <body>
@@ -21,7 +22,10 @@
     <div class="card header">
         <h1 style="margin:0; font-size: 2.2rem;">Lightchain Identity Portal</h1>
         <p style="margin: 10px 0 20px;">Secure On-Chain Identity on Lightchain AI Testnet</p>
-        <button id="connectBtn" style="background: white; color: #007bff; max-width: 250px; margin: auto;">Connect MetaMask</button>
+        <div id="walletActions">
+            <button id="connectBtn" style="background: white; color: #007bff; max-width: 250px; margin: auto;">Connect MetaMask</button>
+            <button id="disconnectBtn" style="display:none; background: #6c757d; color: white; max-width: 200px; margin: 10px auto;">Disconnect</button>
+        </div>
         <button id="switchNetBtn" style="display:none; background: #ffc107; color: #000; max-width: 250px; margin: 10px auto;">Switch to Lightchain</button>
         <span id="walletStatus" class="status-text">Status: Disconnected</span>
     </div>
@@ -44,10 +48,17 @@
         <button id="createBtn" style="background: #28a745;">Register Identity</button>
     </div>
 
+    <div class="card" id="adminPanel">
+        <h3 style="margin-top:0; color: #dc3545;">Admin Verification Tool</h3>
+        <p>Enter a user address to grant them the verified checkmark.</p>
+        <input type="text" id="verifyAddr" placeholder="User Wallet Address (0x...)">
+        <button id="verifyBtn" style="background: #dc3545;">Verify Identity</button>
+    </div>
+
     <script>
         const CONTRACT_ADDRESS = "0xE0087e581f11b9de0d61697a0cb0cdffca8f1f34";
         const LIGHTCHAIN_SETUP = {
-            chainId: '0x1f8', // 504
+            chainId: '0x1f8', 
             chainName: 'Lightchain AI Testnet',
             nativeCurrency: { name: 'LCAI', symbol: 'LCAI', decimals: 18 },
             rpcUrls: ['https://light-testnet-rpc.lightchain.ai'],
@@ -56,95 +67,29 @@
 
         const ABI = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"newAdmin","type":"address"}],"name":"AdminAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"oldAdmin","type":"address"}],"name":"AdminRemoved","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"userAddress","type":"address"},{"indexed":false,"internalType":"string","name":"username","type":"string"},{"indexed":false,"internalType":"string","name":"did","type":"string"}],"name":"IdentityCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"userAddress","type":"address"}],"name":"IdentityVerified","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"userAddress","type":"address"}],"name":"VerificationRevoked","type":"event"},{"inputs":[{"internalType":"address","name":"_newAdmin","type":"address"}],"name":"addAdmin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"_username","type":"string"},{"internalType":"string","name":"_did","type":"string"}],"name":"createIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"profiles","outputs":[{"internalType":"string","name":"username","type":"string"},{"internalType":"string","name":"did","type":"string"},{"internalType":"bool","name":"isVerified","type":"bool"},{"internalType":"bool","name":"exists","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_admin","type":"address"}],"name":"removeAdmin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"}];
 
-        let signer;
-        let contract;
+        let signer, contract, provider;
 
         async function connectWallet() {
-            let provider;
-            if (window.ethereum.providers) {
-                provider = window.ethereum.providers.find((p) => p.isMetaMask);
-            } else {
-                provider = window.ethereum;
-            }
-
-            if (provider) {
-                try {
-                    const accounts = await provider.request({ method: 'eth_requestAccounts' });
-                    const browserProvider = new ethers.BrowserProvider(provider);
-                    
-                    const chainId = await provider.request({ method: 'eth_chainId' });
-                    if (chainId !== LIGHTCHAIN_SETUP.chainId) {
-                        document.getElementById('switchNetBtn').style.display = 'block';
-                        document.getElementById('walletStatus').innerText = "Status: Wrong Network";
-                        return;
-                    }
-
-                    signer = await browserProvider.getSigner();
-                    contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
-
-                    document.getElementById('walletStatus').innerText = "Status: Connected (" + accounts[0].substring(0,6) + "...)";
-                    document.getElementById('walletStatus').style.color = "#4ade80";
-                    document.getElementById('connectBtn').innerText = "Wallet Linked";
-                    document.getElementById('switchNetBtn').style.display = 'none';
-                } catch (err) {
-                    alert("Connection failed: " + err.message);
-                }
-            } else {
-                alert("MetaMask not detected!");
-            }
-        }
-
-        async function switchNetwork() {
-            try {
-                await window.ethereum.request({
-                    method: 'wallet_switchEthereumChain',
-                    params: [{ chainId: LIGHTCHAIN_SETUP.chainId }],
-                });
-                window.location.reload();
-            } catch (err) {
-                if (err.code === 4902) {
-                    await window.ethereum.request({
-                        method: 'wallet_addEthereumChain',
-                        params: [LIGHTCHAIN_SETUP],
-                    });
-                }
-            }
-        }
-
-        document.getElementById('searchBtn').onclick = async () => {
-            const addr = document.getElementById('searchAddr').value;
-            if (!ethers.isAddress(addr)) return alert("Invalid Address");
-            if (!contract) return alert("Please click 'Connect MetaMask' first!");
+            if (!window.ethereum) return alert("MetaMask not detected!");
             
             try {
-                const profile = await contract.getIdentity(addr);
-                document.getElementById('searchResult').style.display = 'block';
-                document.getElementById('resName').innerText = profile[0];
-                document.getElementById('resStatus').innerHTML = profile[2] ? 
-                    `<span class="verified-badge"><span class="checkmark">✓</span> Verified</span>` : 
-                    `<span style="color:gray; font-style:italic;"> (Pending)</span>`;
-            } catch (e) {
-                alert("No identity found for this address.");
-            }
-        };
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                provider = new ethers.BrowserProvider(window.ethereum);
+                
+                const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                if (chainId !== LIGHTCHAIN_SETUP.chainId) {
+                    document.getElementById('switchNetBtn').style.display = 'block';
+                    document.getElementById('walletStatus').innerText = "Status: Please Switch Networks";
+                    return;
+                }
 
-        document.getElementById('createBtn').onclick = async () => {
-            const name = document.getElementById('regName').value;
-            const did = document.getElementById('regDID').value;
-            if(!contract) return alert("Connect Wallet First");
-            try {
-                const tx = await contract.createIdentity(name, did);
-                document.getElementById('walletStatus').innerText = "Status: Transaction Pending...";
-                await tx.wait();
-                alert("Identity Registered successfully!");
-                location.reload();
-            } catch (e) {
-                alert("Error: " + (e.reason || "Check if you already have an identity"));
-            }
-        };
+                signer = await provider.getSigner();
+                contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
 
-        document.getElementById('connectBtn').onclick = connectWallet;
-        document.getElementById('switchNetBtn').onclick = switchNetwork;
-    </script>
-</body>
-</html>
+                // Update UI
+                const userAddr = accounts[0];
+                document.getElementById('walletStatus').innerText = "Status: Connected (" + userAddr.substring(0,6) + "...)";
+                document.getElementById('walletStatus').style.color = "#4ade80";
+                document.getElementById('connectBtn').style.display = 'none';
+                document.getElementById('disconnectBtn').style.display = 'inline-block';
+                document.getElementById('switchNetBtn').style.display = '
