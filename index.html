@@ -31,7 +31,7 @@
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity</h1><span class="version-tag">v3.9</span></div>
+        <div class="nav-title"><h1>Lightchain Identity</h1><span class="version-tag">v4.0</span></div>
         <div class="token-display"><span id="tokenBalance">0.00</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -84,9 +84,10 @@
             try {
                 const count = await ballContract.totalPredictions();
                 document.getElementById('globalCount').innerText = count.toString();
-                const balance = await signer.provider.getBalance(await signer.getAddress());
+                const address = await signer.getAddress();
+                const balance = await signer.provider.getBalance(address);
                 document.getElementById('tokenBalance').innerText = parseFloat(ethers.formatEther(balance)).toFixed(3);
-            } catch(e) { console.error("Update failed", e); }
+            } catch(e) { console.error("Data update failed", e); }
         }
 
         async function connectWallet() {
@@ -103,17 +104,22 @@
                 document.getElementById('disconnectBtn').style.display = 'block';
                 document.getElementById('walletStatus').innerText = "Addr: " + accounts[0].substring(0, 10) + "...";
 
+                // RESTORE LAST ANSWER IF EXISTS
+                const lastAnswer = localStorage.getItem('lastOracleAnswer');
+                if(lastAnswer) document.getElementById('response').innerText = lastAnswer;
+
                 await updateData();
                 
-                // Set up event listener for Oracle
                 ballContract.on("OracleAnswer", (user, question, answer) => {
                     const feed = document.getElementById('txFeed');
                     const item = document.createElement('div');
                     item.className = 'feed-item';
-                    item.innerHTML = `<strong>Consultation:</strong> "${question.substring(0, 20)}..."`;
+                    item.innerHTML = `<strong>Oracle:</strong> "${question.substring(0, 15)}..."`;
                     feed.prepend(item);
+                    
                     if (user.toLowerCase() === accounts[0].toLowerCase()) {
                         document.getElementById('response').innerText = answer;
+                        localStorage.setItem('lastOracleAnswer', answer); // SAVE FOR RELOAD
                     }
                 });
 
@@ -129,15 +135,8 @@
                     document.getElementById('adminConsole').style.display = 'block';
                     document.getElementById('withdrawBtn').style.display = 'block';
                 }
-            } catch(e) { console.error("Connection failed", e); }
+            } catch(e) { console.error("Connection error", e); }
         }
-
-        document.getElementById('oracleQuestion').oninput = (e) => {
-            const val = e.target.value.toLowerCase();
-            const isBad = BAD_WORDS.some(word => val.includes(word));
-            document.getElementById('profanityWarning').style.display = isBad ? 'block' : 'none';
-            document.getElementById('shakeBtn').disabled = isBad;
-        };
 
         document.getElementById('shakeBtn').onclick = async () => {
             const question = document.getElementById('oracleQuestion').value;
@@ -145,33 +144,45 @@
             const cost = (0.01 * (Math.floor(question.length / 10) + 1)).toFixed(2);
             const ball = document.getElementById('ball');
             const res = document.getElementById('response');
+            
             ball.classList.add('shake');
             res.innerText = "Mining Wisdom...";
+            
             try {
-                const tx = await ballContract.getPrediction(question, { value: ethers.parseEther(cost), gasLimit: 500000 });
+                const tx = await ballContract.getPrediction(question, { 
+                    value: ethers.parseEther(cost), 
+                    gasLimit: 800000 // Increased gas limit for stability
+                });
                 await tx.wait(); 
                 await updateData();
             } catch (e) { 
-                alert("Consultation Failed."); 
+                console.error(e);
+                alert("Consultation Failed. Check LCAI Balance."); 
                 res.innerText = "?";
             } finally { ball.classList.remove('shake'); }
         };
 
-        document.getElementById('withdrawBtn').onclick = async () => { try { await (await ballContract.withdraw()).wait(); alert("Fees Claimed!"); await updateData(); } catch(e) { alert("Withdraw failed"); } };
+        document.getElementById('withdrawBtn').onclick = async () => {
+            try {
+                const tx = await ballContract.withdraw({ gasLimit: 200000 });
+                await tx.wait();
+                alert("LCAI Fees Withdrawn successfully!");
+                await updateData();
+            } catch(e) { 
+                console.error(e);
+                alert("Withdrawal failed. Are you the contract owner?"); 
+            }
+        };
+
         document.getElementById('verifyBtn').onclick = async () => { try { await (await identityContract.verifyIdentity(document.getElementById('verifyAddr').value)).wait(); location.reload(); } catch(e) { alert("Verify failed"); } };
         document.getElementById('revokeBtn').onclick = async () => { try { await (await identityContract.revokeVerification(document.getElementById('verifyAddr').value)).wait(); location.reload(); } catch(e) { alert("Revoke failed"); } };
         document.getElementById('connectBtn').onclick = connectWallet;
-        document.getElementById('disconnectBtn').onclick = () => { localStorage.removeItem('isWalletConnected'); location.reload(); };
+        document.getElementById('disconnectBtn').onclick = () => { localStorage.removeItem('isWalletConnected'); localStorage.removeItem('lastOracleAnswer'); location.reload(); };
 
         window.addEventListener('DOMContentLoaded', async () => {
             if (localStorage.getItem('isWalletConnected') === 'true' && window.ethereum) {
-                // Check if already authorized in MetaMask
                 const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-                if (accounts.length > 0) {
-                    await connectWallet();
-                } else {
-                    localStorage.removeItem('isWalletConnected');
-                }
+                if (accounts.length > 0) await connectWallet();
             }
         });
     </script>
