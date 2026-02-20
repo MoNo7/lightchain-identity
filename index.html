@@ -5,69 +5,93 @@
     <title>Lightchain AI Identity Portal</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; padding: 20px; max-width: 800px; margin: auto; background: #f0f2f5; color: #1c1e21; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f0f2f5; color: #1c1e21; display: flex; min-height: 100vh; }
+        
+        /* Layout Containers */
+        .main-container { flex: 1; padding: 20px; max-width: 800px; margin: 0 auto; transition: margin-right 0.3s; }
+        
+        /* Side Menu Styles */
+        #adminPanel { 
+            width: 350px; 
+            background: white; 
+            border-left: 2px solid #dc3545; 
+            padding: 20px; 
+            box-shadow: -4px 0 15px rgba(0,0,0,0.1); 
+            display: none; /* Controlled by JS */
+            flex-direction: column;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+
         .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 25px; border: 1px solid #e1e4e8; }
         .header { text-align: center; background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; padding: 40px 20px; border-radius: 15px; }
+        
         input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-size: 1rem; }
         button { background: #007bff; color: white; border: none; padding: 14px; border-radius: 10px; cursor: pointer; width: 100%; font-weight: 600; font-size: 1rem; transition: 0.3s; margin-top: 10px; }
         button:hover { background: #0056b3; transform: translateY(-2px); }
+        
         .status-text { font-size: 0.9rem; margin-top: 15px; opacity: 0.9; display: block; font-weight: bold; }
         .verified-badge { color: #1877F2; font-weight: bold; }
         .checkmark { background: #1877F2; color: white; border-radius: 50%; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; margin-right: 5px; }
-        #adminPanel { border: 2px solid #dc3545; display: none; }
-        .member-item { padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-        .member-item:last-child { border-bottom: none; }
+        
+        .member-item { padding: 12px; border-bottom: 1px solid #eee; display: flex; flex-direction: column; gap: 8px; }
         .btn-group { display: flex; gap: 5px; }
-        .small-btn { width: auto; padding: 6px 12px; font-size: 0.85rem; margin: 0; }
-        #memberList { max-height: 300px; overflow-y: auto; background: #fff5f5; border-radius: 8px; padding: 10px; }
+        .small-btn { width: auto; padding: 6px 12px; font-size: 0.8rem; margin: 0; flex: 1; }
+        #memberList { background: #fff5f5; border-radius: 8px; padding: 5px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-    <div class="card header">
-        <h1 style="margin:0; font-size: 2.2rem;">Lightchain Identity Portal</h1>
-        <p style="margin: 10px 0 20px;">Secure On-Chain Identity on Lightchain AI Testnet</p>
-        <div id="walletActions">
-            <button id="connectBtn" style="background: white; color: #007bff; max-width: 250px; margin: auto;">Connect MetaMask</button>
-            <button id="disconnectBtn" style="display:none; background: #6c757d; color: white; max-width: 200px; margin: 10px auto;">Disconnect Wallet</button>
+    <div class="main-container">
+        <div class="card header">
+            <h1 style="margin:0; font-size: 2.2rem;">Lightchain Identity Portal</h1>
+            <p style="margin: 10px 0 20px;">Secure On-Chain Identity on Lightchain AI Testnet</p>
+            <div id="walletActions">
+                <button id="connectBtn" style="background: white; color: #007bff; max-width: 250px; margin: auto;">Connect MetaMask</button>
+                <button id="disconnectBtn" style="display:none; background: #6c757d; color: white; max-width: 200px; margin: 10px auto;">Disconnect Wallet</button>
+            </div>
+            <button id="switchNetBtn" style="display:none; background: #ffc107; color: #000; max-width: 250px; margin: 10px auto;">Switch to Lightchain</button>
+            <span id="walletStatus" class="status-text">Status: Disconnected</span>
         </div>
-        <button id="switchNetBtn" style="display:none; background: #ffc107; color: #000; max-width: 250px; margin: 10px auto;">Switch to Lightchain</button>
-        <span id="walletStatus" class="status-text">Status: Disconnected</span>
-    </div>
 
-    <div class="card">
-        <h3 style="margin-top:0;">Global Identity Lookup</h3>
-        <div style="display:flex; gap: 10px;">
-            <input type="text" id="searchAddr" placeholder="Search by Wallet Address (0x...)">
-            <button id="searchBtn" style="width: 120px; margin-top: 10px; background: #6c757d;">Search</button>
-        </div>
-        <div id="searchResult" style="display:none; margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 10px;">
-            <p style="margin:0;"><strong>User:</strong> <span id="resName"></span> <span id="resStatus"></span></p>
-        </div>
-    </div>
-
-    <div class="card">
-        <h3 style="margin-top:0;">Register Your Identity</h3>
-        <input type="text" id="regName" placeholder="Desired Username">
-        <input type="text" id="regDID" placeholder="DID or Profile Link">
-        <button id="createBtn" style="background: #28a745;">Register Identity</button>
-    </div>
-
-    <div class="card" id="adminPanel">
-        <h3 style="margin-top:0; color: #dc3545;">Admin Control Center</h3>
-        
-        <div style="margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
-            <h4>Quick Manual Action</h4>
-            <input type="text" id="verifyAddr" placeholder="User Address (0x...)">
+        <div class="card">
+            <h3 style="margin-top:0;">Global Identity Lookup</h3>
             <div style="display:flex; gap: 10px;">
-                <button id="verifyBtn" style="background: #dc3545;">Verify</button>
-                <button id="revokeBtn" style="background: #6c757d;">Revoke</button>
+                <input type="text" id="searchAddr" placeholder="Search by Wallet Address (0x...)">
+                <button id="searchBtn" style="width: 120px; margin-top: 10px; background: #6c757d;">Search</button>
+            </div>
+            <div id="searchResult" style="display:none; margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 10px;">
+                <p style="margin:0;"><strong>User:</strong> <span id="resName"></span> <span id="resStatus"></span></p>
             </div>
         </div>
 
-        <h4>Recent Registrations</h4>
+        <div class="card">
+            <h3 style="margin-top:0;">Register Your Identity</h3>
+            <input type="text" id="regName" placeholder="Desired Username">
+            <input type="text" id="regDID" placeholder="DID or Profile Link">
+            <button id="createBtn" style="background: #28a745;">Register Identity</button>
+        </div>
+    </div>
+
+    <div id="adminPanel">
+        <h3 style="margin-top:0; color: #dc3545; border-bottom: 2px solid #dc3545; padding-bottom: 10px;">Admin Console</h3>
+        <p style="font-size: 0.85rem;">Logged in as Manager: <br><strong id="adminAddrDisplay"></strong></p>
+        
+        <div style="margin-top: 20px;">
+            <h4 style="margin-bottom:5px;">Manual Action</h4>
+            <input type="text" id="verifyAddr" placeholder="Target Address (0x...)">
+            <div class="btn-group">
+                <button id="verifyBtn" style="background: #dc3545; flex:1;">Verify</button>
+                <button id="revokeBtn" style="background: #6c757d; flex:1;">Revoke</button>
+            </div>
+        </div>
+
+        <h4 style="margin-top:30px; margin-bottom:10px;">Registration Queue</h4>
         <div id="memberList">
-            <p style="color: #666; font-style: italic; text-align: center;">Scanning blockchain...</p>
+            <p style="color: #666; font-style: italic; text-align: center; padding: 20px;">Scanning chain...</p>
         </div>
     </div>
 
@@ -111,7 +135,8 @@
 
                 const adminStatus = await contract.isAdmin(userAddr);
                 if(adminStatus) {
-                    document.getElementById('adminPanel').style.display = 'block';
+                    document.getElementById('adminPanel').style.display = 'flex';
+                    document.getElementById('adminAddrDisplay').innerText = userAddr.substring(0,20) + "...";
                     loadMemberList();
                 }
             } catch (err) { alert("Connection failed: " + err.message); }
@@ -122,7 +147,7 @@
             try {
                 const filter = contract.filters.IdentityCreated();
                 const events = await contract.queryFilter(filter, -500000); 
-                if (events.length === 0) { listDiv.innerHTML = "<p>No members found.</p>"; return; }
+                if (events.length === 0) { listDiv.innerHTML = "<p style='padding:20px;'>Empty queue.</p>"; return; }
 
                 listDiv.innerHTML = "";
                 events.forEach(event => {
@@ -131,7 +156,7 @@
                     const item = document.createElement('div');
                     item.className = 'member-item';
                     item.innerHTML = `
-                        <span><strong>${name}</strong> (${addr.substring(0,6)}...)</span>
+                        <div style="font-size:0.9rem;"><strong>${name}</strong><br><small style="color:gray;">${addr.substring(0,18)}...</small></div>
                         <div class="btn-group">
                             <button class="small-btn" onclick="document.getElementById('verifyAddr').value='${addr}'">Select</button>
                             <button class="small-btn" style="background:#6c757d" onclick="quickRevoke('${addr}')">Revoke</button>
