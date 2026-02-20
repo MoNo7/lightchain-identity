@@ -17,44 +17,44 @@
         #rightSidebar { width: 280px; background: #fff; border-left: 1px solid #e1e4e8; padding: 20px; overflow-y: auto; box-sizing: border-box; }
         .main-utility-area { flex: 1; padding: 40px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; }
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #e1e4e8; width: 100%; box-sizing: border-box; }
-        .identity-name { font-size: 1.1rem; font-weight: bold; display: flex; align-items: center; justify-content: center; }
-        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 0.95rem; }
-        .primary-btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; margin-top: 10px; transition: 0.2s; }
-        .cost-indicator { font-size: 0.8rem; color: #666; margin: 5px 0 15px 0; font-weight: bold; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        .primary-btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; margin-top: 10px; }
+        .small-btn { padding: 8px; font-size: 0.75rem; flex: 1; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; }
         #adminConsole { display: none; border-top: 3px solid var(--admin); padding-top: 15px; }
-        .small-btn { padding: 6px; font-size: 0.75rem; flex: 1; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        .eight-ball { width: 200px; height: 200px; background: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; margin: 20px auto; position: relative; box-shadow: inset -15px -15px 40px rgba(255,255,255,0.1), 0 10px 20px rgba(0,0,0,0.3); }
-        .inner-circle { width: 100px; height: 100px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #000; font-size: 12px; padding: 12px; text-align: center; font-weight: bold; border: 4px solid #111; }
-        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        .feed-item { padding: 10px; border-bottom: 1px solid #eee; font-size: 0.8rem; background: #fcfcfc; margin-bottom: 5px; border-radius: 6px; }
+        .eight-ball { width: 180px; height: 180px; background: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; margin: 20px auto; box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
+        .inner-circle { width: 90px; height: 90px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #000; font-size: 11px; padding: 10px; text-align: center; font-weight: bold; border: 3px solid #111; }
+        .shake { animation: shake 0.5s; }
         @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } }
         .verified-badge-inline { background: #1877F2; color: white; border-radius: 50%; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; margin-left: 8px; }
     </style>
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity</h1><span class="version-tag">v3.6</span></div>
+        <div class="nav-title"><h1>Lightchain Identity</h1><span class="version-tag">v3.7</span></div>
         <div class="token-display"><span id="tokenBalance">0.00</span> LCAI</div>
     </div>
     <div class="content-wrapper">
         <div id="leftSidebar">
-            <div id="userStatusHeader" style="display:none;"><div class="identity-name" id="userNameDisplay"></div></div>
+            <div id="userStatusHeader" style="display:none; margin-bottom:15px; text-align:center;"><div class="identity-name" id="userNameDisplay"></div></div>
             <div class="card">
-                <div id="walletStatus">Disconnected</div>
+                <div id="walletStatus" style="font-size: 0.8rem; margin-bottom:10px;">Disconnected</div>
                 <button id="connectBtn" class="primary-btn">Connect Wallet</button>
+                <button id="withdrawBtn" class="small-btn" style="width:100%; margin-top:10px; background:#28a745; display:none;">Withdraw Fees</button>
                 <button id="disconnectBtn" class="primary-btn" style="display:none; background:#6c757d;">Disconnect</button>
             </div>
             <div id="adminConsole" class="card">
-                <h4 style="color:var(--admin); margin: 0 0 15px 0;">Admin Console</h4>
+                <h4 style="color:var(--admin); margin: 0 0 10px 0;">Admin Console</h4>
                 <input type="text" id="verifyAddr" placeholder="Target 0x...">
                 <div style="display:flex; gap: 4px;"><button id="verifyBtn" class="small-btn" style="background:var(--admin);">Verify</button><button id="revokeBtn" class="small-btn">Revoke</button></div>
             </div>
         </div>
         <div class="main-utility-area">
-            <div class="card" style="max-width: 550px; text-align: center;">
+            <div class="card" style="max-width: 500px; text-align: center;">
                 <h2 style="margin:0;">🔮 Oracle Consultation</h2>
                 <div id="oracleUI" style="display:none; margin-top: 20px;">
-                    <input type="text" id="oracleQuestion" placeholder="Ask the AIVM a question...">
-                    <div class="cost-indicator">Required Fee: <span id="estCost">0.01</span> LCAI</div>
+                    <input type="text" id="oracleQuestion" placeholder="Ask a question (0.01 LCAI base fee)...">
+                    <div id="profanityWarning" style="color:red; font-size:0.75rem; display:none; margin-top:5px;">⚠️ Inappropriate language detected.</div>
                     <div class="eight-ball" id="ball"><div class="inner-circle" id="response">?</div></div>
                     <button id="shakeBtn" class="primary-btn" style="background: #28a745;">Pay & Consult Oracle</button>
                 </div>
@@ -64,26 +64,27 @@
             <div class="card">
                 <h4 style="margin: 0 0 10px 0; color: #0056b3;">Oracle Stats</h4>
                 <div>Global Predictions: <strong id="globalCount">0</strong></div>
+                <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
+                <h4 style="font-size:0.85rem; margin-bottom:10px;">Live Feed (Recent)</h4>
+                <div id="txFeed"></div>
             </div>
         </div>
     </div>
     <script>
         const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
         const BALL_CONTRACT_ADDR = "0x6780F956709304720b2E0B494aB30deA0F86f842";
-        const IDENTITY_ABI = [{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
-        const BALL_ABI = [{"inputs":[{"internalType":"string","name":"_question","type":"string"}],"name":"getPrediction","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}];
-        let signer, identityContract, ballContract;
+        const BAD_WORDS = ["fuck", "shit", "bitch", "asshole"]; // Simple monitor
 
-        document.getElementById('oracleQuestion').oninput = (e) => {
-            const multiplier = Math.floor(e.target.value.length / 10) + 1;
-            document.getElementById('estCost').innerText = (0.01 * multiplier).toFixed(2);
-        };
+        const BALL_ABI = [{"inputs":[{"internalType":"string","name":"_question","type":"string"}],"name":"getPrediction","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"}];
+        const IDENTITY_ABI = [{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
+
+        let signer, ballContract, identityContract;
 
         async function updateData() {
             const count = await ballContract.totalPredictions();
             document.getElementById('globalCount').innerText = count.toString();
             const balance = await signer.provider.getBalance(await signer.getAddress());
-            document.getElementById('tokenBalance').innerText = parseFloat(ethers.formatEther(balance)).toFixed(2);
+            document.getElementById('tokenBalance').innerText = parseFloat(ethers.formatEther(balance)).toFixed(3);
         }
 
         async function connectWallet() {
@@ -91,46 +92,12 @@
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
             const provider = new ethers.BrowserProvider(window.ethereum);
             signer = await provider.getSigner();
-            identityContract = new ethers.Contract(IDENTITY_CONTRACT, IDENTITY_ABI, signer);
             ballContract = new ethers.Contract(BALL_CONTRACT_ADDR, BALL_ABI, signer);
-            localStorage.setItem('isWalletConnected', 'true');
+            identityContract = new ethers.Contract(IDENTITY_CONTRACT, IDENTITY_ABI, signer);
+
             document.getElementById('connectBtn').style.display = 'none';
             document.getElementById('disconnectBtn').style.display = 'block';
-            document.getElementById('walletStatus').innerText = "Connected: " + accounts[0].substring(0,10) + "...";
+            document.getElementById('walletStatus').innerText = "Addr: " + accounts[0].substring(0,10) + "...";
+
             updateData();
-            const profile = await identityContract.getIdentity(accounts[0]).catch(() => null);
-            if(profile && profile[0]) {
-                document.getElementById('userStatusHeader').style.display = 'block';
-                document.getElementById('userNameDisplay').innerHTML = `${profile[0]} ${profile[2] ? '<span class="verified-badge-inline">✓</span>' : ''}`;
-                if(profile[2]) document.getElementById('oracleUI').style.display = 'block';
-            }
-            if(await identityContract.isAdmin(accounts[0])) document.getElementById('adminConsole').style.display = 'block';
-        }
-
-        document.getElementById('shakeBtn').onclick = async () => {
-            const question = document.getElementById('oracleQuestion').value;
-            if(!question) return alert("Please ask a question.");
-            const cost = document.getElementById('estCost').innerText;
-            const ball = document.getElementById('ball');
-            const res = document.getElementById('response');
-            ball.classList.add('shake');
-            res.innerText = "Consulting...";
-            try {
-                const tx = await ballContract.getPrediction(question, { 
-                    value: ethers.parseEther(cost),
-                    gasLimit: 300000 
-                });
-                await tx.wait();
-                updateData();
-                res.innerText = "Success!";
-            } catch (e) {
-                res.innerText = "Error: Fee or AIVM issue.";
-            } finally { ball.classList.remove('shake'); }
-        };
-
-        document.getElementById('connectBtn').onclick = connectWallet;
-        document.getElementById('disconnectBtn').onclick = () => { localStorage.removeItem('isWalletConnected'); location.reload(); };
-        window.addEventListener('DOMContentLoaded', () => { if (localStorage.getItem('isWalletConnected') === 'true') setTimeout(connectWallet, 500); });
-    </script>
-</body>
-</html>
+            const profile = await identityContract.getIdentity(accounts[0]).catch(() => null
