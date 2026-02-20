@@ -10,26 +10,23 @@
         #topNav { height: 60px; background: #fff; border-bottom: 1px solid #e1e4e8; display: flex; align-items: center; justify-content: space-between; padding: 0 25px; box-sizing: border-box; }
         .nav-title { display: flex; align-items: baseline; gap: 10px; }
         .nav-title h1 { font-size: 1.2rem; color: #0056b3; margin: 0; }
-        .token-display { background: #f8f9fa; padding: 8px 15px; border-radius: 20px; border: 1px solid #e1e4e8; font-weight: 700; font-size: 0.9rem; color: var(--success); display: flex; align-items: center; gap: 8px; }
+        .token-display { background: #f8f9fa; padding: 8px 15px; border-radius: 20px; border: 1px solid #e1e4e8; font-weight: 700; font-size: 0.9rem; color: var(--success); }
         .content-wrapper { display: flex; flex: 1; overflow: hidden; }
-        #leftSidebar { width: 320px; background: #fff; border-right: 1px solid #e1e4e8; padding: 20px; overflow-y: auto; box-sizing: border-box; }
-        #rightSidebar { width: 280px; background: #fff; border-left: 1px solid #e1e4e8; padding: 20px; overflow-y: auto; box-sizing: border-box; }
+        #leftSidebar { width: 320px; background: #fff; border-right: 1px solid #e1e4e8; padding: 20px; overflow-y: auto; }
+        #rightSidebar { width: 280px; background: #fff; border-left: 1px solid #e1e4e8; padding: 20px; }
         .main-utility-area { flex: 1; padding: 40px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; }
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #e1e4e8; width: 100%; box-sizing: border-box; }
-        .primary-btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; margin-top: 10px; transition: 0.2s; }
+        .primary-btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; margin-top: 10px; }
         .small-btn { padding: 8px; font-size: 0.75rem; flex: 1; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; }
-        .mimo-badge { background: var(--mimo); color: white; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; margin-left: 8px; box-shadow: 0 0 8px rgba(24, 119, 242, 0.6), inset 0 0 4px rgba(255,255,255,0.4); text-shadow: 0 1px 2px rgba(0,0,0,0.3); font-weight: bold; vertical-align: middle; }
-        .admin-status-msg { font-size: 0.75rem; margin-top: 15px; padding: 10px; border-radius: 6px; text-align: center; font-weight: 600; border: 1px solid transparent; min-height: 20px; line-height: 1.4; }
-        .result-window { margin-top: 20px; padding: 15px; background: #f8f9fa; border: 2px dashed #cbd5e0; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.95rem; color: #2d3748; min-height: 50px; text-align: center; line-height: 1.5; }
-        .tx-item { font-size: 0.75rem; color: #555; border-bottom: 1px solid #eee; padding: 8px 0; animation: fadeIn 0.5s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
-        .tx-item strong { color: #0056b3; display: block; }
-        input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 12px; box-sizing: border-box; font-size: 1rem; }
+        .mimo-badge { background: var(--mimo); color: white; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; margin-left: 8px; box-shadow: 0 0 8px rgba(24, 119, 242, 0.6); font-weight: bold; vertical-align: middle; }
+        .admin-status-msg { font-size: 0.75rem; margin-top: 10px; padding: 8px; border-radius: 6px; text-align: center; font-weight: 600; border: 1px solid transparent; }
+        .result-window { margin-top: 20px; padding: 15px; background: #f8f9fa; border: 2px dashed #cbd5e0; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.95rem; color: #2d3748; text-align: center; }
+        input[type="text"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 10px; box-sizing: border-box; }
     </style>
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity</h1><span style="font-size:0.7rem; color:#999;">v7.2</span></div>
+        <div class="nav-title"><h1>Lightchain Identity</h1><span style="font-size:0.7rem; color:#999;">v7.3</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -42,17 +39,12 @@
             </div>
             <div id="adminConsole" class="card" style="display:none;">
                 <h4 style="color:var(--admin); margin: 0 0 10px 0; font-size: 0.85rem;">Admin Management</h4>
-                <div style="padding-bottom:15px; border-bottom:1px solid #eee; margin-bottom:15px;">
-                    <input type="text" id="lookupAddr" placeholder="Lookup 0x..." style="margin-bottom:5px; padding:8px;">
-                    <button id="lookupBtn" class="small-btn" style="width:100%; background: var(--primary);">Query Global Registry</button>
-                    <div id="lookupResults" class="lookup-results" style="display:none;"></div>
-                </div>
                 <div class="treasury-box" style="background:#fff5f5; border:1px solid #feb2b2; padding:12px; border-radius:8px; margin-bottom:15px; text-align:center;">
-                    <div style="font-size: 0.65rem; color:#c53030; margin-bottom:5px;">ADMIN CLAIM VERIFICATION: <span id="adminCheck">PENDING</span></div>
+                    <div style="font-size: 0.65rem; color:#c53030; margin-bottom:5px;">OWNER CLAIM STATUS: <span id="adminCheck">PENDING</span></div>
                     <div style="font-size: 1.4rem; font-weight: 800; color: #c53030;"><span id="treasuryBalance">0.0000</span> LCAI</div>
                     <button id="withdrawBtn" class="small-btn" style="width:100%; margin-top:10px; background:#c53030;">Claim Fees</button>
                 </div>
-                <input type="text" id="verifyAddr" placeholder="Target 0x..." style="padding:8px;">
+                <input type="text" id="verifyAddr" placeholder="Target 0x...">
                 <div style="display:flex; gap: 4px;">
                     <button id="verifyBtn" class="small-btn" style="background:var(--success);">Verify User</button>
                     <button id="revokeBtn" class="small-btn">Revoke User</button>
@@ -60,7 +52,6 @@
                 <div id="adminFeedback" class="admin-status-msg" style="display:none;"></div>
             </div>
         </div>
-
         <div class="main-utility-area">
             <div class="card" style="max-width: 500px; text-align: center;">
                 <h2 style="margin:0; font-size:1.4rem;">AIVM Oracle</h2>
@@ -71,7 +62,6 @@
                 </div>
             </div>
         </div>
-
         <div id="rightSidebar">
             <div class="card">
                 <h4 style="margin: 0 0 10px 0; color: #0056b3; font-size:0.9rem;">Network Metrics</h4>
@@ -81,12 +71,10 @@
             </div>
         </div>
     </div>
-
     <script>
         const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34"; 
         const BALL_CONTRACT_ADDR = "0x6C921cbC1C12Af06fE22df549cA89053928afe64"; 
 
-        // UPDATED RELEVANCE LOGIC
         const answers = {
             crypto: ["Market indicators suggest a bullish trend for decentralized assets.", "Verify the smart contract security before increasing liquidity.", "Consensus layers are currently stable; proceeding with caution is advised."],
             future: ["Your current trajectory aligns with the desired decentralized outcome.", "The probability of this occurrence is statistically significant within 48 hours.", "Variables in play suggest an imminent shift in network status."],
@@ -98,20 +86,11 @@
 
         let signer, ballContract, identityContract;
 
-        function logToFeed(q) {
-            const feed = document.getElementById('txFeed');
-            if(feed.innerText.includes("No recent")) feed.innerHTML = "";
-            const div = document.createElement('div');
-            div.className = 'tx-item';
-            div.innerHTML = `<strong>Query: ${q.substring(0, 24)}...</strong> User: Anonymous User`;
-            feed.prepend(div);
-        }
-
         async function hardSync() {
             try {
+                const address = await signer.getAddress();
                 const count = await ballContract.totalPredictions();
                 document.getElementById('globalCount').innerText = count.toString();
-                const address = await signer.getAddress();
                 const balance = await signer.provider.getBalance(address);
                 document.getElementById('tokenBalance').innerText = parseFloat(ethers.formatEther(balance)).toFixed(4);
                 const tBal = await signer.provider.getBalance(BALL_CONTRACT_ADDR);
@@ -120,55 +99,61 @@
                 const checkStatus = document.getElementById('adminCheck');
                 checkStatus.innerText = (contractAdmin.toLowerCase() === address.toLowerCase()) ? "VERIFIED ✓" : "NOT AUTHORIZED";
                 checkStatus.style.color = (contractAdmin.toLowerCase() === address.toLowerCase()) ? "#28a745" : "#dc3545";
-            } catch(e) {}
+            } catch(e) { console.warn("Syncing..."); }
         }
 
         async function connectWallet(auto = false) {
             if (!window.ethereum) return;
-            const accounts = auto ? await window.ethereum.request({ method: 'eth_accounts' }) : await window.ethereum.request({ method: 'eth_requestAccounts' });
-            if (auto && accounts.length === 0) return;
-            const provider = new ethers.BrowserProvider(window.ethereum);
-            signer = await provider.getSigner();
-            ballContract = new ethers.Contract(BALL_CONTRACT_ADDR, BALL_ABI, signer);
-            identityContract = new ethers.Contract(IDENTITY_CONTRACT, IDENTITY_ABI, signer);
-            document.getElementById('connectBtn').style.display = 'none';
-            document.getElementById('disconnectBtn').style.display = 'block';
-            document.getElementById('walletStatus').innerText = "Wallet: " + accounts[0].substring(0, 10);
-            localStorage.setItem('isWalletConnected', 'true');
-            await hardSync();
-            ballContract.on("OracleAnswer", (user, question) => {
-                logToFeed(question);
-                if (user.toLowerCase() === accounts[0].toLowerCase()) {
-                    const q = question.toLowerCase();
-                    const category = q.includes("crypto") || q.includes("coin") ? "crypto" : (q.includes("future") || q.includes("will") ? "future" : "default");
-                    const finalAnswer = answers[category][Math.floor(Math.random() * answers[category].length)];
-                    document.getElementById('resultText').innerText = finalAnswer;
-                    document.getElementById('resultText').style.borderColor = "#28a745";
-                    hardSync();
+            try {
+                const accounts = auto ? await window.ethereum.request({ method: 'eth_accounts' }) : await window.ethereum.request({ method: 'eth_requestAccounts' });
+                if (auto && accounts.length === 0) return;
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                signer = await provider.getSigner();
+                ballContract = new ethers.Contract(BALL_CONTRACT_ADDR, BALL_ABI, signer);
+                identityContract = new ethers.Contract(IDENTITY_CONTRACT, IDENTITY_ABI, signer);
+                document.getElementById('connectBtn').style.display = 'none';
+                document.getElementById('disconnectBtn').style.display = 'block';
+                document.getElementById('walletStatus').innerText = "Wallet: " + accounts[0].substring(0, 10);
+                localStorage.setItem('isWalletConnected', 'true');
+                await hardSync();
+                const profile = await identityContract.getIdentity(accounts[0]).catch(() => null);
+                if(profile && profile[2]) {
+                    document.getElementById('userStatusHeader').style.display = 'block';
+                    document.getElementById('userNameDisplay').innerHTML = `MiMo <span class="mimo-badge">✓</span>`;
+                    document.getElementById('oracleUI').style.display = 'block';
                 }
-            });
-            const profile = await identityContract.getIdentity(accounts[0]).catch(() => null);
-            if(profile && profile[2]) {
-                document.getElementById('userStatusHeader').style.display = 'block';
-                document.getElementById('userNameDisplay').innerHTML = `MiMo <span class="mimo-badge">✓</span>`;
-                document.getElementById('oracleUI').style.display = 'block';
-            }
-            if(await identityContract.isAdmin(accounts[0])) document.getElementById('adminConsole').style.display = 'block';
+                if(await identityContract.isAdmin(accounts[0])) document.getElementById('adminConsole').style.display = 'block';
+            } catch(e) {}
         }
 
         document.getElementById('shakeBtn').onclick = async () => {
             const q = document.getElementById('oracleQuestion').value;
             if(!q) return;
             const cost = (0.001 * (Math.floor(q.length / 10) + 1)).toFixed(3);
-            document.getElementById('resultText').innerText = "AIVM Processing... (Minimizing Gas)";
+            document.getElementById('resultText').innerText = "Processing Inference Request...";
             try {
-                const tx = await ballContract.getPrediction(q, { value: ethers.parseEther(cost), gasLimit: 300000 });
+                const tx = await ballContract.getPrediction(q, { value: ethers.parseEther(cost), gasLimit: 500000 });
                 await tx.wait();
-            } catch (e) { document.getElementById('resultText').innerText = "Execution Failed. Ensure MiMo status."; }
+                // RELEVANCE LOGIC TRIGGERED AFTER TX CONFIRMATION
+                const qLower = q.toLowerCase();
+                const category = qLower.includes("crypto") || qLower.includes("coin") ? "crypto" : (qLower.includes("future") || qLower.includes("will") ? "future" : "default");
+                document.getElementById('resultText').innerText = answers[category][Math.floor(Math.random() * answers[category].length)];
+                await hardSync();
+            } catch (e) { 
+                document.getElementById('resultText').innerText = "Execution Failed. Ensure MiMo status."; 
+            }
         };
 
-        document.getElementById('withdrawBtn').onclick = async () => {
-            try { await (await ballContract.withdraw()).wait(); hardSync(); } catch(e) { alert("Admin only."); }
+        document.getElementById('verifyBtn').onclick = async () => {
+            const addr = document.getElementById('verifyAddr').value;
+            const feedback = document.getElementById('adminFeedback');
+            feedback.style.display = 'block'; feedback.innerText = "Broadcasting Verify...";
+            try { 
+                const tx = await identityContract.verifyIdentity(addr);
+                await tx.wait(); 
+                feedback.innerText = "SUCCESS: User Verified.";
+                await hardSync();
+            } catch(e) { feedback.innerText = "ERROR: Reverted."; }
         };
 
         document.getElementById('connectBtn').onclick = () => connectWallet(false);
@@ -177,4 +162,3 @@
     </script>
 </body>
 </html>
-
