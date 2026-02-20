@@ -13,6 +13,7 @@
         .token-display { background: #f8f9fa; padding: 8px 15px; border-radius: 20px; border: 1px solid #e1e4e8; font-weight: 700; font-size: 0.9rem; color: #28a745; display: flex; align-items: center; gap: 8px; }
         .content-wrapper { display: flex; flex: 1; overflow: hidden; }
         #leftSidebar { width: 320px; background: #fff; border-right: 1px solid #e1e4e8; padding: 20px; overflow-y: auto; box-sizing: border-box; }
+        #rightSidebar { width: 280px; background: #fff; border-left: 1px solid #e1e4e8; padding: 20px; overflow-y: auto; box-sizing: border-box; }
         .main-utility-area { flex: 1; padding: 40px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; }
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #e1e4e8; width: 100%; box-sizing: border-box; }
         .primary-btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; margin-top: 10px; }
@@ -25,30 +26,27 @@
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity</h1><span style="font-size:0.7rem; color:#999;">v4.9</span></div>
+        <div class="nav-title"><h1>Lightchain Identity</h1><span style="font-size:0.7rem; color:#999;">v5.0</span></div>
         <div class="token-display"><span id="tokenBalance">0.00</span> LCAI</div>
     </div>
     <div class="content-wrapper">
         <div id="leftSidebar">
             <div id="userStatusHeader" style="display:none; text-align:center; margin-bottom:15px;"><div id="userNameDisplay" style="font-weight:bold;"></div></div>
             <div class="card">
-                <div id="walletStatus" style="font-size: 0.75rem; margin-bottom:10px; color:#666;">Synchronizing...</div>
+                <div id="walletStatus" style="font-size: 0.75rem; margin-bottom:10px; color:#666;">Waiting for Wallet...</div>
                 <button id="connectBtn" class="primary-btn">Connect Wallet</button>
                 <button id="disconnectBtn" class="primary-btn" style="display:none; background:#6c757d;">Disconnect</button>
             </div>
-            
             <div id="adminConsole" class="card">
                 <h4 style="color:var(--admin); margin: 0 0 10px 0; font-size: 0.85rem;">Admin Management</h4>
                 <div class="treasury-box">
                     <div style="font-size: 1.4rem; font-weight: 800; color: #c53030;"><span id="treasuryBalance">0.0000</span> <small style="font-size: 0.8rem;">LCAI</small></div>
                     <button id="withdrawBtn" class="small-btn" style="width:100%; margin-top:10px; background:#c53030;">Claim Fees</button>
-                    <div id="withdrawLog" style="font-size:0.6rem; margin-top:5px; color:#666;"></div>
                 </div>
                 <input type="text" id="verifyAddr" placeholder="Target 0x...">
                 <div style="display:flex; gap: 4px;"><button id="verifyBtn" class="small-btn" style="background:var(--primary);">Verify</button><button id="revokeBtn" class="small-btn">Revoke</button></div>
             </div>
         </div>
-        
         <div class="main-utility-area">
             <div class="card" style="max-width: 500px; text-align: center;">
                 <h2 style="margin:0; font-size:1.4rem;">AIVM Oracle</h2>
@@ -59,19 +57,26 @@
                 </div>
             </div>
         </div>
+        <div id="rightSidebar">
+            <div class="card">
+                <h4 style="margin: 0 0 10px 0; color: #0056b3; font-size:0.9rem;">Network Metrics</h4>
+                <div style="font-size: 0.85rem;">Predictions Logged: <strong id="globalCount">0</strong></div>
+                <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
+                <div id="txFeed" style="font-size:0.75rem; color:#666;">Awaiting Activity...</div>
+            </div>
+        </div>
     </div>
-
     <script>
         const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
         const BALL_CONTRACT_ADDR = "0x3CC611AF8Ac08A084a2758eB61fa7025854F6f13";
-        
         const BALL_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"admin","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"Withdrawal","type":"event"},{"inputs":[{"internalType":"string","name":"_question","type":"string"}],"name":"getPrediction","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"}];
         const IDENTITY_ABI = [{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
-
         let signer, ballContract, identityContract;
 
         async function hardSync() {
             try {
+                const count = await ballContract.totalPredictions();
+                document.getElementById('globalCount').innerText = count.toString();
                 const address = await signer.getAddress();
                 const balance = await signer.provider.getBalance(address);
                 document.getElementById('tokenBalance').innerText = parseFloat(ethers.formatEther(balance)).toFixed(4);
@@ -87,20 +92,18 @@
             signer = await provider.getSigner();
             ballContract = new ethers.Contract(BALL_CONTRACT_ADDR, BALL_ABI, signer);
             identityContract = new ethers.Contract(IDENTITY_CONTRACT, IDENTITY_ABI, signer);
-
             document.getElementById('connectBtn').style.display = 'none';
             document.getElementById('disconnectBtn').style.display = 'block';
             document.getElementById('walletStatus').innerText = "Wallet: " + accounts[0].substring(0, 10);
             await hardSync();
-
             ballContract.on("OracleAnswer", (user, question, answer) => {
+                document.getElementById('txFeed').innerText = `Recent: "${question.substring(0,10)}..."`;
                 if (user.toLowerCase() === accounts[0].toLowerCase()) {
                     document.getElementById('resultText').innerText = answer;
                     document.getElementById('resultText').style.borderColor = "#28a745";
                 }
                 hardSync();
             });
-
             setTimeout(async () => {
                 const profile = await identityContract.getIdentity(accounts[0]).catch(() => null);
                 if(profile && profile[2]) {
@@ -110,33 +113,31 @@
                 }
                 const isAdmin = await identityContract.isAdmin(accounts[0]);
                 if(isAdmin) document.getElementById('adminConsole').style.display = 'block';
-            }, 800);
+            }, 500);
         }
 
         document.getElementById('oracleQuestion').oninput = (e) => {
             const cost = (0.001 * (Math.floor(e.target.value.length / 10) + 1)).toFixed(3);
             document.getElementById('shakeBtn').innerText = `Execute for ${cost} LCAI`;
         };
-
         document.getElementById('shakeBtn').onclick = async () => {
             const question = document.getElementById('oracleQuestion').value;
             if(!question) return;
             const cost = (0.001 * (Math.floor(question.length / 10) + 1)).toFixed(3);
+            document.getElementById('resultText').innerText = "Processing AIVM...";
             try {
-                const tx = await ballContract.getPrediction(question, { 
-                    value: ethers.parseEther(cost), 
-                    gasLimit: 400000 
-                });
+                const tx = await ballContract.getPrediction(question, { value: ethers.parseEther(cost), gasLimit: 400000 });
                 await tx.wait();
-            } catch (e) { document.getElementById('resultText').innerText = "Error: Block Timeout or Unverified."; }
+            } catch (e) { document.getElementById('resultText').innerText = "Error: Unverified or Fee Mismatch."; }
         };
-
         document.getElementById('withdrawBtn').onclick = async () => {
-            try { await (await ballContract.withdraw({ gasLimit: 250000 })).wait(); hardSync(); } catch(e) { alert("Failed."); }
+            try { await (await ballContract.withdraw({ gasLimit: 250000 })).wait(); hardSync(); } catch(e) { alert("Withdraw Failed."); }
         };
-
+        document.getElementById('verifyBtn').onclick = async () => { try { await (await identityContract.verifyIdentity(document.getElementById('verifyAddr').value)).wait(); location.reload(); } catch(e) { alert("Verify Failed."); } };
+        document.getElementById('revokeBtn').onclick = async () => { try { await (await identityContract.revokeVerification(document.getElementById('verifyAddr').value)).wait(); location.reload(); } catch(e) { alert("Revoke Failed."); } };
         document.getElementById('connectBtn').onclick = connectWallet;
         document.getElementById('disconnectBtn').onclick = () => { localStorage.clear(); location.reload(); };
+        window.addEventListener('load', () => { if(localStorage.getItem('isWalletConnected')) setTimeout(connectWallet, 300); });
     </script>
 </body>
 </html>
