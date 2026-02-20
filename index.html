@@ -73,35 +73,40 @@
             if (!window.ethereum) return alert("MetaMask not detected!");
             
             try {
+                // Force the account request
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                provider = new ethers.BrowserProvider(window.ethereum);
                 
+                // Target the Lightchain Network (504)
                 const chainId = await window.ethereum.request({ method: 'eth_chainId' });
                 if (chainId !== LIGHTCHAIN_SETUP.chainId) {
                     document.getElementById('switchNetBtn').style.display = 'block';
-                    document.getElementById('walletStatus').innerText = "Status: Wrong Network";
+                    document.getElementById('walletStatus').innerText = "Status: Switch to Lightchain";
                     return;
                 }
-
+        
+                provider = new ethers.BrowserProvider(window.ethereum);
                 signer = await provider.getSigner();
                 contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
-
+        
                 const userAddr = accounts[0];
                 document.getElementById('walletStatus').innerText = "Status: Connected (" + userAddr.substring(0,6) + "...)";
                 document.getElementById('walletStatus').style.color = "#4ade80";
                 document.getElementById('connectBtn').style.display = 'none';
                 document.getElementById('disconnectBtn').style.display = 'inline-block';
                 document.getElementById('switchNetBtn').style.display = 'none';
-
-                // Check Admin Status to show Red Panel
+        
+                // Check Admin Status - This shows the panel
                 const adminStatus = await contract.isAdmin(userAddr);
                 if(adminStatus) {
                     document.getElementById('adminPanel').style.display = 'block';
                 }
-
-            } catch (err) { alert("Connection failed: " + err.message); }
+        
+            } catch (err) { 
+                console.error(err);
+                alert("Connection failed: " + err.message); 
+            }
         }
-
+                
         async function disconnect() {
             signer = null; contract = null;
             document.getElementById('walletStatus').innerText = "Status: Disconnected";
@@ -168,5 +173,6 @@
     </script>
 </body>
 </html>
+
 
 
