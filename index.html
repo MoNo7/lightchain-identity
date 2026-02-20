@@ -22,8 +22,8 @@
         .small-btn { padding: 8px; font-size: 0.75rem; flex: 1; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; }
         #adminConsole { display: none; border-top: 3px solid var(--admin); padding-top: 15px; }
         .feed-item { padding: 10px; border-bottom: 1px solid #eee; font-size: 0.8rem; background: #fcfcfc; margin-bottom: 5px; border-radius: 6px; }
-        .eight-ball { width: 180px; height: 180px; background: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; margin: 20px auto; box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
-        .inner-circle { width: 90px; height: 90px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #000; font-size: 11px; padding: 10px; text-align: center; font-weight: bold; border: 3px solid #111; }
+        .eight-ball { width: 200px; height: 200px; background: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; margin: 20px auto; box-shadow: 0 10px 20px rgba(0,0,0,0.3); position: relative; }
+        .inner-circle { width: 110px; height: 110px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #000; font-size: 11px; padding: 10px; text-align: center; font-weight: bold; border: 4px solid #111; z-index: 2; transition: 0.3s; }
         .shake { animation: shake 0.5s; }
         @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } }
         .verified-badge-inline { background: #1877F2; color: white; border-radius: 50%; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; margin-left: 8px; }
@@ -31,7 +31,7 @@
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity</h1><span class="version-tag">v3.7</span></div>
+        <div class="nav-title"><h1>Lightchain Identity</h1><span class="version-tag">v3.8</span></div>
         <div class="token-display"><span id="tokenBalance">0.00</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -72,10 +72,10 @@
     </div>
     <script>
         const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-        const BALL_CONTRACT_ADDR = "0x6780F956709304720b2E0B494aB30deA0F86f842";
-        const BAD_WORDS = ["fuck", "shit", "bitch", "asshole"]; // Simple monitor
+        const BALL_CONTRACT_ADDR = "PASTE_YOUR_NEW_DEPLOYED_ADDRESS_HERE"; 
+        const BAD_WORDS = ["fuck", "shit", "bitch", "asshole", "cunt", "nigger"]; 
 
-        const BALL_ABI = [{"inputs":[{"internalType":"string","name":"_question","type":"string"}],"name":"getPrediction","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"}];
+        const BALL_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},{"inputs":[{"internalType":"string","name":"_question","type":"string"}],"name":"getPrediction","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"}];
         const IDENTITY_ABI = [{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
 
         let signer, ballContract, identityContract;
@@ -100,6 +100,21 @@
             document.getElementById('walletStatus').innerText = "Addr: " + accounts[0].substring(0,10) + "...";
 
             updateData();
+            
+            // Listen for Oracle Events
+            ballContract.on("OracleAnswer", (user, question, answer) => {
+                const feed = document.getElementById('txFeed');
+                const item = document.createElement('div');
+                item.className = 'feed-item';
+                item.innerHTML = `<strong>Consultation:</strong> "${question.substring(0,20)}..."`;
+                feed.prepend(item);
+                
+                // If the event is for the current user, show it in the ball
+                if (user.toLowerCase() === accounts[0].toLowerCase()) {
+                    document.getElementById('response').innerText = answer;
+                }
+            });
+
             const profile = await identityContract.getIdentity(accounts[0]).catch(() => null);
             if(profile && profile[0]) {
                 document.getElementById('userStatusHeader').style.display = 'block';
@@ -126,25 +141,31 @@
             const cost = (0.01 * multiplier).toFixed(2);
             
             const ball = document.getElementById('ball');
+            const res = document.getElementById('response');
             ball.classList.add('shake');
+            res.innerText = "Mining Wisdom...";
+            
             try {
-                const tx = await ballContract.getPrediction(question, { value: ethers.parseEther(cost), gasLimit: 400000 });
-                await tx.wait();
+                const tx = await ballContract.getPrediction(question, { 
+                    value: ethers.parseEther(cost), 
+                    gasLimit: 500000 
+                });
+                await tx.wait(); 
                 updateData();
-                const feed = document.getElementById('txFeed');
-                const item = document.createElement('div');
-                item.className = 'feed-item';
-                item.innerHTML = `<strong>Oracle consulted:</strong> "${question.substring(0,30)}..."`;
-                feed.prepend(item);
-            } catch (e) { alert("Consultation Failed."); }
-            finally { ball.classList.remove('shake'); }
+                // Note: The answer will be set by the .on("OracleAnswer") listener above!
+            } catch (e) { 
+                alert("Consultation Failed."); 
+                res.innerText = "?";
+            } finally { 
+                ball.classList.remove('shake'); 
+            }
         };
 
         document.getElementById('withdrawBtn').onclick = async () => { await (await ballContract.withdraw()).wait(); alert("Fees Claimed!"); updateData(); };
         document.getElementById('verifyBtn').onclick = async () => { await (await identityContract.verifyIdentity(document.getElementById('verifyAddr').value)).wait(); location.reload(); };
         document.getElementById('revokeBtn').onclick = async () => { await (await identityContract.revokeVerification(document.getElementById('verifyAddr').value)).wait(); location.reload(); };
         document.getElementById('connectBtn').onclick = connectWallet;
-        document.getElementById('disconnectBtn').onclick = () => location.reload();
+        document.getElementById('disconnectBtn').onclick = () => { localStorage.removeItem('isWalletConnected'); location.reload(); };
         window.addEventListener('DOMContentLoaded', () => { if (localStorage.getItem('isWalletConnected') === 'true') setTimeout(connectWallet, 500); });
     </script>
 </body>
