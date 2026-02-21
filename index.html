@@ -176,14 +176,14 @@ document.getElementById('shakeBtn').onclick = async () => {
         let val = 0n;
         if (feesOn) {
             const bytes = getByteLength(fullPrompt);
-            const cost = ((Math.floor(bytes / 10) + 1) * 0.010).toFixed(3); // Adjusted base to 0.010 match
+            // Matches the 0.010 display on your portal
+            const cost = ((Math.floor(bytes / 10) + 1) * 0.010).toFixed(3); 
             val = ethers.parseEther(cost);
         }
 
-        document.getElementById('resultText').innerText = "Consulting AIVM (Network processing)...";
+        document.getElementById('resultText').innerText = "Processing visionary inference...";
         
-        // FIX: Explicitly set gasLimit to 3,000,000 to avoid "Intrinsic Gas Too Low"
-        // and ensure the AIVM has enough runway.
+        // Force high gas limit to prevent revert
         const tx = await ballContract.getPrediction(fullPrompt, { 
             value: val, 
             gasLimit: 3000000 
@@ -193,7 +193,7 @@ document.getElementById('shakeBtn').onclick = async () => {
         await hardSync();
     } catch (e) { 
         console.error("Consult Error:", e);
-        document.getElementById('resultText').innerText = "Error: Check Balance (Gas + Fee) or Nonce.";
+        document.getElementById('resultText').innerText = "Inference Failed: Reset Nonce in MetaMask or check LCAI balance.";
     }
 };
 
@@ -272,4 +272,5 @@ document.getElementById('shakeBtn').onclick = async () => {
     </script>
 </body>
 </html>
+
 
