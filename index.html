@@ -26,7 +26,7 @@
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity (Testnet)</h1><span style="font-size:0.7rem; color:#999;">v10.5</span></div>
+        <div class="nav-title"><h1>Lightchain Identity (Testnet)</h1><span style="font-size:0.7rem; color:#999;">v10.6</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -93,62 +93,40 @@
         const ADMIN_GAS = { ...BASE_GAS, gasLimit: 80000 };
         const QUERY_GAS = { ...BASE_GAS, gasLimit: 350000 };
 
-        // --- CORE CHAIN SCANNING ENGINE ---
         async function scanChainHistory() {
             try {
                 document.getElementById('revenueLog').innerHTML = "<i>Scanning blocks...</i>";
                 const events = await ballContract.queryFilter("OracleAnswer");
-                
                 let totalRevenue = 0;
                 let revHTML = "";
                 let actHTML = "";
-                
-                // 1. Calculate total revenue from all historical events
                 events.forEach(e => {
                     const q = e.args[1];
                     totalRevenue += 0.001 * (Math.floor(q.length / 10) + 1);
                 });
-                
-                // 2. Grab the 15 most recent events to build the visual logs
                 const recentEvents = events.slice(-15).reverse();
-                
-                // Fetch timestamps efficiently in parallel
                 const blocks = await Promise.all(recentEvents.map(e => e.getBlock()));
-                
                 recentEvents.forEach((e, index) => {
-                    const user = e.args[0];
                     const q = e.args[1];
                     const fee = (0.001 * (Math.floor(q.length / 10) + 1)).toFixed(3);
                     const time = new Date(blocks[index].timestamp * 1000).toLocaleTimeString();
-                    const anonAddr = user.substring(0,5) + "..." + user.substring(user.length-4);
-                    
-                    // Build Owner Log
                     revHTML += `<div style="padding: 4px 0; border-bottom: 1px solid #f0f0f0;">[${time}] +${fee} LCAI</div>`;
-                    
-                    // Build Activity Log (top 10 only)
                     if (index < 10) {
-                        actHTML += `<div class="tx-item"><strong>Query:</strong> "${q}"<br><span style="font-size:0.6rem; color:#999;">User: ${anonAddr} | ${time}</span></div>`;
+                        actHTML += `<div class="tx-item"><strong>Query:</strong> "${q}"<br><span style="font-size:0.6rem; color:#999;">User: Anonymous | ${time}</span></div>`;
                     }
                 });
-                
                 document.getElementById('totalRevenueDisplay').innerText = "Total: " + totalRevenue.toFixed(3) + " LCAI";
                 document.getElementById('revenueLog').innerHTML = revHTML || "<div style='color:#ccc; font-style:italic;'>No history</div>";
                 document.getElementById('txFeed').innerHTML = actHTML || "<div style='color:#ccc; font-style:italic;'>No activity</div>";
-                
-            } catch (error) {
-                console.error("Chain Scan Error:", error);
-                document.getElementById('revenueLog').innerHTML = "<div style='color:red;'>Chain scan failed</div>";
-            }
+            } catch (error) { console.error("Chain Scan Error:", error); }
         }
 
-        // --- REALTIME ACTIVITY UPDATER ---
         function appendRealtimeActivity(user, question) {
             const feed = document.getElementById('txFeed');
             const item = document.createElement('div');
             item.className = 'tx-item';
-            const anonAddr = user.substring(0,5) + "..." + user.substring(user.length-4);
             const time = new Date().toLocaleTimeString();
-            item.innerHTML = `<strong>Query:</strong> "${question}"<br><span style="font-size:0.6rem; color:#999;">User: ${anonAddr} | ${time}</span>`;
+            item.innerHTML = `<strong>Query:</strong> "${question}"<br><span style="font-size:0.6rem; color:#999;">User: Anonymous | ${time}</span>`;
             feed.prepend(item);
             if(feed.children.length > 10) feed.lastChild.remove();
         }
@@ -158,21 +136,15 @@
             const res = document.getElementById('resultText');
             const rand = (min, max) => Math.floor(Math.random() * (max - min + 1) + min);
             const pick = (arr) => arr[arr.length * Math.random() | 0];
-
             const templates = {
                 tech: [`Neural processing shifts to Epoch ${rand(15, 30)}, enabling ${rand(40, 95)}% faster data synthesis.`],
                 energy: [`Hydrogen grids projected to reach 100% efficiency by Epoch ${rand(40, 60)}.`],
                 nature: [`Environmental sensors predict a ${pick(['vibrant violet', 'neon cyan', 'deep indigo'])} sky spectrum due to filtered ${pick(['ion', 'plasma', 'carbon'])} layers by Epoch ${rand(8, 14)}.`]
             };
-
             let response = "<strong>AIVM LOG ANALYSIS:</strong><br>";
-            if (qL.match(/sky|color|nature|world|future/)) {
-                response += "• " + pick(templates.nature);
-            } else if (qL.match(/ai|tech|data/)) {
-                response += "• " + pick(templates.tech);
-            } else {
-                response += `Infrastructure priority shift of ${rand(10, 20)}% detected for Epoch ${rand(5, 12)}.`;
-            }
+            if (qL.match(/sky|color|nature|world|future/)) { response += "• " + pick(templates.nature); }
+            else if (qL.match(/ai|tech|data/)) { response += "• " + pick(templates.tech); }
+            else { response += `Infrastructure priority shift of ${rand(10, 20)}% detected for Epoch ${rand(5, 12)}.`; }
             res.innerHTML = response;
         }
 
@@ -192,8 +164,6 @@
                     document.getElementById('userStatusHeader').style.display = 'block';
                     document.getElementById('userNameDisplay').innerHTML = `${profile[0]} <span class="mimo-badge">✓</span>`;
                 }
-                
-                // Sync historical logs directly from the blockchain
                 await scanChainHistory();
             } catch(e) {}
         }
@@ -211,20 +181,16 @@
                 document.getElementById('disconnectBtn').style.display = 'block';
                 document.getElementById('walletStatus').innerText = "Wallet: " + accounts[0].substring(0, 10);
                 localStorage.setItem('isWalletConnected', 'true');
-                
                 await hardSync();
-                
                 ballContract.on("OracleAnswer", (user, question) => {
                     appendRealtimeActivity(user, question);
                     if (user.toLowerCase() === accounts[0].toLowerCase()) generateAIVMInference(question);
-                    // Slight delay to allow block to confirm before re-syncing owner revenue
                     setTimeout(scanChainHistory, 3000); 
                 });
             } catch(e) {}
         }
 
         window.addEventListener('load', () => { if(localStorage.getItem('isWalletConnected') === 'true') connectWallet(true); });
-
         document.getElementById('shakeBtn').onclick = async () => {
             const q = document.getElementById('oracleQuestion').value;
             const fee = (0.001 * (Math.floor(q.length / 10) + 1)).toFixed(3);
@@ -235,8 +201,6 @@
                 await hardSync();
             } catch (e) { document.getElementById('resultText').innerText = "Query Failed."; }
         };
-
-        // Admin functionality
         document.getElementById('lookupBtn').onclick = async () => {
             try {
                 const data = await identityContract.getIdentity(document.getElementById('lookupAddr').value);
@@ -246,8 +210,6 @@
         };
         document.getElementById('verifyBtn').onclick = async () => { try { const tx = await identityContract.verifyIdentity(document.getElementById('verifyAddr').value, ADMIN_GAS); await tx.wait(); await hardSync(); } catch(e){} };
         document.getElementById('revokeBtn').onclick = async () => { try { const tx = await identityContract.revokeVerification(document.getElementById('verifyAddr').value, ADMIN_GAS); await tx.wait(); await hardSync(); } catch(e){} };
-
-        // Core functionality bindings
         document.getElementById('connectBtn').onclick = () => connectWallet(false);
         document.getElementById('disconnectBtn').onclick = () => { localStorage.clear(); location.reload(); };
         document.getElementById('refreshLogBtn').onclick = () => scanChainHistory();
