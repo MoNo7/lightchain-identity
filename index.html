@@ -20,13 +20,13 @@
         .small-btn { padding: 8px; font-size: 0.75rem; flex: 1; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; }
         .mimo-badge { background: var(--mimo); color: white; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; margin-left: 8px; box-shadow: 0 0 8px rgba(24, 119, 242, 0.6); font-weight: bold; vertical-align: middle; }
         .result-window { margin-top: 20px; padding: 20px; background: #f8f9fa; border: 2px dashed #cbd5e0; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.9rem; color: #2d3748; text-align: left; line-height: 1.6; }
-        .tx-item { font-size: 0.7rem; color: #666; padding: 8px 0; border-bottom: 1px solid #f0f0f0; word-break: break-all; }
+        .tx-item { font-size: 0.7rem; color: #666; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
         input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; }
     </style>
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity (Testnet)</h1><span style="font-size:0.7rem; color:#999;">v10.0</span></div>
+        <div class="nav-title"><h1>Lightchain Identity (Testnet)</h1><span style="font-size:0.7rem; color:#999;">v10.1</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -73,7 +73,7 @@
         <div id="rightSidebar">
             <div class="card">
                 <h4 style="margin:0; color: #0056b3; font-size:0.9rem;">Network Metrics</h4>
-                <div style="font-size: 0.8rem; margin-top:10px;">Predictions: <strong id="globalCount">0</strong></div>
+                <div style="font-size: 0.8rem; margin-top:10px;">Total Queries: <strong id="globalCount">0</strong></div>
                 <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
                 <h4 style="margin:0 0 10px 0; font-size:0.75rem; color:#999;">Anonymous Activity</h4>
                 <div id="txFeed" style="max-height: 400px; overflow-y: auto;"></div>
@@ -92,14 +92,27 @@
         const ADMIN_GAS = { ...BASE_GAS, gasLimit: 80000 };
         const QUERY_GAS = { ...BASE_GAS, gasLimit: 350000 };
 
-        function updateTxFeed(type, user) {
+        function updateTxFeed(user) {
             const feed = document.getElementById('txFeed');
             const item = document.createElement('div');
             item.className = 'tx-item';
-            const shortAddr = user.substring(0,6) + "..." + user.substring(user.length-4);
-            item.innerHTML = `<strong>${type}</strong><br><span style="font-size:0.6rem;">User: ${shortAddr}</span>`;
+            const anonAddr = user.substring(0,4) + "..." + user.substring(user.length-4);
+            item.innerHTML = `<strong>AIVM Query</strong><br><span style="font-size:0.6rem; color:#999;">User: ${anonAddr}</span>`;
             feed.prepend(item);
-            if(feed.children.length > 10) feed.lastChild.remove();
+            if(feed.children.length > 15) feed.lastChild.remove();
+        }
+
+        function renderRevenueHistory() {
+            const logs = JSON.parse(localStorage.getItem('revenueHistory') || "[]");
+            const container = document.getElementById('revenueLog');
+            container.innerHTML = logs.length ? "" : "<div style='color:#ccc; font-style:italic;'>No history</div>";
+            logs.forEach(log => {
+                const div = document.createElement('div');
+                div.style.padding = "4px 0";
+                div.style.borderBottom = "1px solid #f0f0f0";
+                div.innerText = log;
+                container.appendChild(div);
+            });
         }
 
         function generateAIVMInference(q) {
@@ -138,6 +151,7 @@
                     document.getElementById('userStatusHeader').style.display = 'block';
                     document.getElementById('userNameDisplay').innerHTML = `${profile[0]} <span class="mimo-badge">✓</span>`;
                 }
+                renderRevenueHistory();
             } catch(e) { console.error("Sync Error", e); }
         }
 
@@ -154,35 +168,20 @@
                 document.getElementById('disconnectBtn').style.display = 'block';
                 document.getElementById('walletStatus').innerText = "Wallet: " + accounts[0].substring(0, 10);
                 localStorage.setItem('isWalletConnected', 'true');
-                renderRevenueHistory();
                 await hardSync();
                 ballContract.on("OracleAnswer", (user, question) => {
-                    updateTxFeed("AIVM Inference", user);
+                    updateTxFeed(user);
                     if (user.toLowerCase() === accounts[0].toLowerCase()) generateAIVMInference(question);
                 });
             } catch(e) {}
         }
 
-        function renderRevenueHistory() {
-            const logs = JSON.parse(localStorage.getItem('revenueHistory') || "[]");
-            const container = document.getElementById('revenueLog');
-            container.innerHTML = logs.length ? "" : "No history";
-            logs.forEach(log => {
-                const div = document.createElement('div');
-                div.style.padding = "2px 0";
-                div.innerText = log;
-                container.appendChild(div);
-            });
-        }
-
         window.addEventListener('load', () => { if(localStorage.getItem('isWalletConnected') === 'true') setTimeout(() => connectWallet(true), 500); });
 
-        // --- BUTTON ACTIONS RESTORED ---
         document.getElementById('lookupBtn').onclick = async () => {
-            const addr = document.getElementById('lookupAddr').value;
             const res = document.getElementById('lookupResults');
             try {
-                const data = await identityContract.getIdentity(addr);
+                const data = await identityContract.getIdentity(document.getElementById('lookupAddr').value);
                 res.innerHTML = `<strong>User:</strong> ${data[0]}<br><strong>Verified:</strong> ${data[2] ? 'YES' : 'NO'}`;
                 res.style.display = 'block';
             } catch(e) { res.innerText = "Error: Not Found"; res.style.display = 'block'; }
@@ -195,7 +194,6 @@
                 fb.innerText = "Transmitting...";
                 await tx.wait();
                 fb.innerText = "Success ✓";
-                updateTxFeed("Identity Verified", document.getElementById('verifyAddr').value);
                 await hardSync();
             } catch (e) { fb.innerText = "Failed"; }
         };
@@ -207,7 +205,6 @@
                 fb.innerText = "Revoking...";
                 await tx.wait();
                 fb.innerText = "Revoked ✓";
-                updateTxFeed("Identity Revoked", document.getElementById('verifyAddr').value);
                 await hardSync();
             } catch (e) { fb.innerText = "Failed"; }
         };
@@ -222,7 +219,6 @@
                 let logs = JSON.parse(localStorage.getItem('revenueHistory') || "[]");
                 logs.unshift(`[${new Date().toLocaleTimeString()}] +${fee} LCAI`);
                 localStorage.setItem('revenueHistory', JSON.stringify(logs.slice(0, 50)));
-                renderRevenueHistory();
                 await hardSync();
             } catch (e) { document.getElementById('resultText').innerText = "Query Failed."; }
         };
