@@ -22,12 +22,11 @@
         .result-window { margin-top: 20px; padding: 20px; background: #f8f9fa; border: 2px dashed #cbd5e0; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.9rem; color: #2d3748; text-align: left; line-height: 1.6; }
         .tx-item { font-size: 0.7rem; color: #666; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
         input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; }
-        #adminFeedback { transition: all 0.3s ease; min-height: 1em; }
     </style>
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity (Testnet)</h1><span style="font-size:0.7rem; color:#999;">v10.9</span></div>
+        <div class="nav-title"><h1>Lightchain Identity (Testnet)</h1><span style="font-size:0.7rem; color:#999;">v11.0</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -50,7 +49,6 @@
                 </div>
                 <div id="adminFeedback" style="font-size:0.7rem; margin-top:8px; text-align:center; font-weight:bold;"></div>
             </div>
-            
             <div id="ownerConsole" class="card" style="display:none; border: 1px solid var(--owner);">
                 <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;">
                     <h4 style="color:var(--owner); margin: 0; font-size: 0.85rem;">Owner Revenue Log</h4>
@@ -85,14 +83,16 @@
 
     <script>
         const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34"; 
-        const BALL_CONTRACT_ADDR = "0x6ad7A34795d3362389e303d4B02c603493CaAAf9"; 
+        const BALL_CONTRACT_ADDR = "0x9885E29970C3dd6CD325a5556940f6eD8c22aE97"; 
+        
+        // Updated ABI to include 'answer' string in OracleAnswer event
         const BALL_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},{"inputs":[{"internalType":"string","name":"_question","type":"string"}],"name":"getPrediction","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"}];
         const IDENTITY_ABI = [{"inputs":[{"internalType":"string","name":"_username","type":"string"},{"internalType":"string","name":"_did","type":"string"}],"name":"createIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
 
         let signer, ballContract, identityContract;
         const BASE_GAS = { maxFeePerGas: ethers.parseUnits('10', 'gwei'), maxPriorityFeePerGas: ethers.parseUnits('10', 'gwei') };
         const ADMIN_GAS = { ...BASE_GAS, gasLimit: 80000 };
-        const QUERY_GAS = { ...BASE_GAS, gasLimit: 350000 };
+        const QUERY_GAS = { ...BASE_GAS, gasLimit: 500000 }; // Higher for real AIVM compute
 
         async function scanChainHistory() {
             try {
@@ -100,18 +100,15 @@
                 let totalRevenue = 0;
                 let revHTML = "";
                 let actHTML = "";
-                
                 const now = Date.now();
                 const twelveHoursAgo = now - (12 * 60 * 60 * 1000);
                 const seenQuestions = new Set();
 
-                // Calculate global revenue
                 events.forEach(e => {
                     const q = e.args[1];
                     if (q) totalRevenue += 0.001 * (Math.floor(q.length / 10) + 1);
                 });
 
-                // Reverse for latest first
                 const rawRecent = events.filter(e => e.args[1]).reverse();
                 const blocks = await Promise.all(rawRecent.slice(0, 30).map(e => e.getBlock()));
                 
@@ -119,58 +116,24 @@
                 rawRecent.forEach((e, index) => {
                     const q = e.args[1];
                     const fee = (0.001 * (Math.floor(q.length / 10) + 1)).toFixed(3);
-                    
-                    // Owner Log (Latest 15 transactions)
                     if (index < 15 && blocks[index]) {
                         const time = new Date(blocks[index].timestamp * 1000).toLocaleTimeString();
                         revHTML += `<div style="padding: 4px 0; border-bottom: 1px solid #f0f0f0;">[${time}] +${fee} LCAI</div>`;
                     }
-
-                    // Activity Log (Filtered: Unique + 12h)
                     if (blocks[index] && logCount < 10) {
                         const blockTime = blocks[index].timestamp * 1000;
-                        const timeStr = new Date(blockTime).toLocaleTimeString();
-                        
                         if (blockTime > twelveHoursAgo && !seenQuestions.has(q)) {
                             seenQuestions.add(q);
-                            actHTML += `<div class="tx-item"><strong>Query:</strong> "${q}"<br><span style="font-size:0.6rem; color:#999;">User: Anonymous | ${timeStr}</span></div>`;
+                            actHTML += `<div class="tx-item"><strong>Query:</strong> "${q}"<br><span style="font-size:0.6rem; color:#999;">User: Anonymous | ${new Date(blockTime).toLocaleTimeString()}</span></div>`;
                             logCount++;
                         }
                     }
                 });
 
                 document.getElementById('totalRevenueDisplay').innerText = "Total: " + totalRevenue.toFixed(3) + " LCAI";
-                document.getElementById('revenueLog').innerHTML = revHTML || "<div style='color:#ccc; font-style:italic;'>No history</div>";
-                document.getElementById('txFeed').innerHTML = actHTML || "<div style='color:#ccc; font-style:italic;'>No unique activity (12h)</div>";
-            } catch (error) { console.error("Chain Scan Error:", error); }
-        }
-
-        function appendRealtimeActivity(user, question) {
-            if (!question) return;
-            const feed = document.getElementById('txFeed');
-            const item = document.createElement('div');
-            item.className = 'tx-item';
-            const time = new Date().toLocaleTimeString();
-            item.innerHTML = `<strong>Query:</strong> "${question}"<br><span style="font-size:0.6rem; color:#999;">User: Anonymous | ${time}</span>`;
-            feed.prepend(item);
-            if(feed.children.length > 10) feed.lastChild.remove();
-        }
-
-        function generateAIVMInference(q) {
-            const qL = q.toLowerCase();
-            const res = document.getElementById('resultText');
-            const rand = (min, max) => Math.floor(Math.random() * (max - min + 1) + min);
-            const pick = (arr) => arr[arr.length * Math.random() | 0];
-            const templates = {
-                tech: [`Neural processing shifts to Epoch ${rand(15, 30)}, enabling ${rand(40, 95)}% faster data synthesis.`],
-                energy: [`Hydrogen grids projected to reach 100% efficiency by Epoch ${rand(40, 60)}.`],
-                nature: [`Environmental sensors predict a ${pick(['vibrant violet', 'neon cyan', 'deep indigo'])} sky spectrum due to filtered ${pick(['ion', 'plasma', 'carbon'])} layers by Epoch ${rand(8, 14)}.`]
-            };
-            let response = "<strong>AIVM LOG ANALYSIS:</strong><br>";
-            if (qL.match(/sky|color|nature|world|future/)) { response += "• " + pick(templates.nature); }
-            else if (qL.match(/ai|tech|data/)) { response += "• " + pick(templates.tech); }
-            else { response += `Infrastructure priority shift of ${rand(10, 20)}% detected for Epoch ${rand(5, 12)}.`; }
-            res.innerHTML = response;
+                document.getElementById('revenueLog').innerHTML = revHTML || "No history";
+                document.getElementById('txFeed').innerHTML = actHTML || "No unique activity (12h)";
+            } catch (error) { console.error(error); }
         }
 
         async function hardSync() {
@@ -194,7 +157,7 @@
                     document.getElementById('userStatusHeader').style.display = 'none';
                 }
                 await scanChainHistory();
-            } catch(e) { console.error(e); }
+            } catch(e) {}
         }
 
         async function connectWallet(auto = false) {
@@ -211,9 +174,20 @@
                 document.getElementById('walletStatus').innerText = "Wallet: " + accounts[0].substring(0, 10);
                 localStorage.setItem('isWalletConnected', 'true');
                 await hardSync();
-                ballContract.on("OracleAnswer", (user, question) => {
-                    appendRealtimeActivity(user, question);
-                    if (user.toLowerCase() === accounts[0].toLowerCase()) generateAIVMInference(question);
+                
+                // EVENT LISTENER: DISPLAYS ACTUAL AIVM RESPONSE
+                ballContract.on("OracleAnswer", (user, question, answer) => {
+                    const time = new Date().toLocaleTimeString();
+                    const feed = document.getElementById('txFeed');
+                    const item = document.createElement('div');
+                    item.className = 'tx-item';
+                    item.innerHTML = `<strong>Query:</strong> "${question}"<br><span style="font-size:0.6rem; color:#999;">User: Anonymous | ${time}</span>`;
+                    feed.prepend(item);
+                    if(feed.children.length > 10) feed.lastChild.remove();
+
+                    if (user.toLowerCase() === accounts[0].toLowerCase()) {
+                        document.getElementById('resultText').innerHTML = `<strong>AIVM LOG ANALYSIS:</strong><br><br>${answer}`;
+                    }
                     setTimeout(scanChainHistory, 3000); 
                 });
             } catch(e) {}
@@ -227,7 +201,7 @@
             const fee = (0.001 * (Math.floor(q.length / 10) + 1)).toFixed(3);
             try {
                 const tx = await ballContract.getPrediction(q, { value: ethers.parseEther(fee), ...QUERY_GAS });
-                document.getElementById('resultText').innerText = "Processing Inference...";
+                document.getElementById('resultText').innerText = "Streaming AIVM Inference...";
                 await tx.wait();
                 await hardSync();
             } catch (e) { document.getElementById('resultText').innerText = "Query Failed."; }
@@ -245,26 +219,22 @@
             const fb = document.getElementById('adminFeedback');
             try { 
                 const tx = await identityContract.verifyIdentity(document.getElementById('verifyAddr').value, ADMIN_GAS); 
-                fb.innerText = "Verifying...";
-                fb.style.color = "var(--primary)";
+                fb.innerText = "Verifying..."; fb.style.color = "var(--primary)";
                 await tx.wait(); 
-                fb.innerText = "User Verified!";
-                fb.style.color = "var(--success)";
+                fb.innerText = "User Verified!"; fb.style.color = "var(--success)";
                 await hardSync(); 
-            } catch(e){ fb.innerText = "TX Error"; fb.style.color = "var(--admin)"; } 
+            } catch(e){ fb.innerText = "Error"; } 
         };
 
         document.getElementById('revokeBtn').onclick = async () => { 
             const fb = document.getElementById('adminFeedback');
             try { 
                 const tx = await identityContract.revokeVerification(document.getElementById('verifyAddr').value, ADMIN_GAS); 
-                fb.innerText = "Revoking...";
-                fb.style.color = "var(--admin)";
+                fb.innerText = "Revoking..."; fb.style.color = "var(--admin)";
                 await tx.wait(); 
-                fb.innerText = "Identity Revoked";
-                fb.style.color = "var(--text)";
+                fb.innerText = "Identity Revoked"; fb.style.color = "var(--text)";
                 await hardSync(); 
-            } catch(e){ fb.innerText = "TX Error"; fb.style.color = "var(--admin)"; } 
+            } catch(e){ fb.innerText = "Error"; } 
         };
 
         document.getElementById('connectBtn').onclick = () => connectWallet(false);
