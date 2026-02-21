@@ -26,7 +26,7 @@
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity (Testnet)</h1><span style="font-size:0.7rem; color:#999;">v9.1</span></div>
+        <div class="nav-title"><h1>Lightchain Identity (Testnet)</h1><span style="font-size:0.7rem; color:#999;">v9.2</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -40,9 +40,21 @@
 
             <div id="adminConsole" class="card" style="display:none;">
                 <h4 style="color:var(--admin); margin: 0 0 10px 0; font-size: 0.85rem;">Admin Management</h4>
-                <input type="text" id="verifyAddr" placeholder="Verify address 0x...">
-                <button id="verifyBtn" class="primary-btn" style="background:var(--success); padding:10px;">Verify Identity</button>
-                <div id="adminFeedback" style="font-size:0.7rem; margin-top:5px; text-align:center;"></div>
+                
+                <div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #eee;">
+                    <h5 style="margin: 0 0 8px 0; font-size: 0.75rem;">Global Registry Lookup</h5>
+                    <input type="text" id="lookupAddr" placeholder="Check address 0x...">
+                    <button id="lookupBtn" class="small-btn" style="width:100%; background: var(--primary);">Query Identity</button>
+                    <div id="lookupResults" style="display:none; padding-top:10px; font-size:0.7rem; word-break: break-all;"></div>
+                </div>
+
+                <h5 style="margin: 0 0 8px 0; font-size: 0.75rem;">Identity Actions</h5>
+                <input type="text" id="verifyAddr" placeholder="Target address 0x...">
+                <div style="display:flex; gap: 4px; margin-bottom: 10px;">
+                    <button id="verifyBtn" class="small-btn" style="background:var(--success);">Verify</button>
+                    <button id="revokeBtn" class="small-btn" style="background:var(--admin);">Revoke</button>
+                </div>
+                <div id="adminFeedback" style="font-size:0.7rem; min-height:15px; text-align:center; color: var(--success); font-weight: bold;"></div>
             </div>
 
             <div id="ownerConsole" class="card" style="display:none; border: 1px solid var(--owner);">
@@ -86,7 +98,7 @@
         const BALL_CONTRACT_ADDR = "0x6ad7A34795d3362389e303d4B02c603493CaAAf9"; 
 
         const BALL_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},{"inputs":[{"internalType":"string","name":"_question","type":"string"}],"name":"getPrediction","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"}];
-        const IDENTITY_ABI = [{"inputs":[{"internalType":"string","name":"_username","type":"string"},{"internalType":"string","name":"_did","type":"string"}],"name":"createIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"}];
+        const IDENTITY_ABI = [{"inputs":[{"internalType":"string","name":"_username","type":"string"},{"internalType":"string","name":"_did","type":"string"}],"name":"createIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
 
         let signer, ballContract, identityContract;
 
@@ -146,7 +158,7 @@
             });
         }
 
-        // DYNAMIC FEE LISTENER (ADDED)
+        // DYNAMIC FEE LISTENER
         document.getElementById('oracleQuestion').addEventListener('input', (e) => {
             const q = e.target.value;
             const multiplier = Math.floor(q.length / 10) + 1;
@@ -168,8 +180,41 @@
             } catch (e) { document.getElementById('resultText').innerText = "Query Failed."; }
         };
 
+        // RESTORED ACTIONS: LOOKUP, VERIFY, REVOKE
+        document.getElementById('lookupBtn').onclick = async () => {
+            const addr = document.getElementById('lookupAddr').value;
+            const res = document.getElementById('lookupResults');
+            try {
+                const data = await identityContract.getIdentity(addr);
+                res.innerHTML = `<strong>User:</strong> ${data[0]}<br><strong>Verified:</strong> ${data[2] ? 'YES' : 'NO'}`;
+                res.style.display = 'block';
+            } catch(e) { res.innerText = "Identity Not Found."; res.style.display = 'block'; }
+        };
+
         document.getElementById('verifyBtn').onclick = async () => {
-            try { await (await identityContract.verifyIdentity(document.getElementById('verifyAddr').value)).wait(); alert("User Verified!"); await hardSync(); } catch(e) { alert("Admin Access Denied."); }
+            const target = document.getElementById('verifyAddr').value;
+            const fb = document.getElementById('adminFeedback');
+            fb.innerText = "Broadcasting Verify...";
+            try {
+                const tx = await identityContract.verifyIdentity(target);
+                await tx.wait();
+                fb.innerText = "Verified Successfully ✓";
+                fb.style.color = "var(--success)";
+                await hardSync();
+            } catch (e) { fb.innerText = "Verify Failed."; fb.style.color = "var(--admin)"; }
+        };
+
+        document.getElementById('revokeBtn').onclick = async () => {
+            const target = document.getElementById('verifyAddr').value;
+            const fb = document.getElementById('adminFeedback');
+            fb.innerText = "Broadcasting Revoke...";
+            try {
+                const tx = await identityContract.revokeVerification(target);
+                await tx.wait();
+                fb.innerText = "Identity Revoked ✓";
+                fb.style.color = "var(--admin)";
+                await hardSync();
+            } catch (e) { fb.innerText = "Revoke Failed."; fb.style.color = "var(--admin)"; }
         };
 
         document.getElementById('connectBtn').onclick = () => connectWallet(false);
