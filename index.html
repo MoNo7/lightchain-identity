@@ -19,13 +19,14 @@
         .primary-btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; margin-top: 10px; transition: 0.2s; }
         .small-btn { padding: 8px; font-size: 0.75rem; flex: 1; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; }
         .mimo-badge { background: var(--mimo); color: white; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; margin-left: 8px; box-shadow: 0 0 8px rgba(24, 119, 242, 0.6); font-weight: bold; vertical-align: middle; }
-        .result-window { margin-top: 20px; padding: 20px; background: #f8f9fa; border: 2px dashed #cbd5e0; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 1rem; color: #2d3748; text-align: left; line-height: 1.6; }
+        .result-window { margin-top: 20px; padding: 20px; background: #f8f9fa; border: 2px dashed #cbd5e0; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.9rem; color: #2d3748; text-align: left; line-height: 1.6; }
+        .tx-item { font-size: 0.7rem; color: #666; padding: 8px 0; border-bottom: 1px solid #f0f0f0; word-break: break-all; }
         input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; }
     </style>
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity (Testnet)</h1><span style="font-size:0.7rem; color:#999;">v9.9</span></div>
+        <div class="nav-title"><h1>Lightchain Identity (Testnet)</h1><span style="font-size:0.7rem; color:#999;">v10.0</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -36,30 +37,29 @@
                 <button id="connectBtn" class="primary-btn">Connect Wallet</button>
                 <button id="disconnectBtn" class="primary-btn" style="display:none; background:#6c757d;">Disconnect</button>
             </div>
+
             <div id="adminConsole" class="card" style="display:none;">
                 <h4 style="color:var(--admin); margin: 0 0 10px 0; font-size: 0.85rem;">Admin Management</h4>
-                <input type="text" id="lookupAddr" placeholder="Check address 0x...">
-                <button id="lookupBtn" class="small-btn" style="width:100%; background: var(--primary); margin-bottom:10px;">Query Identity</button>
-                <div id="lookupResults" style="display:none; padding-bottom:10px; font-size:0.7rem; word-break: break-all;"></div>
-                <input type="text" id="verifyAddr" placeholder="Target address 0x...">
-                <div style="display:flex; gap: 4px;">
+                <input type="text" id="lookupAddr" placeholder="Lookup 0x...">
+                <button id="lookupBtn" class="small-btn" style="width:100%; background: var(--primary); margin-bottom:12px;">Query Identity</button>
+                <div id="lookupResults" style="display:none; padding-bottom:10px; font-size:0.7rem;"></div>
+                
+                <input type="text" id="verifyAddr" placeholder="Target 0x...">
+                <div style="display:flex; gap: 5px;">
                     <button id="verifyBtn" class="small-btn" style="background:var(--success);">Verify</button>
                     <button id="revokeBtn" class="small-btn" style="background:var(--admin);">Revoke</button>
                 </div>
-                <div id="adminFeedback" style="font-size:0.7rem; margin-top:10px; text-align:center; font-weight: bold;"></div>
+                <div id="adminFeedback" style="font-size:0.7rem; margin-top:8px; text-align:center; font-weight:bold;"></div>
             </div>
+
             <div id="ownerConsole" class="card" style="display:none; border: 1px solid var(--owner);">
                 <h4 style="color:var(--owner); margin: 0 0 10px 0; font-size: 0.85rem;">Owner Revenue Log</h4>
-                <div id="revenueLog" style="max-height: 150px; overflow-y: auto; font-size: 0.7rem; color: #444; border: 1px solid #eee; padding: 5px; border-radius: 4px; margin-bottom:10px;"></div>
+                <div id="revenueLog" style="max-height: 120px; overflow-y: auto; font-size: 0.65rem; background:#f9f9f9; padding:5px; border-radius:4px; margin-bottom:10px;"></div>
                 <button id="clearLogBtn" class="small-btn" style="width:100%;">Clear History</button>
             </div>
         </div>
+
         <div class="main-utility-area">
-            <div id="registrationArea" class="card" style="display:none; max-width: 600px; text-align: center;">
-                <h2>Identity Required</h2>
-                <input type="text" id="regUsername" placeholder="Enter username...">
-                <button id="registerBtn" class="primary-btn" style="background: var(--mimo);">Register MiMo Identity</button>
-            </div>
             <div id="oracleUI" style="display:none; width: 100%; max-width: 600px;">
                 <div class="card" style="text-align: center;">
                     <h2 style="margin:0;">AIVM Inference Engine</h2>
@@ -69,10 +69,14 @@
                 </div>
             </div>
         </div>
+
         <div id="rightSidebar">
             <div class="card">
-                <h4 style="margin: 0; color: #0056b3; font-size:0.9rem;">Network Metrics</h4>
-                <div style="font-size: 0.85rem; margin-top:10px;">Predictions: <strong id="globalCount">0</strong></div>
+                <h4 style="margin:0; color: #0056b3; font-size:0.9rem;">Network Metrics</h4>
+                <div style="font-size: 0.8rem; margin-top:10px;">Predictions: <strong id="globalCount">0</strong></div>
+                <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
+                <h4 style="margin:0 0 10px 0; font-size:0.75rem; color:#999;">Anonymous Activity</h4>
+                <div id="txFeed" style="max-height: 400px; overflow-y: auto;"></div>
             </div>
         </div>
     </div>
@@ -88,80 +92,53 @@
         const ADMIN_GAS = { ...BASE_GAS, gasLimit: 80000 };
         const QUERY_GAS = { ...BASE_GAS, gasLimit: 350000 };
 
-        // --- DYNAMIC INFERENCE ENGINE (v9.9) ---
+        function updateTxFeed(type, user) {
+            const feed = document.getElementById('txFeed');
+            const item = document.createElement('div');
+            item.className = 'tx-item';
+            const shortAddr = user.substring(0,6) + "..." + user.substring(user.length-4);
+            item.innerHTML = `<strong>${type}</strong><br><span style="font-size:0.6rem;">User: ${shortAddr}</span>`;
+            feed.prepend(item);
+            if(feed.children.length > 10) feed.lastChild.remove();
+        }
+
         function generateAIVMInference(q) {
             const qL = q.toLowerCase();
             const res = document.getElementById('resultText');
-            
             const rand = (min, max) => Math.floor(Math.random() * (max - min + 1) + min);
             const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
-
             const templates = {
-                tech: [
-                    `Neural processing will shift to Epoch ${rand(15, 30)}, enabling ${rand(40, 95)}% faster sub-consensus.`,
-                    `Silicon-based AI will merge with Lightchain nodes by Epoch ${rand(10, 20)}, reducing latency significantly.`,
-                    `Data encryption protocols will evolve; AIVM predicts a ${rand(20, 50)}% increase in security for ${pick(['neural-links', 'edge-computing', 'quantum-storage'])}.`
-                ],
-                energy: [
-                    `Hydrogen-fusion grids are estimated to go live by Epoch ${rand(40, 100)}.`,
-                    `Solar-harvesting nodes will provide ${rand(5, 25)}% of the total network hash-power by next year.`,
-                    `The AIVM identifies ${pick(['lithium-sulfur', 'graphene', 'solid-state'])} as the primary driver for energy efficiency in Epoch ${rand(5, 15)}.`
-                ],
-                bio: [
-                    `Biometric staking will reach a milestone at Epoch ${rand(20, 45)}, securing ${rand(10, 30)}M identities.`,
-                    `DNA-sequenced encryption will prevent ${pick(['deepfakes', 'biogenic-theft', 'epigenetic-tampering'])} starting in Epoch ${rand(30, 60)}.`,
-                    `AIVM analysis suggests localized healthcare DAOs will dominate the ${pick(['bio-economy', 'regen-sector', 'synthetic-market'])}.`
-                ]
+                tech: [`Neural processing will shift to Epoch ${rand(15, 30)}, enabling ${rand(40, 95)}% faster sub-consensus.`, `Data encryption will evolve; AIVM predicts a ${rand(20, 50)}% increase in security for ${pick(['neural-links', 'edge-computing', 'quantum-storage'])}.`],
+                energy: [`Hydrogen-fusion grids are estimated to go live by Epoch ${rand(40, 100)}.`, `The AIVM identifies ${pick(['lithium-sulfur', 'graphene', 'solid-state'])} as the primary driver for energy in Epoch ${rand(5, 15)}.`]
             };
-
             let response = "<strong>AIVM LOG ANALYSIS:</strong><br>";
             let matched = false;
-
-            if (qL.match(/ai|tech|comput|neural|data|quantum/)) {
-                response += "• " + pick(templates.tech) + "<br>";
-                matched = true;
-            }
-            if (qL.match(/sun|solar|hydrogen|energy|power|grid|water/)) {
-                response += "• " + pick(templates.energy) + "<br>";
-                matched = true;
-            }
-            if (qL.match(/bio|dna|health|life|medical|gene/)) {
-                response += "• " + pick(templates.bio) + "<br>";
-                matched = true;
-            }
-
-            if (!matched) {
-                response += `The specific parameters of "${q.substring(0,20)}..." suggest a ${rand(10, 40)}% shift in infrastructure priority by Epoch ${rand(5, 15)}.`;
-            }
-
+            if (qL.match(/ai|tech|comput|neural|data|quantum/)) { response += "• " + pick(templates.tech) + "<br>"; matched = true; }
+            if (qL.match(/sun|solar|hydrogen|energy|power|grid|water/)) { response += "• " + pick(templates.energy) + "<br>"; matched = true; }
+            if (!matched) { response += `Infrastructure priority shift of ${rand(10, 40)}% by Epoch ${rand(5, 15)}.`; }
             res.innerHTML = response;
-            res.style.borderColor = "#28a745";
         }
 
         async function hardSync() {
             try {
                 const address = await signer.getAddress();
-                const [total, balance, owner, isAdmin] = await Promise.all([
+                const [total, owner, isAdmin, profile] = await Promise.all([
                     ballContract.totalPredictions(),
-                    signer.provider.getBalance(address),
                     ballContract.admin(),
-                    identityContract.isAdmin(address)
+                    identityContract.isAdmin(address),
+                    identityContract.getIdentity(address)
                 ]);
+                const balance = await signer.provider.getBalance(address);
                 document.getElementById('globalCount').innerText = total.toString();
                 document.getElementById('tokenBalance').innerText = parseFloat(ethers.formatEther(balance)).toFixed(4);
                 document.getElementById('ownerConsole').style.display = (owner.toLowerCase() === address.toLowerCase()) ? 'block' : 'none';
                 document.getElementById('adminConsole').style.display = isAdmin ? 'block' : 'none';
-                const profile = await identityContract.getIdentity(address);
                 if(profile[2]) {
                     document.getElementById('oracleUI').style.display = 'block';
                     document.getElementById('userStatusHeader').style.display = 'block';
                     document.getElementById('userNameDisplay').innerHTML = `${profile[0]} <span class="mimo-badge">✓</span>`;
-                    document.getElementById('registrationArea').style.display = 'none';
-                } else {
-                    document.getElementById('registrationArea').style.display = 'block';
-                    document.getElementById('oracleUI').style.display = 'none';
                 }
-            } catch(e) {}
+            } catch(e) { console.error("Sync Error", e); }
         }
 
         async function connectWallet(auto = false) {
@@ -180,6 +157,7 @@
                 renderRevenueHistory();
                 await hardSync();
                 ballContract.on("OracleAnswer", (user, question) => {
+                    updateTxFeed("AIVM Inference", user);
                     if (user.toLowerCase() === accounts[0].toLowerCase()) generateAIVMInference(question);
                 });
             } catch(e) {}
@@ -192,15 +170,47 @@
             logs.forEach(log => {
                 const div = document.createElement('div');
                 div.style.padding = "2px 0";
-                div.style.fontSize = "0.65rem";
                 div.innerText = log;
                 container.appendChild(div);
             });
         }
 
-        window.addEventListener('load', () => {
-            if(localStorage.getItem('isWalletConnected') === 'true') setTimeout(() => connectWallet(true), 500);
-        });
+        window.addEventListener('load', () => { if(localStorage.getItem('isWalletConnected') === 'true') setTimeout(() => connectWallet(true), 500); });
+
+        // --- BUTTON ACTIONS RESTORED ---
+        document.getElementById('lookupBtn').onclick = async () => {
+            const addr = document.getElementById('lookupAddr').value;
+            const res = document.getElementById('lookupResults');
+            try {
+                const data = await identityContract.getIdentity(addr);
+                res.innerHTML = `<strong>User:</strong> ${data[0]}<br><strong>Verified:</strong> ${data[2] ? 'YES' : 'NO'}`;
+                res.style.display = 'block';
+            } catch(e) { res.innerText = "Error: Not Found"; res.style.display = 'block'; }
+        };
+
+        document.getElementById('verifyBtn').onclick = async () => {
+            const fb = document.getElementById('adminFeedback');
+            try {
+                const tx = await identityContract.verifyIdentity(document.getElementById('verifyAddr').value, ADMIN_GAS);
+                fb.innerText = "Transmitting...";
+                await tx.wait();
+                fb.innerText = "Success ✓";
+                updateTxFeed("Identity Verified", document.getElementById('verifyAddr').value);
+                await hardSync();
+            } catch (e) { fb.innerText = "Failed"; }
+        };
+
+        document.getElementById('revokeBtn').onclick = async () => {
+            const fb = document.getElementById('adminFeedback');
+            try {
+                const tx = await identityContract.revokeVerification(document.getElementById('verifyAddr').value, ADMIN_GAS);
+                fb.innerText = "Revoking...";
+                await tx.wait();
+                fb.innerText = "Revoked ✓";
+                updateTxFeed("Identity Revoked", document.getElementById('verifyAddr').value);
+                await hardSync();
+            } catch (e) { fb.innerText = "Failed"; }
+        };
 
         document.getElementById('shakeBtn').onclick = async () => {
             const q = document.getElementById('oracleQuestion').value;
