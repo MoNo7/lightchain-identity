@@ -26,7 +26,7 @@
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity (Testnet)</h1><span style="font-size:0.7rem; color:#999;">v9.2</span></div>
+        <div class="nav-title"><h1>Lightchain Identity (Testnet)</h1><span style="font-size:0.7rem; color:#999;">v9.3</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -40,27 +40,25 @@
 
             <div id="adminConsole" class="card" style="display:none;">
                 <h4 style="color:var(--admin); margin: 0 0 10px 0; font-size: 0.85rem;">Admin Management</h4>
-                
                 <div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #eee;">
                     <h5 style="margin: 0 0 8px 0; font-size: 0.75rem;">Global Registry Lookup</h5>
                     <input type="text" id="lookupAddr" placeholder="Check address 0x...">
                     <button id="lookupBtn" class="small-btn" style="width:100%; background: var(--primary);">Query Identity</button>
                     <div id="lookupResults" style="display:none; padding-top:10px; font-size:0.7rem; word-break: break-all;"></div>
                 </div>
-
                 <h5 style="margin: 0 0 8px 0; font-size: 0.75rem;">Identity Actions</h5>
                 <input type="text" id="verifyAddr" placeholder="Target address 0x...">
                 <div style="display:flex; gap: 4px; margin-bottom: 10px;">
                     <button id="verifyBtn" class="small-btn" style="background:var(--success);">Verify</button>
                     <button id="revokeBtn" class="small-btn" style="background:var(--admin);">Revoke</button>
                 </div>
-                <div id="adminFeedback" style="font-size:0.7rem; min-height:15px; text-align:center; color: var(--success); font-weight: bold;"></div>
+                <div id="adminFeedback" style="font-size:0.7rem; min-height:15px; text-align:center; font-weight: bold;"></div>
             </div>
 
             <div id="ownerConsole" class="card" style="display:none; border: 1px solid var(--owner);">
                 <h4 style="color:var(--owner); margin: 0 0 10px 0; font-size: 0.85rem;">Owner Revenue Log</h4>
                 <div style="background:#f3e5f5; padding:10px; border-radius:8px; font-size:0.7rem;">
-                    Fees are pushed <strong>directly</strong> to your wallet on every query.
+                    Fees are pushed <strong>directly</strong> to your wallet.
                 </div>
                 <div id="revenueLog" style="margin-top:10px; max-height: 120px; overflow-y: auto; font-size: 0.65rem;"></div>
             </div>
@@ -123,42 +121,55 @@
                 const isRegAdmin = await identityContract.isAdmin(address);
                 document.getElementById('ownerConsole').style.display = (owner.toLowerCase() === address.toLowerCase()) ? 'block' : 'none';
                 document.getElementById('adminConsole').style.display = isRegAdmin ? 'block' : 'none';
+                
+                const profile = await identityContract.getIdentity(address).catch(() => null);
+                if(profile && profile[2]) {
+                    document.getElementById('oracleUI').style.display = 'block';
+                    document.getElementById('userStatusHeader').style.display = 'block';
+                    document.getElementById('userNameDisplay').innerHTML = `MiMo <span class="mimo-badge">✓</span>`;
+                    document.getElementById('registrationArea').style.display = 'none';
+                } else {
+                    document.getElementById('registrationArea').style.display = 'block';
+                    document.getElementById('oracleUI').style.display = 'none';
+                }
             } catch(e) {}
         }
 
         async function connectWallet(auto = false) {
             if (!window.ethereum) return;
-            const accounts = await window.ethereum.request({ method: auto ? 'eth_accounts' : 'eth_requestAccounts' });
-            if (accounts.length === 0) return;
-            const provider = new ethers.BrowserProvider(window.ethereum);
-            signer = await provider.getSigner();
-            ballContract = new ethers.Contract(BALL_CONTRACT_ADDR, BALL_ABI, signer);
-            identityContract = new ethers.Contract(IDENTITY_CONTRACT, IDENTITY_ABI, signer);
-            
-            document.getElementById('connectBtn').style.display = 'none';
-            document.getElementById('disconnectBtn').style.display = 'block';
-            document.getElementById('walletStatus').innerText = "Wallet: " + accounts[0].substring(0, 10);
-            await hardSync();
-            
-            const profile = await identityContract.getIdentity(accounts[0]).catch(() => null);
-            if(profile && profile[2]) {
-                document.getElementById('oracleUI').style.display = 'block';
-                document.getElementById('userStatusHeader').style.display = 'block';
-                document.getElementById('userNameDisplay').innerHTML = `MiMo <span class="mimo-badge">✓</span>`;
-            } else {
-                document.getElementById('registrationArea').style.display = 'block';
-            }
+            try {
+                const accounts = await window.ethereum.request({ method: auto ? 'eth_accounts' : 'eth_requestAccounts' });
+                if (accounts.length === 0) return;
+                
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                signer = await provider.getSigner();
+                ballContract = new ethers.Contract(BALL_CONTRACT_ADDR, BALL_ABI, signer);
+                identityContract = new ethers.Contract(IDENTITY_CONTRACT, IDENTITY_ABI, signer);
+                
+                document.getElementById('connectBtn').style.display = 'none';
+                document.getElementById('disconnectBtn').style.display = 'block';
+                document.getElementById('walletStatus').innerText = "Wallet: " + accounts[0].substring(0, 10);
+                localStorage.setItem('isWalletConnected', 'true');
+                
+                await hardSync();
 
-            ballContract.on("OracleAnswer", (user, question) => {
-                const div = document.createElement('div');
-                div.className = 'tx-item';
-                div.innerHTML = `<strong>Query:</strong> ${question.substring(0,22)}... <em>Anonymous</em>`;
-                document.getElementById('txFeed').prepend(div);
-                if (user.toLowerCase() === accounts[0].toLowerCase()) generateAIVMInference(question);
-            });
+                ballContract.on("OracleAnswer", (user, question) => {
+                    const div = document.createElement('div');
+                    div.className = 'tx-item';
+                    div.innerHTML = `<strong>Query:</strong> ${question.substring(0,22)}... <em>Anonymous</em>`;
+                    document.getElementById('txFeed').prepend(div);
+                    if (user.toLowerCase() === accounts[0].toLowerCase()) generateAIVMInference(question);
+                });
+            } catch(e) {}
         }
 
-        // DYNAMIC FEE LISTENER
+        // Persistence Restoration Logic
+        window.addEventListener('load', () => {
+            if(localStorage.getItem('isWalletConnected') === 'true') {
+                connectWallet(true);
+            }
+        });
+
         document.getElementById('oracleQuestion').addEventListener('input', (e) => {
             const q = e.target.value;
             const multiplier = Math.floor(q.length / 10) + 1;
@@ -180,7 +191,6 @@
             } catch (e) { document.getElementById('resultText').innerText = "Query Failed."; }
         };
 
-        // RESTORED ACTIONS: LOOKUP, VERIFY, REVOKE
         document.getElementById('lookupBtn').onclick = async () => {
             const addr = document.getElementById('lookupAddr').value;
             const res = document.getElementById('lookupResults');
@@ -195,6 +205,7 @@
             const target = document.getElementById('verifyAddr').value;
             const fb = document.getElementById('adminFeedback');
             fb.innerText = "Broadcasting Verify...";
+            fb.style.color = "#666";
             try {
                 const tx = await identityContract.verifyIdentity(target);
                 await tx.wait();
@@ -208,6 +219,7 @@
             const target = document.getElementById('verifyAddr').value;
             const fb = document.getElementById('adminFeedback');
             fb.innerText = "Broadcasting Revoke...";
+            fb.style.color = "#666";
             try {
                 const tx = await identityContract.revokeVerification(target);
                 await tx.wait();
@@ -219,7 +231,6 @@
 
         document.getElementById('connectBtn').onclick = () => connectWallet(false);
         document.getElementById('disconnectBtn').onclick = () => { localStorage.clear(); location.reload(); };
-        window.addEventListener('load', () => { if(localStorage.getItem('isWalletConnected')) connectWallet(true); });
     </script>
 </body>
 </html>
