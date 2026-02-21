@@ -26,7 +26,7 @@
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity (Testnet)</h1><span style="font-size:0.7rem; color:#999;">v11.0</span></div>
+        <div class="nav-title"><h1>Lightchain Identity (Testnet)</h1><span style="font-size:0.7rem; color:#999;">v11.1</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -49,6 +49,7 @@
                 </div>
                 <div id="adminFeedback" style="font-size:0.7rem; margin-top:8px; text-align:center; font-weight:bold;"></div>
             </div>
+            
             <div id="ownerConsole" class="card" style="display:none; border: 1px solid var(--owner);">
                 <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;">
                     <h4 style="color:var(--owner); margin: 0; font-size: 0.85rem;">Owner Revenue Log</h4>
@@ -84,15 +85,13 @@
     <script>
         const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34"; 
         const BALL_CONTRACT_ADDR = "0x9885E29970C3dd6CD325a5556940f6eD8c22aE97"; 
-        
-        // Updated ABI to include 'answer' string in OracleAnswer event
         const BALL_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},{"inputs":[{"internalType":"string","name":"_question","type":"string"}],"name":"getPrediction","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"}];
         const IDENTITY_ABI = [{"inputs":[{"internalType":"string","name":"_username","type":"string"},{"internalType":"string","name":"_did","type":"string"}],"name":"createIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
 
         let signer, ballContract, identityContract;
         const BASE_GAS = { maxFeePerGas: ethers.parseUnits('10', 'gwei'), maxPriorityFeePerGas: ethers.parseUnits('10', 'gwei') };
         const ADMIN_GAS = { ...BASE_GAS, gasLimit: 80000 };
-        const QUERY_GAS = { ...BASE_GAS, gasLimit: 500000 }; // Higher for real AIVM compute
+        const QUERY_GAS = { ...BASE_GAS, gasLimit: 500000 };
 
         async function scanChainHistory() {
             try {
@@ -104,24 +103,33 @@
                 const twelveHoursAgo = now - (12 * 60 * 60 * 1000);
                 const seenQuestions = new Set();
 
+                // 1. Calculate Revenue from ALL events
                 events.forEach(e => {
                     const q = e.args[1];
                     if (q) totalRevenue += 0.001 * (Math.floor(q.length / 10) + 1);
                 });
 
-                const rawRecent = events.filter(e => e.args[1]).reverse();
-                const blocks = await Promise.all(rawRecent.slice(0, 30).map(e => e.getBlock()));
+                // 2. Filter valid events for display
+                const validEvents = events.filter(e => e.args && e.args[1]).reverse();
+                
+                // Fetch blocks in batches of 30
+                const sliceToFetch = validEvents.slice(0, 30);
+                const blocks = await Promise.all(sliceToFetch.map(e => e.getBlock().catch(() => null)));
                 
                 let logCount = 0;
-                rawRecent.forEach((e, index) => {
+                validEvents.forEach((e, index) => {
                     const q = e.args[1];
                     const fee = (0.001 * (Math.floor(q.length / 10) + 1)).toFixed(3);
-                    if (index < 15 && blocks[index]) {
-                        const time = new Date(blocks[index].timestamp * 1000).toLocaleTimeString();
+                    
+                    // Owner Log (Latest 15)
+                    if (index < 15) {
+                        const time = blocks[index] ? new Date(blocks[index].timestamp * 1000).toLocaleTimeString() : "Pending...";
                         revHTML += `<div style="padding: 4px 0; border-bottom: 1px solid #f0f0f0;">[${time}] +${fee} LCAI</div>`;
                     }
-                    if (blocks[index] && logCount < 10) {
-                        const blockTime = blocks[index].timestamp * 1000;
+
+                    // Activity Log (Unique + 12h)
+                    if (logCount < 10) {
+                        const blockTime = blocks[index] ? blocks[index].timestamp * 1000 : now;
                         if (blockTime > twelveHoursAgo && !seenQuestions.has(q)) {
                             seenQuestions.add(q);
                             actHTML += `<div class="tx-item"><strong>Query:</strong> "${q}"<br><span style="font-size:0.6rem; color:#999;">User: Anonymous | ${new Date(blockTime).toLocaleTimeString()}</span></div>`;
@@ -133,7 +141,7 @@
                 document.getElementById('totalRevenueDisplay').innerText = "Total: " + totalRevenue.toFixed(3) + " LCAI";
                 document.getElementById('revenueLog').innerHTML = revHTML || "No history";
                 document.getElementById('txFeed').innerHTML = actHTML || "No unique activity (12h)";
-            } catch (error) { console.error(error); }
+            } catch (error) { console.error("History Sync Failed:", error); }
         }
 
         async function hardSync() {
@@ -175,20 +183,12 @@
                 localStorage.setItem('isWalletConnected', 'true');
                 await hardSync();
                 
-                // EVENT LISTENER: DISPLAYS ACTUAL AIVM RESPONSE
                 ballContract.on("OracleAnswer", (user, question, answer) => {
                     const time = new Date().toLocaleTimeString();
-                    const feed = document.getElementById('txFeed');
-                    const item = document.createElement('div');
-                    item.className = 'tx-item';
-                    item.innerHTML = `<strong>Query:</strong> "${question}"<br><span style="font-size:0.6rem; color:#999;">User: Anonymous | ${time}</span>`;
-                    feed.prepend(item);
-                    if(feed.children.length > 10) feed.lastChild.remove();
-
                     if (user.toLowerCase() === accounts[0].toLowerCase()) {
                         document.getElementById('resultText').innerHTML = `<strong>AIVM LOG ANALYSIS:</strong><br><br>${answer}`;
                     }
-                    setTimeout(scanChainHistory, 3000); 
+                    setTimeout(scanChainHistory, 2000); 
                 });
             } catch(e) {}
         }
@@ -201,10 +201,10 @@
             const fee = (0.001 * (Math.floor(q.length / 10) + 1)).toFixed(3);
             try {
                 const tx = await ballContract.getPrediction(q, { value: ethers.parseEther(fee), ...QUERY_GAS });
-                document.getElementById('resultText').innerText = "Streaming AIVM Inference...";
+                document.getElementById('resultText').innerText = "Querying Lightchain AIVM...";
                 await tx.wait();
                 await hardSync();
-            } catch (e) { document.getElementById('resultText').innerText = "Query Failed."; }
+            } catch (e) { document.getElementById('resultText').innerText = "AIVM Processing Failed."; }
         };
 
         document.getElementById('lookupBtn').onclick = async () => {
