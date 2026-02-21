@@ -23,14 +23,13 @@
         .result-window { margin-top: 20px; padding: 20px; background: #f8f9fa; border: 2px dashed #cbd5e0; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 1rem; color: #2d3748; text-align: center; line-height: 1.5; }
         .tx-item { font-size: 0.75rem; color: #555; border-bottom: 1px solid #eee; padding: 8px 0; animation: fadeIn 0.5s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
-        .tx-item strong { color: #0056b3; display: block; }
         input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; }
     </style>
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity</h1><span style="font-size:0.7rem; color:#999;">v8.1</span></div>
-        <div id="tokenDisplay" class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
+        <div class="nav-title"><h1>Lightchain Identity</h1><span style="font-size:0.7rem; color:#999;">v8.2</span></div>
+        <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
         <div id="leftSidebar">
@@ -61,12 +60,22 @@
         </div>
 
         <div class="main-utility-area">
-            <div class="card" style="max-width: 600px; text-align: center;">
-                <h2 style="margin:0; font-size:1.4rem;">AIVM Predictions</h2>
-                <div id="oracleUI" style="display:none; margin-top: 20px;">
-                    <input type="text" id="oracleQuestion" placeholder="Ask about future applications..." autocomplete="off">
-                    <button id="shakeBtn" class="primary-btn" style="background: var(--success);">Query AIVM for 0.001 LCAI</button>
-                    <div class="result-window" id="resultText">Waiting for AIVM Consultation...</div>
+            <div id="registrationArea" class="card" style="display:none; max-width: 600px; text-align: center;">
+                <h2 style="margin:0; font-size:1.4rem;">Identity Required</h2>
+                <p style="font-size: 0.85rem; color: #666; margin: 15px 0;">You must register a MiMo username to use the AIVM Oracle.</p>
+                <input type="text" id="regUsername" placeholder="Enter desired username...">
+                <button id="registerBtn" class="primary-btn" style="background: var(--mimo);">Register MiMo Identity</button>
+                <div id="regFeedback" class="admin-status-msg" style="display:none;"></div>
+            </div>
+
+            <div id="oracleUI" style="display:none; width: 100%; max-width: 600px;">
+                <div class="card" style="text-align: center;">
+                    <h2 style="margin:0; font-size:1.4rem;">AIVM Inference Engine</h2>
+                    <div style="margin-top: 20px;">
+                        <input type="text" id="oracleQuestion" placeholder="Ask about future applications..." autocomplete="off">
+                        <button id="shakeBtn" class="primary-btn" style="background: var(--success);">Query AIVM for 0.001 LCAI</button>
+                        <div class="result-window" id="resultText">Waiting for AIVM Consultation...</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -86,7 +95,7 @@
         const BALL_CONTRACT_ADDR = "0x6C921cbC1C12Af06fE22df549cA89053928afe64"; 
 
         const BALL_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},{"inputs":[{"internalType":"string","name":"_question","type":"string"}],"name":"getPrediction","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"}];
-        const IDENTITY_ABI = [{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
+        const IDENTITY_ABI = [{"inputs":[{"internalType":"string","name":"_username","type":"string"},{"internalType":"string","name":"_did","type":"string"}],"name":"createIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
 
         let signer, ballContract, identityContract;
 
@@ -146,6 +155,10 @@
                     document.getElementById('userStatusHeader').style.display = 'block';
                     document.getElementById('userNameDisplay').innerHTML = `MiMo <span class="mimo-badge">✓</span>`;
                     document.getElementById('oracleUI').style.display = 'block';
+                    document.getElementById('registrationArea').style.display = 'none';
+                } else {
+                    document.getElementById('registrationArea').style.display = 'block';
+                    document.getElementById('oracleUI').style.display = 'none';
                 }
                 if(await identityContract.isAdmin(accounts[0])) document.getElementById('adminConsole').style.display = 'block';
             } catch(e) {}
@@ -154,52 +167,52 @@
         function generateAIVMInference(q) {
             const qL = q.toLowerCase();
             const res = document.getElementById('resultText');
-            let response = "The AIVM nodes suggest that the requested application is statistically probable within the next 3 development epochs.";
-            
-            if (qL.includes("water") && qL.includes("future")) {
-                response = "Inference complete: Water-based technologies will anchor future energy grids via decentralized hydrogen electrolysis, managed by AIVM-layer sustainability nodes.";
-            } else if (qL.includes("identity") || qL.includes("mimo")) {
-                response = "Future application of MiMo-anchored identity involves zero-knowledge reputation scores, facilitating global access without exposing raw biometric data.";
-            } else if (qL.includes("hammer") || qL.includes("tool")) {
-                response = "Traditional mechanical tools like hammers are transitioning to AIVM-guided percussion systems, ensuring molecular precision in advanced robotic construction.";
-            } else if (qL.includes("sun") || qL.includes("energy")) {
-                response = "The AIVM predicts that capturing stellar energy will shift toward orbital Dyson-swarm nodes, broadcasting power via microwave transmission to terrestrial Lightchain-managed grids.";
-            }
-
+            let response = "Inference complete: The AIVM nodes predict a favorable integration of this concept within the upcoming 3 epochs.";
+            if (qL.includes("water") && qL.includes("future")) response = "Hydrogen electrolysis via AIVM-managed water grids is the primary future application for sustainable energy distribution.";
+            else if (qL.includes("sun") || qL.includes("energy")) response = "The AIVM predicts orbital solar-harvesting swarms managed by Lightchain consensus layers will broadcast power to terrestrial nodes.";
             res.innerText = response;
             res.style.borderColor = "#28a745";
             hardSync();
         }
 
-        // FIX: REAL-TIME DYNAMIC FEE CALCULATION
         document.getElementById('oracleQuestion').oninput = (e) => {
             const q = e.target.value;
             const multiplier = Math.floor(q.length / 10) + 1;
-            const calculatedFee = (0.001 * multiplier).toFixed(3);
-            document.getElementById('shakeBtn').innerText = `Query AIVM for ${calculatedFee} LCAI`;
+            document.getElementById('shakeBtn').innerText = `Query AIVM for ${(0.001 * multiplier).toFixed(3)} LCAI`;
+        };
+
+        // NEW: SELF-REGISTRATION LOGIC
+        document.getElementById('registerBtn').onclick = async () => {
+            const name = document.getElementById('regUsername').value;
+            const fb = document.getElementById('regFeedback');
+            if(!name) return;
+            fb.style.display = 'block'; fb.innerText = "Broadcasting Identity...";
+            try {
+                const tx = await identityContract.createIdentity(name, "AIVM-NODE-ID", { gasLimit: 300000 });
+                await tx.wait();
+                fb.innerText = "Registration Success! Await Admin Verification.";
+            } catch (e) { fb.innerText = "Error: Already Registered or Failed."; }
         };
 
         document.getElementById('verifyBtn').onclick = async () => {
             const target = document.getElementById('verifyAddr').value;
             if(!target) return;
-            showAdminMsg("Requesting Signature...");
-            try { await (await identityContract.verifyIdentity(target, { gasLimit: 200000 })).wait(); showAdminMsg("User Verified ✓"); await hardSync(); } 
-            catch (e) { showAdminMsg("ERROR: Admin Authorization Denied.", true); }
+            showAdminMsg("Verifying User...");
+            try { await (await identityContract.verifyIdentity(target, { gasLimit: 300000 })).wait(); showAdminMsg("User Verified ✓"); await hardSync(); } 
+            catch (e) { showAdminMsg("ERROR: Check Admin Permissions.", true); }
         };
 
         document.getElementById('withdrawBtn').onclick = async () => {
-            showAdminMsg("Requesting Claim...");
-            try { await (await ballContract.withdraw({ gasLimit: 200000 })).wait(); showAdminMsg("Fees Successfully Claimed ✓"); await hardSync(); } 
-            catch (e) { showAdminMsg("ERROR: Withdrawal Failed.", true); }
+            showAdminMsg("Claiming Fees...");
+            try { await (await ballContract.withdraw({ gasLimit: 300000 })).wait(); showAdminMsg("Claim Success ✓"); await hardSync(); } 
+            catch (e) { showAdminMsg("ERROR: Admin Check Failed.", true); }
         };
 
         document.getElementById('shakeBtn').onclick = async () => {
             const q = document.getElementById('oracleQuestion').value;
             if(!q) return;
             const multiplier = Math.floor(q.length / 10) + 1;
-            const finalCost = (0.001 * multiplier).toFixed(3);
-            document.getElementById('resultText').innerText = "Streaming Inference from AIVM Nodes...";
-            try { await (await ballContract.getPrediction(q, { value: ethers.parseEther(finalCost), gasLimit: 500000 })).wait(); } 
+            try { await (await ballContract.getPrediction(q, { value: ethers.parseEther((0.001 * multiplier).toFixed(3)), gasLimit: 500000 })).wait(); } 
             catch (e) { document.getElementById('resultText').innerText = "Inference Failed. Check MiMo status."; }
         };
 
@@ -207,7 +220,7 @@
             const addr = document.getElementById('lookupAddr').value;
             const res = document.getElementById('lookupResults');
             try { const data = await identityContract.getIdentity(addr); res.innerHTML = `<strong>User:</strong> ${data[0]}<br><strong>Status:</strong> ${data[2] ? 'VERIFIED' : 'PENDING'}`; res.style.display = 'block'; } 
-            catch(e) { res.innerText = "Identity Not Found."; res.style.display = 'block'; }
+            catch(e) { res.innerText = "Not Found."; res.style.display = 'block'; }
         };
 
         document.getElementById('connectBtn').onclick = () => connectWallet(false);
@@ -216,4 +229,3 @@
     </script>
 </body>
 </html>
-
