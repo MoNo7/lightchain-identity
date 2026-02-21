@@ -19,14 +19,14 @@
         .primary-btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; margin-top: 10px; transition: 0.2s; }
         .small-btn { padding: 8px; font-size: 0.75rem; flex: 1; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; }
         .mimo-badge { background: var(--mimo); color: white; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; margin-left: 8px; box-shadow: 0 0 8px rgba(24, 119, 242, 0.6); font-weight: bold; vertical-align: middle; }
-        .result-window { margin-top: 20px; padding: 20px; background: #f8f9fa; border: 2px dashed #cbd5e0; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 1rem; color: #2d3748; text-align: center; line-height: 1.5; }
+        .result-window { margin-top: 20px; padding: 20px; background: #f8f9fa; border: 2px dashed #cbd5e0; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 1rem; color: #2d3748; text-align: left; line-height: 1.6; }
         .tx-item { font-size: 0.75rem; color: #555; border-bottom: 1px solid #eee; padding: 8px 0; }
         input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; }
     </style>
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity (Testnet)</h1><span style="font-size:0.7rem; color:#999;">v9.7</span></div>
+        <div class="nav-title"><h1>Lightchain Identity (Testnet)</h1><span style="font-size:0.7rem; color:#999;">v9.8</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -72,7 +72,7 @@
             <div id="oracleUI" style="display:none; width: 100%; max-width: 600px;">
                 <div class="card" style="text-align: center;">
                     <h2 style="margin:0; font-size:1.4rem;">AIVM Inference Engine</h2>
-                    <input type="text" id="oracleQuestion" style="margin-top:20px;" placeholder="What can I expect from AI in the future?">
+                    <input type="text" id="oracleQuestion" style="margin-top:20px;" placeholder="Describe the future of quantum energy grids...">
                     <button id="shakeBtn" class="primary-btn" style="background: var(--success);">Query AIVM for 0.001 LCAI</button>
                     <div class="result-window" id="resultText">Waiting for AIVM Consultation...</div>
                 </div>
@@ -98,13 +98,9 @@
 
         let signer, ballContract, identityContract;
 
-        // --- CUSTOM GAS SETTINGS ---
-        const BASE_GAS = {
-            maxFeePerGas: ethers.parseUnits('10', 'gwei'),
-            maxPriorityFeePerGas: ethers.parseUnits('10', 'gwei')
-        };
-        const ADMIN_GAS = { ...BASE_GAS, gasLimit: 60000 };
-        const QUERY_GAS = { ...BASE_GAS, gasLimit: 300000 }; // HIGHER LIMIT FOR AIVM
+        const BASE_GAS = { maxFeePerGas: ethers.parseUnits('10', 'gwei'), maxPriorityFeePerGas: ethers.parseUnits('10', 'gwei') };
+        const ADMIN_GAS = { ...BASE_GAS, gasLimit: 80000 };
+        const QUERY_GAS = { ...BASE_GAS, gasLimit: 350000 };
 
         function addRevenueLog(amount) {
             const time = new Date().toLocaleTimeString();
@@ -129,14 +125,37 @@
             });
         }
 
+        // --- ENHANCED AIVM INFERENCE LOGIC (v9.8) ---
         function generateAIVMInference(q) {
             const qL = q.toLowerCase();
             const res = document.getElementById('resultText');
-            let response = "Inference complete: The AIVM predicts a favorable integration of this concept within the next 3 epochs.";
-            if (qL.includes("water")) response = "Hydrogen electrolysis via AIVM-managed water grids is the primary future application for sustainable energy distribution.";
-            else if (qL.includes("sun") || qL.includes("energy")) response = "The AIVM predicts orbital solar-harvesting swarms managed by Lightchain consensus layers will broadcast power to terrestrial nodes.";
-            else if (qL.includes("ai") || qL.includes("future")) response = "AIVM analysis indicates a structural shift toward automated Proof of Intelligence (PoI) staking for global computational rewards.";
-            res.innerText = response;
+            
+            // Intelligence Layers
+            const tech = ["quantum", "ai", "computing", "silicon", "neural", "data"];
+            const energy = ["sun", "solar", "hydrogen", "fusion", "battery", "grid", "power", "water"];
+            const bio = ["dna", "bio", "health", "life", "gene", "medical"];
+            const space = ["mars", "orbit", "planet", "moon", "star", "rocket"];
+
+            let response = "<strong>AIVM LOG ANALYSIS:</strong><br>";
+
+            if (tech.some(k => qL.includes(k))) {
+                response += "Inference detected a focus on high-compute evolution. The AIVM predicts that by Epoch 12, neural-silicon interfaces will allow for sub-second Lightchain verification via biological consensus. ";
+            }
+            if (energy.some(k => qL.includes(k))) {
+                response += "Energy-sector analysis complete: The transition to decentralized fusion-swarms is accelerating. AIVM predicts that localized water-to-hydrogen electrolysis will become the primary staking reward for grid-maintainers. ";
+            }
+            if (bio.some(k => qL.includes(k))) {
+                response += "Biometric data pathways identified. Future healthcare will be governed by AIVM-managed DNA encryption, preventing unauthorized epigenetic alterations while rewards are paid in bio-verified LCAI. ";
+            }
+            if (space.some(k => qL.includes(k))) {
+                response += "Orbital expansion protocols engaged. Lightchain nodes in low-earth orbit will soon handle 40% of global inference traffic, utilizing solar-harvesting as a primary Proof of Power. ";
+            }
+
+            if (response === "<strong>AIVM LOG ANALYSIS:</strong><br>") {
+                response = "<strong>AIVM LOG ANALYSIS:</strong><br>The query falls outside primary future-prediction clusters. However, the AIVM suggests that decentralized integration of this concept will yield 15% computational efficiency gains within the next 4 epochs.";
+            }
+
+            res.innerHTML = response;
             res.style.borderColor = "#28a745";
         }
 
@@ -172,10 +191,7 @@
             if (!window.ethereum) return;
             try {
                 const provider = new ethers.BrowserProvider(window.ethereum);
-                const accounts = await window.ethereum.request({ 
-                    method: auto ? 'eth_accounts' : 'eth_requestAccounts' 
-                });
-
+                const accounts = await window.ethereum.request({ method: auto ? 'eth_accounts' : 'eth_requestAccounts' });
                 if (accounts.length === 0) return;
                 
                 signer = await provider.getSigner();
@@ -211,10 +227,7 @@
             const q = document.getElementById('oracleQuestion').value;
             const fee = (0.001 * (Math.floor(q.length / 10) + 1)).toFixed(3);
             try {
-                const tx = await ballContract.getPrediction(q, { 
-                    value: ethers.parseEther(fee), 
-                    ...QUERY_GAS 
-                });
+                const tx = await ballContract.getPrediction(q, { value: ethers.parseEther(fee), ...QUERY_GAS });
                 document.getElementById('resultText').innerText = "Streaming Inference...";
                 await tx.wait();
                 addRevenueLog(fee);
@@ -240,11 +253,8 @@
         document.getElementById('verifyBtn').onclick = async () => {
             const fb = document.getElementById('adminFeedback');
             try {
-                const tx = await identityContract.verifyIdentity(
-                    document.getElementById('verifyAddr').value,
-                    ADMIN_GAS
-                );
-                fb.innerText = "Processing (Low Fee)...";
+                const tx = await identityContract.verifyIdentity(document.getElementById('verifyAddr').value, ADMIN_GAS);
+                fb.innerText = "Processing...";
                 await tx.wait();
                 fb.innerText = "Verified Successfully ✓";
                 fb.style.color = "var(--success)";
@@ -255,11 +265,8 @@
         document.getElementById('revokeBtn').onclick = async () => {
             const fb = document.getElementById('adminFeedback');
             try {
-                const tx = await identityContract.revokeVerification(
-                    document.getElementById('verifyAddr').value,
-                    ADMIN_GAS
-                );
-                fb.innerText = "Revoking (Low Fee)...";
+                const tx = await identityContract.revokeVerification(document.getElementById('verifyAddr').value, ADMIN_GAS);
+                fb.innerText = "Revoking ...";
                 await tx.wait();
                 fb.innerText = "Identity Revoked ✓";
                 fb.style.color = "var(--admin)";
@@ -268,10 +275,7 @@
         };
 
         document.getElementById('connectBtn').onclick = () => connectWallet(false);
-        document.getElementById('disconnectBtn').onclick = () => { 
-            localStorage.clear(); 
-            location.reload(); 
-        };
+        document.getElementById('disconnectBtn').onclick = () => { localStorage.clear(); location.reload(); };
     </script>
 </body>
 </html>
