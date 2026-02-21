@@ -26,7 +26,7 @@
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity (Testnet)</h1><span style="font-size:0.7rem; color:#999;">v11.5</span></div>
+        <div class="nav-title"><h1>Lightchain Identity (Testnet)</h1><span style="font-size:0.7rem; color:#999;">v11.6</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -43,7 +43,6 @@
                 <input type="text" id="lookupAddr" placeholder="Lookup 0x...">
                 <button id="lookupBtn" class="small-btn" style="width:100%; background: var(--primary); margin-bottom:12px;">Query Identity Status</button>
                 <div id="lookupResults" style="display:none; padding-bottom:10px; font-size:0.7rem; background:#f0f7ff; border-radius:4px; padding:5px; margin-bottom:10px;"></div>
-                
                 <input type="text" id="verifyAddr" placeholder="Target Address 0x...">
                 <div style="display:flex; gap: 5px;">
                     <button id="verifyBtn" class="small-btn" style="background:var(--success);">Verify User</button>
@@ -99,7 +98,7 @@
         let signer, ballContract, identityContract;
         const BASE_GAS = { maxFeePerGas: ethers.parseUnits('10', 'gwei'), maxPriorityFeePerGas: ethers.parseUnits('10', 'gwei') };
         const ADMIN_GAS = { ...BASE_GAS, gasLimit: 200000 };
-        const QUERY_GAS = { ...BASE_GAS, gasLimit: 950000 };
+        const QUERY_GAS = { ...BASE_GAS, gasLimit: 1200000 }; // Increased gas for AIVM
 
         async function hardSync() {
             try {
@@ -122,11 +121,10 @@
                 document.getElementById('adminConsole').style.display = isAdmin ? 'block' : 'none';
                 document.getElementById('ownerConsole').style.display = isOwner ? 'block' : 'none';
                 
-                // Force check verification boolean
                 if(profile[2] === true) {
                     document.getElementById('oracleUI').style.display = 'block';
                     document.getElementById('userStatusHeader').style.display = 'block';
-                    document.getElementById('userNameDisplay').innerHTML = `${profile[0] || 'MiMo Member'} <span class="mimo-badge">✓</span>`;
+                    document.getElementById('userNameDisplay').innerHTML = `${profile[0] || 'Verified Member'} <span class="mimo-badge">✓</span>`;
                 } else {
                     document.getElementById('oracleUI').style.display = 'none';
                 }
@@ -135,6 +133,7 @@
                 feeBtn.innerText = `Toggle Fees: ${feesOn ? 'ON' : 'OFF'}`;
                 feeBtn.style.background = feesOn ? 'var(--owner)' : '#6c757d';
 
+                updateConsultButton();
                 await syncEventLogs();
             } catch(e) { console.error("Sync Failure:", e); }
         }
@@ -153,6 +152,49 @@
             } catch (e) { console.log("Log Sync Error:", e); }
         }
 
+        // --- BUTTON FEATURE RECOVERY ---
+
+        function updateConsultButton() {
+            const q = document.getElementById('oracleQuestion').value;
+            const btn = document.getElementById('shakeBtn');
+            ballContract.feesEnabled().then(feesOn => {
+                if(feesOn) {
+                    const cost = (0.001 * (Math.floor(q.length / 10) + 1)).toFixed(3);
+                    btn.innerText = `Consult AIVM (${cost} LCAI)`;
+                } else {
+                    btn.innerText = "Consult AIVM (Free)";
+                }
+            });
+        }
+
+        document.getElementById('oracleQuestion').oninput = updateConsultButton;
+
+        document.getElementById('shakeBtn').onclick = async () => {
+            const rawQ = document.getElementById('oracleQuestion').value;
+            if (!rawQ) return;
+            const visionaryPrompt = `As a forward-thinking innovator and futurist, provide a prediction for: ${rawQ}`;
+            try {
+                const feesOn = await ballContract.feesEnabled();
+                let feeValue = 0n;
+                if (feesOn) {
+                    const costString = (0.001 * (Math.floor(rawQ.length / 10) + 1)).toFixed(3);
+                    feeValue = ethers.parseEther(costString);
+                }
+                
+                document.getElementById('resultText').innerText = "Processing Visionary Prediction...";
+                const tx = await ballContract.getPrediction(visionaryPrompt, { 
+                    value: feeValue, 
+                    ...QUERY_GAS 
+                });
+                await tx.wait();
+                await hardSync();
+            } catch (e) { 
+                console.error(e);
+                document.getElementById('resultText').innerText = "Inference Failed: Check verification or network status."; 
+            }
+        };
+
+        // --- ADMIN HANDLERS ---
         document.getElementById('lookupBtn').onclick = async () => {
             const addr = document.getElementById('lookupAddr').value;
             if(!addr || !ethers.isAddress(addr)) return;
@@ -169,23 +211,11 @@
             if(!addr) return;
             try {
                 const tx = await identityContract.verifyIdentity(addr, ADMIN_GAS);
-                document.getElementById('adminFeedback').innerText = "Broadcasting verification...";
+                document.getElementById('adminFeedback').innerText = "Broadcasting...";
                 await tx.wait();
-                document.getElementById('adminFeedback').innerText = "User Verified!";
+                document.getElementById('adminFeedback').innerText = "Verified!";
                 await hardSync();
-            } catch(e) { document.getElementById('adminFeedback').innerText = "Verify Failed. Check admin status."; }
-        };
-
-        document.getElementById('revokeBtn').onclick = async () => {
-            const addr = document.getElementById('verifyAddr').value;
-            if(!addr) return;
-            try {
-                const tx = await identityContract.revokeVerification(addr, ADMIN_GAS);
-                document.getElementById('adminFeedback').innerText = "Revoking...";
-                await tx.wait();
-                document.getElementById('adminFeedback').innerText = "Access Revoked.";
-                await hardSync();
-            } catch(e) { document.getElementById('adminFeedback').innerText = "Revoke Failed."; }
+            } catch(e) { document.getElementById('adminFeedback').innerText = "Error: Check Admin status."; }
         };
 
         document.getElementById('toggleFeesBtn').onclick = async () => {
@@ -197,15 +227,7 @@
             } catch (e) { console.error(e); }
         };
 
-        document.getElementById('withdrawBtn').onclick = async () => {
-            try {
-                const tx = await ballContract.withdraw(ADMIN_GAS);
-                await tx.wait();
-                alert("Revenue withdrawn.");
-                await hardSync();
-            } catch (e) { alert("Withdrawal failed."); }
-        };
-
+        // --- CONNECT LOGIC ---
         async function connectWallet(auto = false) {
             if (!window.ethereum) return;
             try {
@@ -217,7 +239,6 @@
                 identityContract = new ethers.Contract(IDENTITY_CONTRACT, IDENTITY_ABI, signer);
                 document.getElementById('connectBtn').style.display = 'none';
                 document.getElementById('disconnectBtn').style.display = 'block';
-                // Show full address for security
                 document.getElementById('walletStatus').innerText = "Active: " + accounts[0];
                 localStorage.setItem('isWalletConnected', 'true');
                 await hardSync();
@@ -229,44 +250,6 @@
             } catch(e) { console.error(e); }
         }
 
-document.getElementById('shakeBtn').onclick = async () => {
-    const rawQ = document.getElementById('oracleQuestion').value;
-    if (!rawQ) return;
-    const visionaryPrompt = `As a forward-thinking innovator and futurist, provide a prediction for: ${rawQ}`;
-    
-    try {
-        const isEnabled = await ballContract.feesEnabled();
-        let val = 0n; // Use BigInt for safety
-        
-        if (isEnabled) { 
-            val = ethers.parseEther((0.001 * (Math.floor(rawQ.length / 10) + 1)).toFixed(3)); 
-        }
-        
-        document.getElementById('resultText').innerText = "Consulting AIVM...";
-        
-        // Explicitly check identity before sending to avoid wasting gas
-        const profile = await identityContract.getIdentity(await signer.getAddress());
-        if (!profile[2]) {
-            throw new Error("IDENTITY_NOT_VERIFIED");
-        }
-
-        const tx = await ballContract.getPrediction(visionaryPrompt, { 
-            value: val, 
-            ...QUERY_GAS 
-        });
-        
-        await tx.wait();
-        await hardSync();
-    } catch (e) { 
-        console.error(e);
-        if (e.message === "IDENTITY_NOT_VERIFIED") {
-            document.getElementById('resultText').innerText = "Error: Your identity is not verified in the contract.";
-        } else {
-            document.getElementById('resultText').innerText = "Transaction Failed: Likely a Fee or Gas mismatch. Check if Fees are ON.";
-        }
-    }
-};
-
         document.getElementById('connectBtn').onclick = () => connectWallet(false);
         document.getElementById('disconnectBtn').onclick = () => { localStorage.clear(); location.reload(); };
         document.getElementById('refreshLogBtn').onclick = () => hardSync();
@@ -274,4 +257,3 @@ document.getElementById('shakeBtn').onclick = async () => {
     </script>
 </body>
 </html>
-
