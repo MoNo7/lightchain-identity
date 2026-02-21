@@ -8,25 +8,22 @@
         :root { --primary: #007bff; --admin: #dc3545; --bg: #f0f2f5; --text: #1c1e21; --success: #28a745; --mimo: #1877F2; --owner: #6f42c1; }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         #topNav { height: 60px; background: #fff; border-bottom: 1px solid #e1e4e8; display: flex; align-items: center; justify-content: space-between; padding: 0 25px; box-sizing: border-box; }
-        .nav-title { display: flex; align-items: baseline; gap: 10px; }
         .nav-title h1 { font-size: 1.2rem; color: #0056b3; margin: 0; }
         .token-display { background: #f8f9fa; padding: 8px 15px; border-radius: 20px; border: 1px solid #e1e4e8; font-weight: 700; font-size: 0.9rem; color: var(--success); }
         .content-wrapper { display: flex; flex: 1; overflow: hidden; }
         #leftSidebar { width: 320px; background: #fff; border-right: 1px solid #e1e4e8; padding: 20px; overflow-y: auto; }
-        #rightSidebar { width: 280px; background: #fff; border-left: 1px solid #e1e4e8; padding: 20px; overflow-y: auto; }
         .main-utility-area { flex: 1; padding: 40px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; }
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #e1e4e8; width: 100%; box-sizing: border-box; }
-        .primary-btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; margin-top: 10px; transition: 0.2s; }
+        .primary-btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; margin-top: 10px; }
         .small-btn { padding: 8px; font-size: 0.75rem; flex: 1; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; }
-        .mimo-badge { background: var(--mimo); color: white; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; margin-left: 8px; box-shadow: 0 0 8px rgba(24, 119, 242, 0.6); font-weight: bold; vertical-align: middle; }
-        .result-window { margin-top: 20px; padding: 20px; background: #f8f9fa; border: 2px dashed #cbd5e0; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.9rem; color: #2d3748; text-align: left; line-height: 1.6; white-space: pre-wrap; }
-        .tx-item { font-size: 0.7rem; color: #666; padding: 10px 0; border-bottom: 1px solid #f0f0f0; word-break: break-all; }
+        .mimo-badge { background: var(--mimo); color: white; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; margin-left: 8px; font-weight: bold; }
+        .result-window { margin-top: 20px; padding: 20px; background: #f8f9fa; border: 2px dashed #cbd5e0; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.9rem; white-space: pre-wrap; }
         input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; }
     </style>
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity (Portal)</h1><span style="font-size:0.7rem; color:#999;">v13.2</span></div>
+        <div class="nav-title"><h1>Lightchain Identity (Portal)</h1><span style="font-size:0.7rem; color:#999;">v13.3</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -38,36 +35,30 @@
                 <button id="disconnectBtn" class="primary-btn" style="display:none; background:#6c757d;">Disconnect</button>
             </div>
             <div id="adminConsole" class="card" style="display:none;">
-                <h4 style="color:var(--admin); margin: 0 0 10px 0; font-size: 0.85rem;">Identity Admin</h4>
+                <h4 style="color:var(--admin); margin: 0 0 10px 0;">Identity Admin</h4>
                 <input type="text" id="lookupAddr" placeholder="Lookup 0x...">
                 <button id="lookupBtn" class="small-btn" style="width:100%; background: var(--primary); margin-bottom:12px;">Query Status</button>
-                <div id="lookupResults" style="display:none; padding:10px; font-size:0.7rem; background:#f0f7ff; border-radius:4px; margin-bottom:10px;"></div>
+                <div id="lookupResults" style="display:none; padding:10px; font-size:0.7rem; background:#f0f7ff; margin-bottom:10px;"></div>
                 <input type="text" id="verifyAddr" placeholder="Target 0x...">
                 <div style="display:flex; gap: 5px;">
                     <button id="verifyBtn" class="small-btn" style="background:var(--success);">Verify</button>
                     <button id="revokeBtn" class="small-btn" style="background:var(--admin);">Revoke</button>
                 </div>
-                <div id="adminFeedback" style="font-size:0.7rem; margin-top:8px; text-align:center; font-weight:bold; color:var(--primary);"></div>
             </div>
             <div id="ownerConsole" class="card" style="display:none; border: 1px solid var(--owner);">
-                <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;">
-                    <h4 style="color:var(--owner); margin: 0; font-size: 0.85rem;">Oracle Owner</h4>
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                    <h4 style="color:var(--owner); margin: 0;">Oracle Owner</h4>
                     <strong style="font-size:0.7rem; color:var(--success);" id="totalRevenueDisplay">0.000 LCAI</strong>
                 </div>
-                <div id="revenueLog" style="max-height: 100px; overflow-y: auto; font-size: 0.65rem; background:#f9f9f9; padding:5px; border-radius:4px; margin-bottom:10px;"></div>
                 <button id="toggleFeesBtn" class="small-btn" style="width:100%; margin-bottom:5px; background:var(--owner);">Toggle Fees</button>
-                <div style="display:flex; gap:5px;">
-                    <button id="refreshLogBtn" class="small-btn">Sync</button>
-                    <button id="withdrawBtn" class="small-btn" style="background:var(--success);">Withdraw</button>
-                </div>
+                <button id="withdrawBtn" class="small-btn" style="width:100%; background:var(--success);">Withdraw</button>
             </div>
         </div>
         <div class="main-utility-area">
             <div id="oracleUI" style="display:none; width: 100%; max-width: 600px;">
                 <div class="card" style="text-align: center; border-top: 4px solid var(--success);">
-                    <h2 style="margin:0;">AIVM Visionary Oracle</h2>
-                    <p style="font-size:0.8rem; color:#666;">Innovative predictions for forward-thinking users.</p>
-                    <input type="text" id="oracleQuestion" style="margin-top:20px;" placeholder="What will the world look like in 2050?">
+                    <h2>AIVM Visionary Oracle</h2>
+                    <input type="text" id="oracleQuestion" placeholder="Ask the future...">
                     <button id="shakeBtn" class="primary-btn" style="background: var(--success);">Consult AIVM</button>
                     <div class="result-window" id="resultText">Waiting for input...</div>
                 </div>
@@ -76,7 +67,7 @@
     </div>
     <script>
         const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-        const BALL_CONTRACT_ADDR = "0x05a8860a9EeAA9a9d866d8A7E4A9C89912cCb708"; 
+        const BALL_CONTRACT_ADDR = "0x455cbe2F29a6F758ec805c0843A9a39558Bf7456"; 
         const SYSTEM_PROMPT = "As a forward-thinking innovator and futurist, provide a prediction for: ";
 
         const BALL_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},{"inputs":[{"internalType":"string","name":"_question","type":"string"}],"name":"getPrediction","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bool","name":"_enabled","type":"bool"}],"name":"toggleFees","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"feesEnabled","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"}];
@@ -117,15 +108,11 @@
         function updateFeeDisplay() {
             const q = document.getElementById('oracleQuestion').value;
             const btn = document.getElementById('shakeBtn');
-            const fullPrompt = SYSTEM_PROMPT + q;
             ballContract.feesEnabled().then(on => {
                 if (on && q) {
-                    const bytes = getByteLength(fullPrompt);
-                    const cost = ((Math.floor(bytes / 10) + 1) * 0.010).toFixed(3);
+                    const cost = ((Math.floor(getByteLength(SYSTEM_PROMPT + q) / 10) + 1) * 0.010).toFixed(3);
                     btn.innerText = `Consult AIVM (${cost} LCAI)`;
-                } else {
-                    btn.innerText = "Consult AIVM (Free)";
-                }
+                } else { btn.innerText = "Consult AIVM (Free)"; }
             });
         }
 
@@ -141,40 +128,46 @@
             await hardSync();
         }
 
-        function disconnectWallet() {
-            signer = null;
-            document.getElementById('connectBtn').style.display = 'block';
-            document.getElementById('disconnectBtn').style.display = 'none';
-            document.getElementById('oracleUI').style.display = 'none';
-            document.getElementById('adminConsole').style.display = 'none';
-            document.getElementById('ownerConsole').style.display = 'none';
-            document.getElementById('walletStatus').innerText = "Disconnected";
-        }
-
-        // Initialize Listeners
         window.onload = () => {
-            document.getElementById('connectBtn').onclick = connectWallet;
-            document.getElementById('disconnectBtn').onclick = disconnectWallet;
-            document.getElementById('oracleQuestion').oninput = updateFeeDisplay;
-            
-            document.getElementById('shakeBtn').onclick = async () => {
+            document.getElementById('connectBtn').addEventListener('click', connectWallet);
+            document.getElementById('disconnectBtn').addEventListener('click', () => location.reload());
+            document.getElementById('oracleQuestion').addEventListener('input', updateFeeDisplay);
+            document.getElementById('shakeBtn').addEventListener('click', async () => {
                 const q = document.getElementById('oracleQuestion').value;
                 if (!q) return;
-                const fullPrompt = SYSTEM_PROMPT + q;
                 try {
                     const feesOn = await ballContract.feesEnabled();
                     let val = 0n;
                     if (feesOn) {
-                        const bytes = getByteLength(fullPrompt);
-                        val = ethers.parseEther(((Math.floor(bytes / 10) + 1) * 0.010).toFixed(3));
+                        const cost = ((Math.floor(getByteLength(SYSTEM_PROMPT + q) / 10) + 1) * 0.010).toFixed(3);
+                        val = ethers.parseEther(cost);
                     }
-                    document.getElementById('resultText').innerText = "Processing visionary inference...";
-                    const tx = await ballContract.getPrediction(fullPrompt, { value: val, gasLimit: 3000000 });
+                    document.getElementById('resultText').innerText = "Broadcasting to AIVM...";
+                    // INCREASED GAS LIMIT TO 4,000,000 TO ENSURE SUCCESS
+                    const tx = await ballContract.getPrediction(SYSTEM_PROMPT + q, { value: val, gasLimit: 4000000 });
                     await tx.wait();
                     await hardSync();
-                } catch (e) {
-                    document.getElementById('resultText').innerText = "Error: Reset MetaMask Nonce or check LCAI balance.";
-                }
+                } catch (e) { document.getElementById('resultText').innerText = "Inference Error: Reset Nonce."; }
+            });
+            
+            // Re-adding Admin/Owner Button Functionality
+            document.getElementById('lookupBtn').onclick = async () => {
+                const res = await identityContract.getIdentity(document.getElementById('lookupAddr').value);
+                document.getElementById('lookupResults').style.display = 'block';
+                document.getElementById('lookupResults').innerHTML = `Username: ${res[0]}<br>Verified: ${res[2] ? '✅' : '❌'}`;
+            };
+            document.getElementById('verifyBtn').onclick = async () => {
+                await (await identityContract.verifyIdentity(document.getElementById('verifyAddr').value)).wait();
+                await hardSync();
+            };
+            document.getElementById('toggleFeesBtn').onclick = async () => {
+                const current = await ballContract.feesEnabled();
+                await (await ballContract.toggleFees(!current)).wait();
+                await hardSync();
+            };
+            document.getElementById('withdrawBtn').onclick = async () => {
+                await (await ballContract.withdraw()).wait();
+                await hardSync();
             };
         };
     </script>
