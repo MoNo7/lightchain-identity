@@ -29,8 +29,8 @@
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity</h1><span style="font-size:0.7rem; color:#999;">v7.9</span></div>
-        <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
+        <div class="nav-title"><h1>Lightchain Identity</h1><span style="font-size:0.7rem; color:#999;">v8.1</span></div>
+        <div id="tokenDisplay" class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
         <div id="leftSidebar">
@@ -62,7 +62,7 @@
 
         <div class="main-utility-area">
             <div class="card" style="max-width: 600px; text-align: center;">
-                <h2 style="margin:0; font-size:1.4rem;">AIVM Magic 8 Ball</h2>
+                <h2 style="margin:0; font-size:1.4rem;">AIVM Inference Engine</h2>
                 <div id="oracleUI" style="display:none; margin-top: 20px;">
                     <input type="text" id="oracleQuestion" placeholder="Ask about future applications..." autocomplete="off">
                     <button id="shakeBtn" class="primary-btn" style="background: var(--success);">Query AIVM for 0.001 LCAI</button>
@@ -96,7 +96,6 @@
             el.style.color = isError ? '#c53030' : '#28a745';
         }
 
-        // RE-ADDED LOG TO FEED LOGIC
         function logToFeed(q) {
             const feed = document.getElementById('txFeed');
             if(feed.innerText.includes("No recent")) feed.innerHTML = "";
@@ -137,7 +136,6 @@
                 localStorage.setItem('isWalletConnected', 'true');
                 await hardSync();
 
-                // FIX: ENSURED LOGTOFEED IS CALLED ON EVERY EVENT
                 ballContract.on("OracleAnswer", (user, question) => {
                     logToFeed(question);
                     if (user.toLowerCase() === accounts[0].toLowerCase()) generateAIVMInference(question);
@@ -157,13 +155,29 @@
             const qL = q.toLowerCase();
             const res = document.getElementById('resultText');
             let response = "The AIVM nodes suggest that the requested application is statistically probable within the next 3 development epochs.";
-            if (qL.includes("water") && qL.includes("future")) response = "Inference complete: Water-based technologies will anchor future energy grids via decentralized hydrogen electrolysis, managed by AIVM-layer sustainability nodes.";
-            else if (qL.includes("identity") || qL.includes("mimo")) response = "Future application of MiMo-anchored identity involves zero-knowledge reputation scores, facilitating global access without exposing raw biometric data.";
-            else if (qL.includes("hammer") || qL.includes("tool")) response = "Traditional mechanical tools like hammers are transitioning to AIVM-guided percussion systems, ensuring molecular precision in advanced robotic construction.";
+            
+            if (qL.includes("water") && qL.includes("future")) {
+                response = "Inference complete: Water-based technologies will anchor future energy grids via decentralized hydrogen electrolysis, managed by AIVM-layer sustainability nodes.";
+            } else if (qL.includes("identity") || qL.includes("mimo")) {
+                response = "Future application of MiMo-anchored identity involves zero-knowledge reputation scores, facilitating global access without exposing raw biometric data.";
+            } else if (qL.includes("hammer") || qL.includes("tool")) {
+                response = "Traditional mechanical tools like hammers are transitioning to AIVM-guided percussion systems, ensuring molecular precision in advanced robotic construction.";
+            } else if (qL.includes("sun") || qL.includes("energy")) {
+                response = "The AIVM predicts that capturing stellar energy will shift toward orbital Dyson-swarm nodes, broadcasting power via microwave transmission to terrestrial Lightchain-managed grids.";
+            }
+
             res.innerText = response;
             res.style.borderColor = "#28a745";
             hardSync();
         }
+
+        // FIX: REAL-TIME DYNAMIC FEE CALCULATION
+        document.getElementById('oracleQuestion').oninput = (e) => {
+            const q = e.target.value;
+            const multiplier = Math.floor(q.length / 10) + 1;
+            const calculatedFee = (0.001 * multiplier).toFixed(3);
+            document.getElementById('shakeBtn').innerText = `Query AIVM for ${calculatedFee} LCAI`;
+        };
 
         document.getElementById('verifyBtn').onclick = async () => {
             const target = document.getElementById('verifyAddr').value;
@@ -182,9 +196,10 @@
         document.getElementById('shakeBtn').onclick = async () => {
             const q = document.getElementById('oracleQuestion').value;
             if(!q) return;
-            const cost = (0.001 * (Math.floor(q.length / 10) + 1)).toFixed(3);
+            const multiplier = Math.floor(q.length / 10) + 1;
+            const finalCost = (0.001 * multiplier).toFixed(3);
             document.getElementById('resultText').innerText = "Streaming Inference from AIVM Nodes...";
-            try { await (await ballContract.getPrediction(q, { value: ethers.parseEther(cost), gasLimit: 500000 })).wait(); } 
+            try { await (await ballContract.getPrediction(q, { value: ethers.parseEther(finalCost), gasLimit: 500000 })).wait(); } 
             catch (e) { document.getElementById('resultText').innerText = "Inference Failed. Check MiMo status."; }
         };
 
@@ -201,4 +216,3 @@
     </script>
 </body>
 </html>
-
