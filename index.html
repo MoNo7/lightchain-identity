@@ -26,7 +26,7 @@
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity (Testnet)</h1><span style="font-size:0.7rem; color:#999;">v12.4</span></div>
+        <div class="nav-title"><h1>Lightchain Identity (Portal)</h1><span style="font-size:0.7rem; color:#999;">v12.5</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -49,7 +49,7 @@
                     <button id="verifyBtn" class="small-btn" style="background:var(--success);">Verify User</button>
                     <button id="revokeBtn" class="small-btn" style="background:var(--admin);">Revoke User</button>
                 </div>
-                <div id="adminFeedback" style="font-size:0.7rem; margin-top:8px; text-align:center; font-weight:bold; color:var(--primary); height: 14px;"></div>
+                <div id="adminFeedback" style="font-size:0.7rem; margin-top:8px; text-align:center; font-weight:bold; color:var(--primary);"></div>
             </div>
 
             <div id="ownerConsole" class="card" style="display:none; border: 1px solid var(--owner);">
@@ -91,8 +91,8 @@
 
     <script>
         const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-        // Update this after successful redeploy
-        const BALL_CONTRACT_ADDR = "0x2E5ab1a3cC91586854F1E98e3E9Ad7ebf1a31821"; 
+        // Update this with the NEW address from the IDE
+        const BALL_CONTRACT_ADDR = "0x0e87de3206Ed8D16d385F38b048734e6fd020B3f"; 
         const SYSTEM_PROMPT = "As a forward-thinking innovator and futurist, provide a prediction for: ";
 
         const BALL_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},{"inputs":[{"internalType":"string","name":"_question","type":"string"}],"name":"getPrediction","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bool","name":"_enabled","type":"bool"}],"name":"toggleFees","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"feesEnabled","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"}];
@@ -126,6 +126,7 @@
                     document.getElementById('userStatusHeader').style.display = 'block';
                     document.getElementById('userNameDisplay').innerHTML = `${profile[0] || 'MiMo Member'} <span class="mimo-badge">✓</span>`;
                 }
+
                 document.getElementById('toggleFeesBtn').innerText = `Fees: ${feesOn ? 'ON' : 'OFF'}`;
                 updateFeeDisplay();
                 syncLogs();
@@ -161,7 +162,7 @@
                     const fee = ((Math.floor(b / 10) + 1) * 0.001).toFixed(3);
                     revenue.innerHTML += `<div class="tx-item" style="color:var(--success)">+${fee} LCAI Received</div>`;
                 });
-            } catch (e) {}
+            } catch (e) { console.log("Sync Log Error", e); }
         }
 
         document.getElementById('oracleQuestion').oninput = updateFeeDisplay;
@@ -179,10 +180,14 @@
                     val = ethers.parseEther(cost);
                 }
                 document.getElementById('resultText').innerText = "Broadcasting visionary query...";
-                const tx = await ballContract.getPrediction(fullPrompt, { value: val, gasLimit: 3000000 });
+                // FIXED: Using high gas floor to ensure AIVM processing succeeds
+                const tx = await ballContract.getPrediction(fullPrompt, { value: val, gasLimit: 4000000 });
                 await tx.wait();
                 hardSync();
-            } catch (e) { document.getElementById('resultText').innerText = "Error: Check verification or LCAI balance."; }
+            } catch (e) { 
+                console.error(e);
+                document.getElementById('resultText').innerText = "Inference Error: Ensure verification or sufficient LCAI.";
+            }
         };
 
         document.getElementById('lookupBtn').onclick = async () => {
