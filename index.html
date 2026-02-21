@@ -26,7 +26,7 @@
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity (Testnet)</h1><span style="font-size:0.7rem; color:#999;">v9.3</span></div>
+        <div class="nav-title"><h1>Lightchain Identity (Testnet)</h1><span style="font-size:0.7rem; color:#999;">v9.5</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -57,10 +57,8 @@
 
             <div id="ownerConsole" class="card" style="display:none; border: 1px solid var(--owner);">
                 <h4 style="color:var(--owner); margin: 0 0 10px 0; font-size: 0.85rem;">Owner Revenue Log</h4>
-                <div style="background:#f3e5f5; padding:10px; border-radius:8px; font-size:0.7rem;">
-                    Fees are pushed <strong>directly</strong> to your wallet.
-                </div>
-                <div id="revenueLog" style="margin-top:10px; max-height: 120px; overflow-y: auto; font-size: 0.65rem;"></div>
+                <div id="revenueLog" style="max-height: 150px; overflow-y: auto; font-size: 0.7rem; color: #444; border: 1px solid #eee; padding: 5px; border-radius: 4px; margin-bottom:10px;"></div>
+                <button id="clearLogBtn" class="small-btn" style="width:100%;">Clear History</button>
             </div>
         </div>
 
@@ -100,6 +98,31 @@
 
         let signer, ballContract, identityContract;
 
+        // --- REVENUE LOG LOGIC ---
+        function addRevenueLog(amount) {
+            const time = new Date().toLocaleTimeString();
+            const logEntry = `[${time}] Received +${amount} LCAI`;
+            let logs = JSON.parse(localStorage.getItem('revenueHistory') || "[]");
+            logs.unshift(logEntry);
+            if(logs.length > 50) logs.pop();
+            localStorage.setItem('revenueHistory', JSON.stringify(logs));
+            renderRevenueHistory();
+        }
+
+        function renderRevenueHistory() {
+            const logs = JSON.parse(localStorage.getItem('revenueHistory') || "[]");
+            const container = document.getElementById('revenueLog');
+            container.innerHTML = logs.length ? "" : "<div style='color:#999;font-style:italic;'>No transaction history</div>";
+            logs.forEach(log => {
+                const div = document.createElement('div');
+                div.style.padding = "4px 0";
+                div.style.borderBottom = "1px solid #f0f0f0";
+                div.innerText = log;
+                container.appendChild(div);
+            });
+        }
+
+        // --- AIVM INFERENCE ENGINE ---
         function generateAIVMInference(q) {
             const qL = q.toLowerCase();
             const res = document.getElementById('resultText');
@@ -114,34 +137,42 @@
         async function hardSync() {
             try {
                 const address = await signer.getAddress();
-                document.getElementById('globalCount').innerText = (await ballContract.totalPredictions()).toString();
-                document.getElementById('tokenBalance').innerText = parseFloat(ethers.formatEther(await signer.provider.getBalance(address))).toFixed(4);
-                
-                const owner = await ballContract.admin();
-                const isRegAdmin = await identityContract.isAdmin(address);
+                const [total, balance, owner, isAdmin] = await Promise.all([
+                    ballContract.totalPredictions(),
+                    signer.provider.getBalance(address),
+                    ballContract.admin(),
+                    identityContract.isAdmin(address)
+                ]);
+
+                document.getElementById('globalCount').innerText = total.toString();
+                document.getElementById('tokenBalance').innerText = parseFloat(ethers.formatEther(balance)).toFixed(4);
                 document.getElementById('ownerConsole').style.display = (owner.toLowerCase() === address.toLowerCase()) ? 'block' : 'none';
-                document.getElementById('adminConsole').style.display = isRegAdmin ? 'block' : 'none';
+                document.getElementById('adminConsole').style.display = isAdmin ? 'block' : 'none';
                 
-                const profile = await identityContract.getIdentity(address).catch(() => null);
-                if(profile && profile[2]) {
+                const profile = await identityContract.getIdentity(address);
+                if(profile[2]) {
                     document.getElementById('oracleUI').style.display = 'block';
                     document.getElementById('userStatusHeader').style.display = 'block';
-                    document.getElementById('userNameDisplay').innerHTML = `MiMo <span class="mimo-badge">✓</span>`;
+                    document.getElementById('userNameDisplay').innerHTML = `${profile[0]} <span class="mimo-badge">✓</span>`;
                     document.getElementById('registrationArea').style.display = 'none';
                 } else {
                     document.getElementById('registrationArea').style.display = 'block';
                     document.getElementById('oracleUI').style.display = 'none';
                 }
-            } catch(e) {}
+            } catch(e) { console.error("Sync Error:", e); }
         }
 
+        // --- PERSISTENCE & CONNECTION ---
         async function connectWallet(auto = false) {
             if (!window.ethereum) return;
             try {
-                const accounts = await window.ethereum.request({ method: auto ? 'eth_accounts' : 'eth_requestAccounts' });
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                const accounts = await window.ethereum.request({ 
+                    method: auto ? 'eth_accounts' : 'eth_requestAccounts' 
+                });
+
                 if (accounts.length === 0) return;
                 
-                const provider = new ethers.BrowserProvider(window.ethereum);
                 signer = await provider.getSigner();
                 ballContract = new ethers.Contract(BALL_CONTRACT_ADDR, BALL_ABI, signer);
                 identityContract = new ethers.Contract(IDENTITY_CONTRACT, IDENTITY_ABI, signer);
@@ -151,30 +182,28 @@
                 document.getElementById('walletStatus').innerText = "Wallet: " + accounts[0].substring(0, 10);
                 localStorage.setItem('isWalletConnected', 'true');
                 
+                renderRevenueHistory();
                 await hardSync();
 
                 ballContract.on("OracleAnswer", (user, question) => {
-                    const div = document.createElement('div');
-                    div.className = 'tx-item';
-                    div.innerHTML = `<strong>Query:</strong> ${question.substring(0,22)}... <em>Anonymous</em>`;
-                    document.getElementById('txFeed').prepend(div);
                     if (user.toLowerCase() === accounts[0].toLowerCase()) generateAIVMInference(question);
                 });
-            } catch(e) {}
+            } catch(e) { console.error("Connect Failed:", e); }
         }
 
-        // Persistence Restoration Logic
+        // Auto-Reconnect on Load
         window.addEventListener('load', () => {
             if(localStorage.getItem('isWalletConnected') === 'true') {
-                connectWallet(true);
+                setTimeout(() => connectWallet(true), 300);
+            } else {
+                document.getElementById('walletStatus').innerText = "Wallet Disconnected";
             }
         });
 
+        // --- BUTTON ACTIONS ---
         document.getElementById('oracleQuestion').addEventListener('input', (e) => {
-            const q = e.target.value;
-            const multiplier = Math.floor(q.length / 10) + 1;
-            const total = (0.001 * multiplier).toFixed(3);
-            document.getElementById('shakeBtn').innerText = `Query AIVM for ${total} LCAI`;
+            const multiplier = Math.floor(e.target.value.length / 10) + 1;
+            document.getElementById('shakeBtn').innerText = `Query AIVM for ${(0.001 * multiplier).toFixed(3)} LCAI`;
         });
 
         document.getElementById('shakeBtn').onclick = async () => {
@@ -184,11 +213,14 @@
                 const tx = await ballContract.getPrediction(q, { value: ethers.parseEther(fee), gasLimit: 500000 });
                 document.getElementById('resultText').innerText = "Streaming Inference...";
                 await tx.wait();
-                const log = document.createElement('div');
-                log.innerText = `+${fee} LCAI Revenue Received.`;
-                document.getElementById('revenueLog').prepend(log);
+                addRevenueLog(fee);
                 await hardSync();
             } catch (e) { document.getElementById('resultText').innerText = "Query Failed."; }
+        };
+
+        document.getElementById('clearLogBtn').onclick = () => {
+            localStorage.removeItem('revenueHistory');
+            renderRevenueHistory();
         };
 
         document.getElementById('lookupBtn').onclick = async () => {
@@ -202,35 +234,34 @@
         };
 
         document.getElementById('verifyBtn').onclick = async () => {
-            const target = document.getElementById('verifyAddr').value;
             const fb = document.getElementById('adminFeedback');
-            fb.innerText = "Broadcasting Verify...";
-            fb.style.color = "#666";
             try {
-                const tx = await identityContract.verifyIdentity(target);
+                const tx = await identityContract.verifyIdentity(document.getElementById('verifyAddr').value);
+                fb.innerText = "Processing...";
                 await tx.wait();
                 fb.innerText = "Verified Successfully ✓";
                 fb.style.color = "var(--success)";
                 await hardSync();
-            } catch (e) { fb.innerText = "Verify Failed."; fb.style.color = "var(--admin)"; }
+            } catch (e) { fb.innerText = "Action Failed."; fb.style.color = "var(--admin)"; }
         };
 
         document.getElementById('revokeBtn').onclick = async () => {
-            const target = document.getElementById('verifyAddr').value;
             const fb = document.getElementById('adminFeedback');
-            fb.innerText = "Broadcasting Revoke...";
-            fb.style.color = "#666";
             try {
-                const tx = await identityContract.revokeVerification(target);
+                const tx = await identityContract.revokeVerification(document.getElementById('verifyAddr').value);
+                fb.innerText = "Processing...";
                 await tx.wait();
                 fb.innerText = "Identity Revoked ✓";
                 fb.style.color = "var(--admin)";
                 await hardSync();
-            } catch (e) { fb.innerText = "Revoke Failed."; fb.style.color = "var(--admin)"; }
+            } catch (e) { fb.innerText = "Action Failed."; fb.style.color = "var(--admin)"; }
         };
 
         document.getElementById('connectBtn').onclick = () => connectWallet(false);
-        document.getElementById('disconnectBtn').onclick = () => { localStorage.clear(); location.reload(); };
+        document.getElementById('disconnectBtn').onclick = () => { 
+            localStorage.clear(); 
+            location.reload(); 
+        };
     </script>
 </body>
 </html>
