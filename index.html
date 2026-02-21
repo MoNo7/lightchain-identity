@@ -21,12 +21,15 @@
         .mimo-badge { background: var(--mimo); color: white; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; margin-left: 8px; box-shadow: 0 0 8px rgba(24, 119, 242, 0.6); font-weight: bold; vertical-align: middle; }
         .admin-status-msg { font-size: 0.7rem; margin-top: 10px; padding: 8px; border-radius: 4px; text-align: center; font-weight: bold; min-height: 15px; }
         .result-window { margin-top: 20px; padding: 20px; background: #f8f9fa; border: 2px dashed #cbd5e0; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 1rem; color: #2d3748; text-align: center; line-height: 1.5; }
+        .tx-item { font-size: 0.75rem; color: #555; border-bottom: 1px solid #eee; padding: 8px 0; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+        .tx-item strong { color: #0056b3; display: block; }
         input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; }
     </style>
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity</h1><span style="font-size:0.7rem; color:#999;">v7.8</span></div>
+        <div class="nav-title"><h1>Lightchain Identity</h1><span style="font-size:0.7rem; color:#999;">v7.9</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -40,25 +43,19 @@
 
             <div id="adminConsole" class="card" style="display:none;">
                 <h4 style="color:var(--admin); margin: 0 0 10px 0; font-size: 0.85rem;">Admin Management</h4>
-                
                 <div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #eee;">
                     <h5 style="margin: 0 0 8px 0; font-size: 0.75rem;">Global Registry Search</h5>
                     <input type="text" id="lookupAddr" placeholder="Search 0x...">
                     <button id="lookupBtn" class="small-btn" style="width:100%; background: var(--primary);">Query Database</button>
                     <div id="lookupResults" class="lookup-results" style="display:none; padding-top:10px; font-size:0.7rem;"></div>
                 </div>
-
                 <div class="treasury-box" style="background:#fff5f5; border:1px solid #feb2b2; padding:12px; border-radius:8px; margin-bottom:15px; text-align:center;">
                     <div style="font-size: 0.65rem; color:#c53030; margin-bottom:5px;">OWNER CLAIM STATUS: <span id="adminCheck">PENDING</span></div>
                     <div style="font-size: 1.4rem; font-weight: 800; color: #c53030;"><span id="treasuryBalance">0.0000</span> LCAI</div>
                     <button id="withdrawBtn" class="small-btn" style="width:100%; margin-top:10px; background:#c53030;">Claim Fees</button>
                 </div>
-
                 <input type="text" id="verifyAddr" placeholder="Verify 0x...">
-                <div style="display:flex; gap: 4px;">
-                    <button id="verifyBtn" class="small-btn" style="background:var(--success);">Verify User</button>
-                    <button id="revokeBtn" class="small-btn">Revoke User</button>
-                </div>
+                <div style="display:flex; gap: 4px;"><button id="verifyBtn" class="small-btn" style="background:var(--success);">Verify User</button><button id="revokeBtn" class="small-btn">Revoke User</button></div>
                 <div id="adminFeedback" class="admin-status-msg" style="display:none;"></div>
             </div>
         </div>
@@ -99,6 +96,16 @@
             el.style.color = isError ? '#c53030' : '#28a745';
         }
 
+        // RE-ADDED LOG TO FEED LOGIC
+        function logToFeed(q) {
+            const feed = document.getElementById('txFeed');
+            if(feed.innerText.includes("No recent")) feed.innerHTML = "";
+            const div = document.createElement('div');
+            div.className = 'tx-item';
+            div.innerHTML = `<strong>Query: ${q.substring(0, 30)}...</strong> User: Anonymous User`;
+            feed.prepend(div);
+        }
+
         async function hardSync() {
             try {
                 const address = await signer.getAddress();
@@ -130,7 +137,9 @@
                 localStorage.setItem('isWalletConnected', 'true');
                 await hardSync();
 
+                // FIX: ENSURED LOGTOFEED IS CALLED ON EVERY EVENT
                 ballContract.on("OracleAnswer", (user, question) => {
+                    logToFeed(question);
                     if (user.toLowerCase() === accounts[0].toLowerCase()) generateAIVMInference(question);
                 });
 
@@ -144,51 +153,30 @@
             } catch(e) {}
         }
 
-        // IMPROVED: RELEVANCE KEYWORD ENGINE
         function generateAIVMInference(q) {
             const qL = q.toLowerCase();
             const res = document.getElementById('resultText');
-            let response = "Analyzing block patterns... The AIVM suggests that the requested application is statistically probable within the next 3 epochs.";
-            
-            if (qL.includes("water") && qL.includes("future")) {
-                response = "Inference complete: Water-based technologies will anchor future energy grids via decentralized hydrogen electrolysis, managed by AIVM-layer sustainability nodes.";
-            } else if (qL.includes("identity") || qL.includes("mimo")) {
-                response = "Future application of MiMo-anchored identity involves zero-knowledge reputation scores, facilitating global access without exposing raw biometric data.";
-            } else if (qL.includes("hammer") || qL.includes("tool")) {
-                response = "Traditional mechanical tools like hammers are transitioning to AIVM-guided percussion systems, ensuring molecular precision in advanced robotic construction.";
-            } else if (qL.includes("crypto") || qL.includes("market")) {
-                response = "AIVM analysis indicates a structural shift toward automated POI-based staking where network rewards are distributed according to verified computational contribution.";
-            }
-
+            let response = "The AIVM nodes suggest that the requested application is statistically probable within the next 3 development epochs.";
+            if (qL.includes("water") && qL.includes("future")) response = "Inference complete: Water-based technologies will anchor future energy grids via decentralized hydrogen electrolysis, managed by AIVM-layer sustainability nodes.";
+            else if (qL.includes("identity") || qL.includes("mimo")) response = "Future application of MiMo-anchored identity involves zero-knowledge reputation scores, facilitating global access without exposing raw biometric data.";
+            else if (qL.includes("hammer") || qL.includes("tool")) response = "Traditional mechanical tools like hammers are transitioning to AIVM-guided percussion systems, ensuring molecular precision in advanced robotic construction.";
             res.innerText = response;
             res.style.borderColor = "#28a745";
             hardSync();
         }
 
-        // FIXED: ADMIN VERIFY LOGIC
         document.getElementById('verifyBtn').onclick = async () => {
             const target = document.getElementById('verifyAddr').value;
             if(!target) return;
-            showAdminMsg("Requesting Admin Signature...");
-            try {
-                const tx = await identityContract.verifyIdentity(target, { gasLimit: 200000 });
-                showAdminMsg("Transaction Pending...");
-                await tx.wait();
-                showAdminMsg("User Successfully Verified ✓");
-                await hardSync();
-            } catch (e) { showAdminMsg("ERROR: Admin Authorization Denied.", true); }
+            showAdminMsg("Requesting Signature...");
+            try { await (await identityContract.verifyIdentity(target, { gasLimit: 200000 })).wait(); showAdminMsg("User Verified ✓"); await hardSync(); } 
+            catch (e) { showAdminMsg("ERROR: Admin Authorization Denied.", true); }
         };
 
-        // FIXED: CLAIM FEES LOGIC
         document.getElementById('withdrawBtn').onclick = async () => {
-            showAdminMsg("Requesting Claim Signature...");
-            try {
-                const tx = await ballContract.withdraw({ gasLimit: 200000 });
-                showAdminMsg("Withdrawing Funds...");
-                await tx.wait();
-                showAdminMsg("Fees Successfully Claimed ✓");
-                await hardSync();
-            } catch (e) { showAdminMsg("ERROR: Withdrawal Failed.", true); }
+            showAdminMsg("Requesting Claim...");
+            try { await (await ballContract.withdraw({ gasLimit: 200000 })).wait(); showAdminMsg("Fees Successfully Claimed ✓"); await hardSync(); } 
+            catch (e) { showAdminMsg("ERROR: Withdrawal Failed.", true); }
         };
 
         document.getElementById('shakeBtn').onclick = async () => {
@@ -196,20 +184,15 @@
             if(!q) return;
             const cost = (0.001 * (Math.floor(q.length / 10) + 1)).toFixed(3);
             document.getElementById('resultText').innerText = "Streaming Inference from AIVM Nodes...";
-            try {
-                const tx = await ballContract.getPrediction(q, { value: ethers.parseEther(cost), gasLimit: 500000 });
-                await tx.wait();
-            } catch (e) { document.getElementById('resultText').innerText = "Inference Failed. Check MiMo status."; }
+            try { await (await ballContract.getPrediction(q, { value: ethers.parseEther(cost), gasLimit: 500000 })).wait(); } 
+            catch (e) { document.getElementById('resultText').innerText = "Inference Failed. Check MiMo status."; }
         };
 
         document.getElementById('lookupBtn').onclick = async () => {
             const addr = document.getElementById('lookupAddr').value;
             const res = document.getElementById('lookupResults');
-            try {
-                const data = await identityContract.getIdentity(addr);
-                res.innerHTML = `<strong>User:</strong> ${data[0]}<br><strong>Status:</strong> ${data[2] ? 'VERIFIED' : 'PENDING'}`;
-                res.style.display = 'block';
-            } catch(e) { res.innerText = "Identity Not Found."; res.style.display = 'block'; }
+            try { const data = await identityContract.getIdentity(addr); res.innerHTML = `<strong>User:</strong> ${data[0]}<br><strong>Status:</strong> ${data[2] ? 'VERIFIED' : 'PENDING'}`; res.style.display = 'block'; } 
+            catch(e) { res.innerText = "Identity Not Found."; res.style.display = 'block'; }
         };
 
         document.getElementById('connectBtn').onclick = () => connectWallet(false);
