@@ -25,7 +25,7 @@
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity (Portal)</h1><span style="font-size:0.7rem; color:#999;">v15.7</span></div>
+        <div class="nav-title"><h1>Lightchain Identity (Portal)</h1><span style="font-size:0.7rem; color:#999;">v15.8</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -48,7 +48,7 @@
 
             <div id="ownerConsole" class="card" style="display:none; border: 1px solid var(--owner);">
                 <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;"><h4 style="color:var(--owner); margin: 0;">Oracle Owner</h4><button id="refreshLogBtn" class="small-btn" style="padding:2px 6px; flex:none;">Sync</button></div>
-                <div style="margin-bottom:10px; font-size:0.8rem;">Revenue: <strong style="color:var(--success);" id="totalRevenueDisplay">0.000 LCAI</strong></div>
+                <div style="margin-bottom:10px; font-size:0.8rem;">Revenue: <strong id="totalRevenueDisplay">0.000 LCAI</strong></div>
                 <button id="toggleFeesBtn" class="small-btn" style="width:100%; margin-bottom:5px; background:var(--owner);">Toggle Fees</button>
                 <button id="withdrawBtn" class="small-btn" style="width:100%; background:var(--success);">Withdraw</button>
             </div>
@@ -58,9 +58,9 @@
             <div id="oracleUI" style="display:none; width: 100%; max-width: 600px;">
                 <div class="card" style="text-align: center; border-top: 4px solid var(--success);">
                     <h2>AIVM Visionary Oracle</h2>
-                    <input type="text" id="oracleQuestion" placeholder="Ask the future...">
+                    <input type="text" id="oracleQuestion" placeholder="Ask the futurist...">
                     <button id="shakeBtn" class="primary-btn" style="background: var(--success);">Consult AIVM</button>
-                    <div class="result-window" id="resultText">Awaiting on-chain response...</div>
+                    <div class="result-window" id="resultText">Awaiting inference...</div>
                 </div>
             </div>
         </div>
@@ -72,7 +72,8 @@
 
     <script>
         const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-        const BALL_CONTRACT_ADDR = "0x01B3540997d564B3a18dB05216445ea2ED35a938"; 
+        // --- DEPLOY V15.8 AND PASTE NEW ADDRESS HERE ---
+        const BALL_CONTRACT_ADDR = "0xD1B5C856FE419cF05Ac3f12Ad3c51ce8e6884286"; 
         
         const BALL_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},{"inputs":[{"internalType":"string","name":"_userQuestion","type":"string"}],"name":"getPrediction","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bool","name":"_enabled","type":"bool"}],"name":"toggleFees","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"feesEnabled","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"lastAnswer","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"}];
         const IDENTITY_ABI = [{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
@@ -133,7 +134,7 @@
             document.getElementById('disconnectBtn').addEventListener('click', () => { localStorage.clear(); location.reload(); });
             document.getElementById('refreshLogBtn').addEventListener('click', hardSync);
             
-document.getElementById('shakeBtn').addEventListener('click', async () => {
+            document.getElementById('shakeBtn').addEventListener('click', async () => {
                 const q = document.getElementById('oracleQuestion').value;
                 if (!q) return;
                 const btn = document.getElementById('shakeBtn');
@@ -141,37 +142,39 @@ document.getElementById('shakeBtn').addEventListener('click', async () => {
                 const resText = document.getElementById('resultText');
                 
                 try {
-                    const cost = (0.010 + (Math.floor(q.length / 10) * 0.005)).toFixed(3);
-                    const val = (await ballContract.feesEnabled()) ? ethers.parseEther(cost) : 0n;
-
-                    resText.innerText = "Requesting Inference... (Wait 15s)";
+                    const feesOn = await ballContract.feesEnabled();
+                    let val = 0n;
+                    if (feesOn) {
+                        const cost = (0.010 + (Math.floor(q.length / 10) * 0.005)).toFixed(3);
+                        val = ethers.parseEther(cost);
+                    }
+                    resText.innerText = "Requesting Inference... (Wait 20s)";
                     
                     const tx = await ballContract.getPrediction(q, { value: val, gasLimit: 8000000 });
                     await tx.wait();
                     
-                    // AUTO-SYNC LOOP: Checks the contract until 'AIVM_PENDING' is replaced by real text
+                    // AUTO-SYNC LOOP
                     let attempts = 0;
                     const syncLoop = setInterval(async () => {
                         const answer = await ballContract.lastAnswer(signer.address);
                         attempts++;
-                        
-                        if (answer !== "AIVM_PENDING") {
+                        if (answer !== "AIVM_PENDING" && answer !== "") {
                             resText.innerHTML = `<strong>AIVM RESPONSE:</strong><br>${answer}`;
                             await hardSync();
                             btn.disabled = false;
                             clearInterval(syncLoop);
-                        } else if (attempts > 12) {
-                            resText.innerText = "AIVM Busy. Please click the 'Sync' button in the Owner panel manually.";
+                        } else if (attempts > 15) {
+                            resText.innerText = "AI node is highly occupied. Result will appear in your log shortly.";
                             btn.disabled = false;
                             clearInterval(syncLoop);
                         } else {
-                            resText.innerText = `AI is thinking... (${attempts * 5}s elapsed)`;
+                            resText.innerText = `AI is processing... (${attempts * 5}s elapsed)`;
                         }
                     }, 5000);
 
                 } catch (e) {
                     console.error(e);
-                    resText.innerText = "RPC Connection Busy. Try again in 30s.";
+                    resText.innerText = "RPC busy. Syncing in background...";
                     btn.disabled = false;
                 }
             });
@@ -201,4 +204,3 @@ document.getElementById('shakeBtn').addEventListener('click', async () => {
     </script>
 </body>
 </html>
-
