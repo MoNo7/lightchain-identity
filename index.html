@@ -25,7 +25,7 @@
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity (Portal)</h1><span style="font-size:0.7rem; color:#999;">v16.0</span></div>
+        <div class="nav-title"><h1>Lightchain Identity (Portal)</h1><span style="font-size:0.7rem; color:#999;">v16.1</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -36,7 +36,6 @@
                 <button id="connectBtn" class="primary-btn">Connect Wallet</button>
                 <button id="disconnectBtn" class="primary-btn" style="display:none; background:#6c757d;">Disconnect</button>
             </div>
-            
             <div id="adminConsole" class="card" style="display:none;">
                 <h4 style="color:var(--admin); margin: 0 0 10px 0;">Identity Admin</h4>
                 <input type="text" id="lookupAddr" placeholder="Lookup 0x...">
@@ -45,7 +44,6 @@
                 <input type="text" id="verifyAddr" placeholder="Target 0x...">
                 <div style="display:flex; gap: 5px;"><button id="verifyBtn" class="small-btn" style="background:var(--success);">Verify</button><button id="revokeBtn" class="small-btn" style="background:var(--admin);">Revoke</button></div>
             </div>
-
             <div id="ownerConsole" class="card" style="display:none; border: 1px solid var(--owner);">
                 <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;"><h4 style="color:var(--owner); margin: 0;">Oracle Owner</h4><button id="refreshLogBtn" class="small-btn" style="padding:2px 6px; flex:none;">Sync</button></div>
                 <div style="margin-bottom:10px; font-size:0.8rem;">Revenue: <strong id="totalRevenueDisplay">0.000 LCAI</strong></div>
@@ -53,31 +51,26 @@
                 <button id="withdrawBtn" class="small-btn" style="width:100%; background:var(--success);">Withdraw</button>
             </div>
         </div>
-
         <div class="main-utility-area">
             <div id="oracleUI" style="display:none; width: 100%; max-width: 600px;">
                 <div class="card" style="text-align: center; border-top: 4px solid var(--success);">
                     <h2>AIVM Visionary Oracle</h2>
-                    <input type="text" id="oracleQuestion" placeholder="Ask the futurist...">
+                    <input type="text" id="oracleQuestion" placeholder="Consult the future...">
                     <button id="shakeBtn" class="primary-btn" style="background: var(--success);">Consult AIVM</button>
                     <div class="result-window" id="resultText">Awaiting inference...</div>
                 </div>
             </div>
         </div>
-
         <div id="rightSidebar">
             <div class="card"><h4 style="margin:0; color: #0056b3; font-size:0.9rem;">Network Metrics</h4><div style="font-size: 0.8rem; margin-top:10px;">Total Queries: <strong id="globalCount">0</strong></div><hr style="border:0; border-top:1px solid #eee; margin:15px 0;"><h4 style="margin:0 0 10px 0; font-size:0.75rem; color:#999;">Activity Log:</h4><div id="txFeed" style="max-height: 500px; overflow-y: auto;"></div></div>
         </div>
     </div>
-
     <script>
         const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-        // --- DEPLOY V16.0 AND PASTE NEW ADDRESS HERE ---
-        const BALL_CONTRACT_ADDR = "0x6d7AA027A0d4Ae144986b628755b0bbbC3CBEAb3"; 
-        
+        // --- DEPLOY V16.1 AND PASTE NEW ADDRESS HERE ---
+        const BALL_CONTRACT_ADDR = "0x6e971fD29B5a8419726F057686480f2B0296B707"; 
         const BALL_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},{"inputs":[{"internalType":"string","name":"_userQuestion","type":"string"}],"name":"getPrediction","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bool","name":"_enabled","type":"bool"}],"name":"toggleFees","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"feesEnabled","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"}];
         const IDENTITY_ABI = [{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
-
         let signer, ballContract, identityContract, provider;
 
         async function scanChainHistory() {
@@ -91,7 +84,7 @@
                     item.innerHTML = `<strong>Query:</strong> "${e.args[1]}"<br><span style="font-size:0.6rem; color:#999;">AI: ${e.args[2]}</span>`;
                     feed.appendChild(item);
                 });
-            } catch (e) { console.error(e); }
+            } catch (e) {}
         }
 
         async function hardSync() {
@@ -113,7 +106,7 @@
                 }
                 document.getElementById('toggleFeesBtn').innerText = `Fees: ${feesOn ? 'ON' : 'OFF'}`;
                 await scanChainHistory();
-            } catch (e) { console.error(e); }
+            } catch (e) {}
         }
 
         async function connectWallet() {
@@ -126,8 +119,6 @@
             document.getElementById('connectBtn').style.display = 'none';
             document.getElementById('disconnectBtn').style.display = 'block';
             await hardSync();
-            
-            // Listen for any new answers to update the history feed automatically
             ballContract.on("OracleAnswer", scanChainHistory);
         }
 
@@ -147,35 +138,35 @@
                     const cost = (0.010 + (Math.floor(q.length / 10) * 0.005)).toFixed(3);
                     const val = (await ballContract.feesEnabled()) ? ethers.parseEther(cost) : 0n;
 
-                    resText.innerText = "AIVM Processing... (This can take 30-60 seconds on-chain)";
+                    resText.innerText = "Consulting AIVM... Please sign in MetaMask.";
                     
-                    // We set up the listener FIRST. This completely sidesteps RPC timeouts!
+                    // PRE-SET LISTENER
                     const onAnswer = async (user, question, answer) => {
                         if (user.toLowerCase() === signer.address.toLowerCase() && question === q) {
                             resText.innerHTML = `<strong>AIVM RESPONSE:</strong><br>${answer}`;
                             await hardSync();
                             btn.disabled = false;
-                            ballContract.off("OracleAnswer", onAnswer); // Clean up the listener
+                            ballContract.off("OracleAnswer", onAnswer);
                         }
                     };
                     ballContract.on("OracleAnswer", onAnswer);
 
-                    // We send the transaction and do not enforce a strict timeout
-                    const tx = await ballContract.getPrediction(q, { value: val });
+                    // FORCED GAS LIMIT: 5,000,000 ensures popup and enough time for AI
+                    const tx = await ballContract.getPrediction(q, { 
+                        value: val, 
+                        gasLimit: 5000000 
+                    });
                     
-                    // The UI now entirely relies on the event listener. If the RPC connection drops 
-                    // while waiting for the receipt, we catch it silently because the event listener 
-                    // is safely watching in the background!
-                    tx.wait().catch(e => { console.warn("Background RPC wait dropped, event listener still active."); });
+                    resText.innerText = "Transaction Mined. Generating AI futurism report (30-60s)...";
+                    await tx.wait();
 
                 } catch (e) {
                     console.error(e);
-                    resText.innerText = "Transaction Rejected or Failed.";
+                    resText.innerText = "MetaMask popup blocked or Gas Estimation failed.";
                     btn.disabled = false;
                 }
             });
 
-            // ... [Admin and Owner buttons remain unchanged] ...
             document.getElementById('lookupBtn').onclick = async () => {
                 const res = await identityContract.getIdentity(document.getElementById('lookupAddr').value);
                 const display = document.getElementById('lookupResults');
