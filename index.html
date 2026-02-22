@@ -14,7 +14,7 @@
         #leftSidebar, #rightSidebar { width: 320px; background: #fff; padding: 20px; overflow-y: auto; border-right: 1px solid #e1e4e8; }
         #rightSidebar { border-right: none; border-left: 1px solid #e1e4e8; }
         .main-utility-area { flex: 1; padding: 40px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); margin-bottom: 20px; border: 1px solid #e1e4e8; width: 100%; box-sizing: border-box; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #e1e4e8; width: 100%; box-sizing: border-box; }
         .primary-btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; margin-top: 10px; transition: 0.2s; }
         .primary-btn:disabled { opacity: 0.6; cursor: not-allowed; }
         .small-btn { padding: 8px; font-size: 0.75rem; flex: 1; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; }
@@ -27,7 +27,7 @@
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity (Portal)</h1><span style="font-size:0.7rem; color:#999;">v14.1</span></div>
+        <div class="nav-title"><h1>Lightchain Identity (Portal)</h1><span style="font-size:0.7rem; color:#999;">v14.2</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -89,7 +89,7 @@
 
         async function scanChainHistory() {
             try {
-                const events = await ballContract.queryFilter("OracleAnswer", -1000);
+                const events = await ballContract.queryFilter("OracleAnswer", -2000);
                 const feed = document.getElementById('txFeed');
                 feed.innerHTML = "";
                 events.reverse().forEach(e => {
@@ -98,7 +98,7 @@
                     item.innerHTML = `<strong>Query:</strong> "${e.args[1]}"<br><span style="font-size:0.6rem; color:#999;">User: Anonymous</span>`;
                     feed.appendChild(item);
                 });
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error("Event Sync Error:", e); }
         }
 
         async function hardSync() {
@@ -110,9 +110,10 @@
                 document.getElementById('walletStatus').innerText = "Active: " + address.substring(0, 10) + "...";
                 document.getElementById('tokenBalance').innerText = parseFloat(ethers.formatEther(await provider.getBalance(address))).toFixed(4);
                 document.getElementById('globalCount').innerText = total.toString();
-                document.getElementById('totalRevenueDisplay').innerText = parseFloat(ethers.formatEther(contractBalance)).toFixed(3);
+                document.getElementById('totalRevenueDisplay').innerText = parseFloat(ethers.formatEther(contractBalance)).toFixed(3) + " LCAI";
                 document.getElementById('adminConsole').style.display = isAdmin ? 'block' : 'none';
                 document.getElementById('ownerConsole').style.display = (address.toLowerCase() === owner.toLowerCase()) ? 'block' : 'none';
+                
                 if (profile[2]) {
                     document.getElementById('oracleUI').style.display = 'block';
                     document.getElementById('userStatusHeader').style.display = 'block';
@@ -124,7 +125,7 @@
                 document.getElementById('toggleFeesBtn').innerText = `Fees: ${feesOn ? 'ON' : 'OFF'}`;
                 updateFeeDisplay();
                 await scanChainHistory();
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error("Sync Error:", e); }
         }
 
         function updateFeeDisplay() {
@@ -170,19 +171,24 @@
                         const cost = (0.010 + (Math.floor(q.length / 10) * 0.005)).toFixed(3);
                         val = ethers.parseEther(cost);
                     }
-                    resText.innerText = "Transmitting to AIVM...";
-                    const tx = await ballContract.getPrediction(q, { value: val, gasLimit: 3000000 });
+                    resText.innerText = "Transmitting to AIVM (Manual Gas Boost)...";
+                    
+                    // Increased Gas Limit for AIVM Precompile
+                    const tx = await ballContract.getPrediction(q, { 
+                        value: val, 
+                        gasLimit: 5000000 
+                    });
+                    
                     await tx.wait();
                     await hardSync();
                     resText.innerText = "AIVM Processing... check Activity Log soon.";
                 } catch (e) {
-                    console.error(e);
-                    // Detailed Error Reporting
-                    let errorMsg = "Transaction Failed.";
-                    if (e.reason) errorMsg += " Reason: " + e.reason;
-                    else if (e.message && e.message.includes("nonce")) errorMsg += " Nonce mismatch (Clear MetaMask Activity).";
-                    else if (e.code === "ACTION_REJECTED") errorMsg += " User denied transaction.";
-                    else errorMsg += " Check IDE console for internal RPC error.";
+                    console.error("FULL ERROR OBJECT:", e);
+                    let errorMsg = "Transaction Failed. ";
+                    if (e.data && e.data.message) errorMsg += e.data.message;
+                    else if (e.reason) errorMsg += "Reason: " + e.reason;
+                    else if (e.message && e.message.includes("nonce")) errorMsg += "Nonce error! Clear MetaMask Activity.";
+                    else errorMsg += "See IDE terminal for precompile revert details.";
                     resText.innerText = errorMsg;
                 }
                 btn.disabled = false;
