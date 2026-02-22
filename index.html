@@ -25,7 +25,7 @@
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity (Portal)</h1><span style="font-size:0.7rem; color:#999;">v17.0</span></div>
+        <div class="nav-title"><h1>Lightchain Identity (Portal)</h1><span style="font-size:0.7rem; color:#999;">v18.0</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -72,11 +72,11 @@
 
     <script>
         const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-        // --- DEPLOY V17.0 AND PASTE NEW ADDRESS HERE ---
-        const BALL_CONTRACT_ADDR = "0xD16bE37579f1DA9AD4de10a0Cf101636Ffd9fe18"; 
+        // --- DEPLOY V18.0 AND PASTE NEW ADDRESS HERE ---
+        const BALL_CONTRACT_ADDR = "0x7B0276167b032304d820ce45EfC96c710Cb2d7a3"; 
 
         const BALL_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},{"inputs":[{"internalType":"string","name":"_userQuestion","type":"string"}],"name":"getPrediction","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bool","name":"_enabled","type":"bool"}],"name":"toggleFees","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"feesEnabled","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"}];
-        const IDENTITY_ABI = [{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
+        const IDENTITY_ABI = [{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
 
         let signer, ballContract, identityContract, provider;
 
@@ -145,22 +145,12 @@
                     const cost = (0.010 + (Math.floor(q.length / 10) * 0.005)).toFixed(3);
                     const val = (await ballContract.feesEnabled()) ? ethers.parseEther(cost) : 0n;
 
-                    resText.innerHTML = "Opening MetaMask...<br><span style='font-size:0.7rem;'>Set gas manually if prompted.</span>";
+                    resText.innerHTML = "Opening MetaMask...";
 
-                    // THE V2-RESTORED STRATEGY: 
-                    // 1. Fire and forget the transaction.
-                    // 2. Watch for the event independently of the transaction receipt.
-                    
-                    const tx = await ballContract.getPrediction(q, { 
-                        value: val, 
-                        gasLimit: 4000000 // Safer gas limit for testnet
-                    });
-
-                    resText.innerHTML = `Signed! Hash: <a href='https://testnet-explorer.lightchain.ai/tx/${tx.hash}' target='_blank'>${tx.hash.substring(0,10)}...</a><br>Waiting for AI Consensus (30-90s)...`;
-
-                    // We wait for the specific event matching the user and question
+                    // PRE-SET LISTENER: This ensures we catch the answer even if the browser drops the tx link.
+                    const userAddr = (await signer.getAddress()).toLowerCase();
                     const onAnswer = async (user, question, answer) => {
-                        if (user.toLowerCase() === (await signer.getAddress()).toLowerCase() && question === q) {
+                        if (user.toLowerCase() === userAddr && question === q) {
                             resText.innerHTML = `<strong>AIVM RESPONSE:</strong><br>${answer}`;
                             await hardSync();
                             btn.disabled = false;
@@ -169,16 +159,26 @@
                     };
                     ballContract.on("OracleAnswer", onAnswer);
 
-                    // Robust wait: This won't throw an error if the connection drops!
-                    provider.waitForTransaction(tx.hash, 1, 180000).then(() => {
-                        console.log("Inference confirmed on-chain.");
-                    }).catch(() => {
-                        console.warn("RPC dropped, background listener still active.");
+                    // HIGH GAS: 10M gas manually set to bypass estimation errors.
+                    const tx = await ballContract.getPrediction(q, { 
+                        value: val, 
+                        gasLimit: 10000000 
+                    });
+
+                    // FIXED EXPLORER LINK: Ensuring valid HTML structure
+                    const link = `https://testnet-explorer.lightchain.ai/tx/${tx.hash}`;
+                    resText.innerHTML = `Signed! Hash: <a href="${link}" target="_blank" style="color:blue;">${tx.hash.substring(0,12)}...</a><br>Awaiting AI Finalization (30-90s)...`;
+
+                    // We watch for the transaction hash directly on the provider.
+                    provider.waitForTransaction(tx.hash, 1, 300000).then(() => {
+                        console.log("Transaction successfully recorded on-chain.");
+                    }).catch(e => {
+                        console.warn("RPC disconnect detected. Background listener still monitoring events.");
                     });
 
                 } catch (e) {
                     console.error(e);
-                    resText.innerText = "Error: " + (e.reason || "Check Balance/Gas");
+                    resText.innerText = "Error: " + (e.reason || "Check balance and gas settings.");
                     btn.disabled = false;
                 }
             });
