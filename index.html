@@ -26,7 +26,7 @@
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity (Portal)</h1><span style="font-size:0.7rem; color:#999;">v14.5</span></div>
+        <div class="nav-title"><h1>Lightchain Identity (Portal)</h1><span style="font-size:0.7rem; color:#999;">v15.0</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -37,58 +37,41 @@
                 <button id="connectBtn" class="primary-btn">Connect Wallet</button>
                 <button id="disconnectBtn" class="primary-btn" style="display:none; background:#6c757d;">Disconnect</button>
             </div>
-            
             <div id="adminConsole" class="card" style="display:none;">
                 <h4 style="color:var(--admin); margin: 0 0 10px 0;">Identity Admin</h4>
                 <input type="text" id="lookupAddr" placeholder="Lookup 0x...">
                 <button id="lookupBtn" class="small-btn" style="width:100%; background: var(--primary); margin-bottom:12px;">Query Status</button>
                 <div id="lookupResults" style="display:none; padding:10px; font-size:0.7rem; background:#f0f7ff; margin-bottom:10px; border-radius:6px;"></div>
                 <input type="text" id="verifyAddr" placeholder="Target 0x...">
-                <div style="display:flex; gap: 5px;">
-                    <button id="verifyBtn" class="small-btn" style="background:var(--success);">Verify</button>
-                    <button id="revokeBtn" class="small-btn" style="background:var(--admin);">Revoke</button>
-                </div>
+                <div style="display:flex; gap: 5px;"><button id="verifyBtn" class="small-btn" style="background:var(--success);">Verify</button><button id="revokeBtn" class="small-btn" style="background:var(--admin);">Revoke</button></div>
                 <div id="adminStatus"></div>
             </div>
-
             <div id="ownerConsole" class="card" style="display:none; border: 1px solid var(--owner);">
-                <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;">
-                    <h4 style="color:var(--owner); margin: 0;">Oracle Owner</h4>
-                    <button id="refreshLogBtn" class="small-btn" style="padding:2px 6px; flex:none;">Sync</button>
-                </div>
+                <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;"><h4 style="color:var(--owner); margin: 0;">Oracle Owner</h4><button id="refreshLogBtn" class="small-btn" style="padding:2px 6px; flex:none;">Sync</button></div>
                 <div style="margin-bottom:10px; font-size:0.8rem;">Revenue: <strong style="color:var(--success);" id="totalRevenueDisplay">0.000 LCAI</strong></div>
                 <button id="toggleFeesBtn" class="small-btn" style="width:100%; margin-bottom:5px; background:var(--owner);">Toggle Fees</button>
                 <button id="withdrawBtn" class="small-btn" style="width:100%; background:var(--success);">Withdraw</button>
             </div>
         </div>
-
         <div class="main-utility-area">
             <div id="oracleUI" style="display:none; width: 100%; max-width: 600px;">
                 <div class="card" style="text-align: center; border-top: 4px solid var(--success);">
-                    <h2>AIVM Visionary Oracle (Test Mode)</h2>
-                    <input type="text" id="oracleQuestion" placeholder="Ask a test question...">
+                    <h2>AIVM Visionary Oracle</h2>
+                    <input type="text" id="oracleQuestion" placeholder="Consult the AI...">
                     <button id="shakeBtn" class="primary-btn" style="background: var(--success);">Consult AIVM</button>
-                    <div class="result-window" id="resultText">Waiting for input...</div>
+                    <div class="result-window" id="resultText">Awaiting Live Inference...</div>
                 </div>
             </div>
         </div>
-
         <div id="rightSidebar">
-            <div class="card">
-                <h4 style="margin:0; color: #0056b3; font-size:0.9rem;">Network Metrics</h4>
-                <div style="font-size: 0.8rem; margin-top:10px;">Total Queries: <strong id="globalCount">0</strong></div>
-                <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
-                <h4 style="margin:0 0 10px 0; font-size:0.75rem; color:#999;">Activity Log:</h4>
-                <div id="txFeed" style="max-height: 500px; overflow-y: auto;"></div>
-            </div>
+            <div class="card"><h4 style="margin:0; color: #0056b3; font-size:0.9rem;">Network Metrics</h4><div style="font-size: 0.8rem; margin-top:10px;">Total Queries: <strong id="globalCount">0</strong></div><hr style="border:0; border-top:1px solid #eee; margin:15px 0;"><h4 style="margin:0 0 10px 0; font-size:0.75rem; color:#999;">Activity Log:</h4><div id="txFeed" style="max-height: 500px; overflow-y: auto;"></div></div>
         </div>
     </div>
-
     <script>
         const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-        // --- PASTE YOUR NEW MOCK CONTRACT ADDRESS HERE ---
-        const BALL_CONTRACT_ADDR = "0x56DDa18d6E90578155D42f26d4d2622Bb5b669d0"; 
-        
+        // --- UPDATE THIS AFTER DEPLOYING V15 CONTRACT ---
+        const BALL_CONTRACT_ADDR = "0x3Ff73B0674d73a66d45E51190B2AF8160A96fA9E"; 
+
         const BALL_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},{"inputs":[{"internalType":"string","name":"_userQuestion","type":"string"}],"name":"getPrediction","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bool","name":"_enabled","type":"bool"}],"name":"toggleFees","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"feesEnabled","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"}];
         const IDENTITY_ABI = [{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
 
@@ -102,10 +85,10 @@
                 events.reverse().forEach(e => {
                     const item = document.createElement('div');
                     item.className = 'tx-item';
-                    item.innerHTML = `<strong>Query:</strong> "${e.args[1]}"<br><span style="font-size:0.6rem; color:#999;">Result: ${e.args[2]}</span>`;
+                    item.innerHTML = `<strong>Query:</strong> "${e.args[1]}"<br><span style="font-size:0.6rem; color:#999;">AIVM: ${e.args[2]}</span>`;
                     feed.appendChild(item);
                 });
-            } catch (e) { console.error("History Sync Failed:", e); }
+            } catch (e) { console.error(e); }
         }
 
         async function hardSync() {
@@ -118,10 +101,8 @@
                 document.getElementById('tokenBalance').innerText = parseFloat(ethers.formatEther(await provider.getBalance(address))).toFixed(4);
                 document.getElementById('globalCount').innerText = total.toString();
                 document.getElementById('totalRevenueDisplay').innerText = parseFloat(ethers.formatEther(contractBalance)).toFixed(3) + " LCAI";
-                
                 document.getElementById('adminConsole').style.display = isAdmin ? 'block' : 'none';
                 document.getElementById('ownerConsole').style.display = (address.toLowerCase() === owner.toLowerCase()) ? 'block' : 'none';
-                
                 if (profile[2]) {
                     document.getElementById('oracleUI').style.display = 'block';
                     document.getElementById('userStatusHeader').style.display = 'block';
@@ -130,7 +111,7 @@
                 document.getElementById('toggleFeesBtn').innerText = `Fees: ${feesOn ? 'ON' : 'OFF'}`;
                 updateFeeDisplay();
                 await scanChainHistory();
-            } catch (e) { console.error("HardSync Failed:", e); }
+            } catch (e) { console.error(e); }
         }
 
         function updateFeeDisplay() {
@@ -176,14 +157,15 @@
                         const cost = (0.010 + (Math.floor(q.length / 10) * 0.005)).toFixed(3);
                         val = ethers.parseEther(cost);
                     }
-                    resText.innerText = "Testing logic (AI bypassed)...";
-                    const tx = await ballContract.getPrediction(q, { value: val, gasLimit: 500000 });
+                    resText.innerText = "Initiating AIVM Inference Engine...";
+                    // Gas Limit set high (5M) to ensure precompile has room to process
+                    const tx = await ballContract.getPrediction(q, { value: val, gasLimit: 5000000 });
                     await tx.wait();
                     await hardSync();
-                    resText.innerText = "Transaction successful! Check the Activity Log for the mock result.";
+                    resText.innerText = "Inference Successful. Check the Activity Log for the full prediction.";
                 } catch (e) {
-                    console.error("Test Error:", e);
-                    resText.innerText = "Transaction Failed. Verify your balance and contract address.";
+                    console.error(e);
+                    resText.innerText = "AIVM Engine Timed Out. Clear MetaMask Activity and try again.";
                 }
                 btn.disabled = false;
             });
@@ -198,21 +180,19 @@
             document.getElementById('verifyBtn').onclick = async () => {
                 const target = document.getElementById('verifyAddr').value;
                 try {
-                    const tx = await identityContract.verifyIdentity(target);
-                    await tx.wait();
+                    await (await identityContract.verifyIdentity(target)).wait();
                     document.getElementById('adminStatus').innerText = "Verified ✓";
                     await hardSync();
-                } catch(e) { console.error(e); }
+                } catch(e) {}
             };
 
             document.getElementById('revokeBtn').onclick = async () => {
                 const target = document.getElementById('verifyAddr').value;
                 try {
-                    const tx = await identityContract.revokeVerification(target);
-                    await tx.wait();
+                    await (await identityContract.revokeVerification(target)).wait();
                     document.getElementById('adminStatus').innerText = "Revoked ✓";
                     await hardSync();
-                } catch(e) { console.error(e); }
+                } catch(e) {}
             };
 
             document.getElementById('toggleFeesBtn').onclick = async () => {
