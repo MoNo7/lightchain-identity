@@ -25,7 +25,7 @@
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity (Portal)</h1><span style="font-size:0.7rem; color:#999;">v15.6</span></div>
+        <div class="nav-title"><h1>Lightchain Identity (Portal)</h1><span style="font-size:0.7rem; color:#999;">v15.7</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -60,7 +60,7 @@
                     <h2>AIVM Visionary Oracle</h2>
                     <input type="text" id="oracleQuestion" placeholder="Ask the future...">
                     <button id="shakeBtn" class="primary-btn" style="background: var(--success);">Consult AIVM</button>
-                    <div class="result-window" id="resultText">Waiting for on-chain consensus...</div>
+                    <div class="result-window" id="resultText">Awaiting on-chain response...</div>
                 </div>
             </div>
         </div>
@@ -72,16 +72,16 @@
 
     <script>
         const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-        const BALL_CONTRACT_ADDR = "0xF9b043464137eb01A877086A0fcF38706E49f566"; 
+        const BALL_CONTRACT_ADDR = "0xDf40F9F36e5Fca6f39588a427491e71271D5b1a0"; 
         
-        const BALL_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},{"inputs":[{"internalType":"string","name":"_userQuestion","type":"string"}],"name":"getPrediction","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bool","name":"_enabled","type":"bool"}],"name":"toggleFees","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"feesEnabled","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"}];
+        const BALL_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},{"inputs":[{"internalType":"string","name":"_userQuestion","type":"string"}],"name":"getPrediction","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bool","name":"_enabled","type":"bool"}],"name":"toggleFees","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"feesEnabled","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"lastAnswer","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"}];
         const IDENTITY_ABI = [{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
 
         let signer, ballContract, identityContract, provider;
 
         async function scanChainHistory() {
             try {
-                const events = await ballContract.queryFilter("OracleAnswer", -2000);
+                const events = await ballContract.queryFilter("OracleAnswer", -1000);
                 const feed = document.getElementById('txFeed');
                 feed.innerHTML = "";
                 events.reverse().forEach(e => {
@@ -111,20 +111,8 @@
                     document.getElementById('userNameDisplay').innerHTML = `${profile[0]} <span class="mimo-badge">✓</span>`;
                 }
                 document.getElementById('toggleFeesBtn').innerText = `Fees: ${feesOn ? 'ON' : 'OFF'}`;
-                updateFeeDisplay();
                 await scanChainHistory();
             } catch (e) { console.error(e); }
-        }
-
-        function updateFeeDisplay() {
-            const q = document.getElementById('oracleQuestion').value;
-            const btn = document.getElementById('shakeBtn');
-            ballContract.feesEnabled().then(on => {
-                if (on && q) {
-                    const cost = (0.010 + (Math.floor(q.length / 10) * 0.005)).toFixed(3);
-                    btn.innerText = `Consult AIVM (${cost} LCAI)`;
-                } else { btn.innerText = "Consult AIVM (Free)"; }
-            });
         }
 
         async function connectWallet() {
@@ -143,7 +131,6 @@
         window.onload = () => {
             document.getElementById('connectBtn').addEventListener('click', connectWallet);
             document.getElementById('disconnectBtn').addEventListener('click', () => { localStorage.clear(); location.reload(); });
-            document.getElementById('oracleQuestion').addEventListener('input', updateFeeDisplay);
             document.getElementById('refreshLogBtn').addEventListener('click', hardSync);
             
             document.getElementById('shakeBtn').addEventListener('click', async () => {
@@ -160,24 +147,26 @@
                         const cost = (0.010 + (Math.floor(q.length / 10) * 0.005)).toFixed(3);
                         val = ethers.parseEther(cost);
                     }
-                    resText.innerText = "Transmitting to AIVM (Background Loop Active)...";
+                    resText.innerText = "Transmitting to AIVM Engine...";
                     
-                    // START WATCHING FOR EVENT IMMEDIATELY
-                    ballContract.once("OracleAnswer", (user, question, answer) => {
-                        if(user.toLowerCase() === signer.address.toLowerCase()) {
-                            resText.innerHTML = `<strong>AIVM RESPONSE:</strong><br>${answer}`;
-                            hardSync();
-                            btn.disabled = false;
-                        }
-                    });
-
                     const tx = await ballContract.getPrediction(q, { value: val, gasLimit: 8000000 });
                     await tx.wait();
-                    resText.innerText = "Transaction Mined. AI is thinking...";
+                    resText.innerText = "Transaction Mined. Finalizing AI result...";
+                    
+                    // We check the contract mapping every 5 seconds until the AI result updates
+                    let checkInterval = setInterval(async () => {
+                        const currentAnswer = await ballContract.lastAnswer(signer.address);
+                        if (!currentAnswer.includes("processing") && !currentAnswer.includes("AIVM")) {
+                            resText.innerHTML = `<strong>AIVM RESPONSE:</strong><br>${currentAnswer}`;
+                            await hardSync();
+                            btn.disabled = false;
+                            clearInterval(checkInterval);
+                        }
+                    }, 5000);
 
                 } catch (e) {
                     console.error(e);
-                    resText.innerText = "Inference Triggered. Please wait for the log to refresh.";
+                    resText.innerText = "Connection Busy. Please click Sync in 30 seconds.";
                     btn.disabled = false;
                 }
             });
