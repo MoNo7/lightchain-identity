@@ -72,7 +72,7 @@
 
     <script>
         const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-        const BALL_CONTRACT_ADDR = "0xDf40F9F36e5Fca6f39588a427491e71271D5b1a0"; 
+        const BALL_CONTRACT_ADDR = "0x01B3540997d564B3a18dB05216445ea2ED35a938"; 
         
         const BALL_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},{"inputs":[{"internalType":"string","name":"_userQuestion","type":"string"}],"name":"getPrediction","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bool","name":"_enabled","type":"bool"}],"name":"toggleFees","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"feesEnabled","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"lastAnswer","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"}];
         const IDENTITY_ABI = [{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
@@ -133,7 +133,7 @@
             document.getElementById('disconnectBtn').addEventListener('click', () => { localStorage.clear(); location.reload(); });
             document.getElementById('refreshLogBtn').addEventListener('click', hardSync);
             
-            document.getElementById('shakeBtn').addEventListener('click', async () => {
+document.getElementById('shakeBtn').addEventListener('click', async () => {
                 const q = document.getElementById('oracleQuestion').value;
                 if (!q) return;
                 const btn = document.getElementById('shakeBtn');
@@ -141,32 +141,37 @@
                 const resText = document.getElementById('resultText');
                 
                 try {
-                    const feesOn = await ballContract.feesEnabled();
-                    let val = 0n;
-                    if (feesOn) {
-                        const cost = (0.010 + (Math.floor(q.length / 10) * 0.005)).toFixed(3);
-                        val = ethers.parseEther(cost);
-                    }
-                    resText.innerText = "Transmitting to AIVM Engine...";
+                    const cost = (0.010 + (Math.floor(q.length / 10) * 0.005)).toFixed(3);
+                    const val = (await ballContract.feesEnabled()) ? ethers.parseEther(cost) : 0n;
+
+                    resText.innerText = "Requesting Inference... (Wait 15s)";
                     
                     const tx = await ballContract.getPrediction(q, { value: val, gasLimit: 8000000 });
                     await tx.wait();
-                    resText.innerText = "Transaction Mined. Finalizing AI result...";
                     
-                    // We check the contract mapping every 5 seconds until the AI result updates
-                    let checkInterval = setInterval(async () => {
-                        const currentAnswer = await ballContract.lastAnswer(signer.address);
-                        if (!currentAnswer.includes("processing") && !currentAnswer.includes("AIVM")) {
-                            resText.innerHTML = `<strong>AIVM RESPONSE:</strong><br>${currentAnswer}`;
+                    // AUTO-SYNC LOOP: Checks the contract until 'AIVM_PENDING' is replaced by real text
+                    let attempts = 0;
+                    const syncLoop = setInterval(async () => {
+                        const answer = await ballContract.lastAnswer(signer.address);
+                        attempts++;
+                        
+                        if (answer !== "AIVM_PENDING") {
+                            resText.innerHTML = `<strong>AIVM RESPONSE:</strong><br>${answer}`;
                             await hardSync();
                             btn.disabled = false;
-                            clearInterval(checkInterval);
+                            clearInterval(syncLoop);
+                        } else if (attempts > 12) {
+                            resText.innerText = "AIVM Busy. Please click the 'Sync' button in the Owner panel manually.";
+                            btn.disabled = false;
+                            clearInterval(syncLoop);
+                        } else {
+                            resText.innerText = `AI is thinking... (${attempts * 5}s elapsed)`;
                         }
                     }, 5000);
 
                 } catch (e) {
                     console.error(e);
-                    resText.innerText = "Connection Busy. Please click Sync in 30 seconds.";
+                    resText.innerText = "RPC Connection Busy. Try again in 30s.";
                     btn.disabled = false;
                 }
             });
@@ -196,3 +201,4 @@
     </script>
 </body>
 </html>
+
