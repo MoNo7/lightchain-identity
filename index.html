@@ -25,7 +25,7 @@
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity (Portal)</h1><span style="font-size:0.7rem; color:#999;">v15.8</span></div>
+        <div class="nav-title"><h1>Lightchain Identity (Portal)</h1><span style="font-size:0.7rem; color:#999;">v16.0</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -72,10 +72,10 @@
 
     <script>
         const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-        // --- DEPLOY V15.8 AND PASTE NEW ADDRESS HERE ---
-        const BALL_CONTRACT_ADDR = "0xD1B5C856FE419cF05Ac3f12Ad3c51ce8e6884286"; 
+        // --- DEPLOY V16.0 AND PASTE NEW ADDRESS HERE ---
+        const BALL_CONTRACT_ADDR = "0x6d7AA027A0d4Ae144986b628755b0bbbC3CBEAb3"; 
         
-        const BALL_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},{"inputs":[{"internalType":"string","name":"_userQuestion","type":"string"}],"name":"getPrediction","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bool","name":"_enabled","type":"bool"}],"name":"toggleFees","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"feesEnabled","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"lastAnswer","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"}];
+        const BALL_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},{"inputs":[{"internalType":"string","name":"_userQuestion","type":"string"}],"name":"getPrediction","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bool","name":"_enabled","type":"bool"}],"name":"toggleFees","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"feesEnabled","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"}];
         const IDENTITY_ABI = [{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
 
         let signer, ballContract, identityContract, provider;
@@ -126,6 +126,8 @@
             document.getElementById('connectBtn').style.display = 'none';
             document.getElementById('disconnectBtn').style.display = 'block';
             await hardSync();
+            
+            // Listen for any new answers to update the history feed automatically
             ballContract.on("OracleAnswer", scanChainHistory);
         }
 
@@ -142,55 +144,48 @@
                 const resText = document.getElementById('resultText');
                 
                 try {
-                    const feesOn = await ballContract.feesEnabled();
-                    let val = 0n;
-                    if (feesOn) {
-                        const cost = (0.010 + (Math.floor(q.length / 10) * 0.005)).toFixed(3);
-                        val = ethers.parseEther(cost);
-                    }
-                    resText.innerText = "Requesting Inference... (Wait 20s)";
+                    const cost = (0.010 + (Math.floor(q.length / 10) * 0.005)).toFixed(3);
+                    const val = (await ballContract.feesEnabled()) ? ethers.parseEther(cost) : 0n;
+
+                    resText.innerText = "AIVM Processing... (This can take 30-60 seconds on-chain)";
                     
-                    const tx = await ballContract.getPrediction(q, { value: val, gasLimit: 8000000 });
-                    await tx.wait();
-                    
-                    // AUTO-SYNC LOOP
-                    let attempts = 0;
-                    const syncLoop = setInterval(async () => {
-                        const answer = await ballContract.lastAnswer(signer.address);
-                        attempts++;
-                        if (answer !== "AIVM_PENDING" && answer !== "") {
+                    // We set up the listener FIRST. This completely sidesteps RPC timeouts!
+                    const onAnswer = async (user, question, answer) => {
+                        if (user.toLowerCase() === signer.address.toLowerCase() && question === q) {
                             resText.innerHTML = `<strong>AIVM RESPONSE:</strong><br>${answer}`;
                             await hardSync();
                             btn.disabled = false;
-                            clearInterval(syncLoop);
-                        } else if (attempts > 15) {
-                            resText.innerText = "AI node is highly occupied. Result will appear in your log shortly.";
-                            btn.disabled = false;
-                            clearInterval(syncLoop);
-                        } else {
-                            resText.innerText = `AI is processing... (${attempts * 5}s elapsed)`;
+                            ballContract.off("OracleAnswer", onAnswer); // Clean up the listener
                         }
-                    }, 5000);
+                    };
+                    ballContract.on("OracleAnswer", onAnswer);
+
+                    // We send the transaction and do not enforce a strict timeout
+                    const tx = await ballContract.getPrediction(q, { value: val });
+                    
+                    // The UI now entirely relies on the event listener. If the RPC connection drops 
+                    // while waiting for the receipt, we catch it silently because the event listener 
+                    // is safely watching in the background!
+                    tx.wait().catch(e => { console.warn("Background RPC wait dropped, event listener still active."); });
 
                 } catch (e) {
                     console.error(e);
-                    resText.innerText = "RPC busy. Syncing in background...";
+                    resText.innerText = "Transaction Rejected or Failed.";
                     btn.disabled = false;
                 }
             });
 
+            // ... [Admin and Owner buttons remain unchanged] ...
             document.getElementById('lookupBtn').onclick = async () => {
                 const res = await identityContract.getIdentity(document.getElementById('lookupAddr').value);
                 const display = document.getElementById('lookupResults');
                 display.style.display = 'block';
                 display.innerHTML = `<strong>Username:</strong> ${res[0] || 'None'}<br><strong>Verified:</strong> ${res[2] ? '✅ Yes' : '❌ No'}`;
             };
-
             document.getElementById('verifyBtn').onclick = async () => {
                 await (await identityContract.verifyIdentity(document.getElementById('verifyAddr').value)).wait();
                 await hardSync();
             };
-
             document.getElementById('toggleFeesBtn').onclick = async () => {
                 const current = await ballContract.feesEnabled();
                 await (await ballContract.toggleFees(!current)).wait();
