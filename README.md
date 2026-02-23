@@ -50,7 +50,6 @@ Users can query the status of any `0x` address through the **Identity Portal**. 
 Submit natural language queries to the **AIVM Oracle**.
 
 ### 3. Revenue & Fees
-
 The Oracle Owner can toggle fee collection on/off, gas is still necessary for netowrk computation.
 ---
 
