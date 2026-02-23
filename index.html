@@ -78,7 +78,7 @@
 
     <script>
         const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-        const BALL_CONTRACT_ADDR = "0x459b943dcF855B374F0A602f65929639DDAf60A1"; 
+        const BALL_CONTRACT_ADDR = "0x1d203EA510261CF77ED71B543B4bF270dd47b739"; 
 
         const BALL_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},{"inputs":[{"internalType":"string","name":"_userQuestion","type":"string"}],"name":"getPrediction","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bool","name":"_enabled","type":"bool"}],"name":"toggleFees","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"feesEnabled","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"latestAnswer","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"}];
         const IDENTITY_ABI = [{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
@@ -147,33 +147,38 @@
                 const resText = document.getElementById('resultText');
                 
                 try {
-                    const val = (await ballContract.feesEnabled()) ? ethers.parseEther("0.020") : 0n;
+                    const cost = (0.010 + (Math.floor(q.length / 10) * 0.005)).toFixed(3);
+                    const val = (await ballContract.feesEnabled()) ? ethers.parseEther(cost) : 0n;
+
                     resText.innerText = "Transmitting to AIVM Engine...";
 
-                    const tx = await ballContract.getPrediction(q, { value: val, gasLimit: 9500000 });
-                    await tx.wait();
+                    const tx = await ballContract.getPrediction(q, { 
+                        value: val, 
+                        gasLimit: 15500000 // Matched to contract for maximum throughput
+                    });
                     
-                    resText.innerText = "Parsing AI Consensus...";
+                    resText.innerText = "Transaction Mined! Finalizing inference...";
+                    await tx.wait();
 
                     let pollCount = 0;
                     const pollInterval = setInterval(async () => {
                         const answer = await ballContract.latestAnswer(signer.address);
                         pollCount++;
                         if (answer && answer !== "") {
-                            // CLEAN OUTPUT: Directly show the answer
-                            resText.innerHTML = answer;
+                            // CLEAN OUTPUT: No labels, just the AI response
+                            resText.innerHTML = `<span style="color:#2c3e50; font-weight:500;">${answer}</span>`;
                             await hardSync();
                             btn.disabled = false;
                             clearInterval(pollInterval);
                         } else if (pollCount > 15) {
-                            resText.innerText = "Sync Timeout. Please refresh manually.";
+                            resText.innerText = "Sync Timeout. Result saved to Activity Log.";
                             btn.disabled = false;
                             clearInterval(pollInterval);
                         }
                     }, 2000);
 
                 } catch (e) {
-                    resText.innerText = "Error. Check Balance/Gas.";
+                    resText.innerText = "Inference Error. Check LCAI Balance.";
                     btn.disabled = false;
                 }
             });
@@ -224,3 +229,4 @@
     </script>
 </body>
 </html>
+
