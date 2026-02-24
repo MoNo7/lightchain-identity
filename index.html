@@ -25,7 +25,7 @@
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity (Portal)</h1><span style="font-size:0.7rem; color:#999;">v33.0</span></div>
+        <div class="nav-title"><h1>Lightchain Identity (Testnet)</h1><span style="font-size:0.7rem; color:#999;">v34.0</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -54,7 +54,7 @@
 
             <div id="ownerConsole" class="card" style="display:none; border: 1px solid var(--owner);">
                 <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;"><h4 style="color:var(--owner); margin: 0;">Oracle Owner</h4><button id="refreshLogBtn" class="small-btn" style="padding:2px 6px; flex:none;">Sync</button></div>
-                <div style="margin-bottom:10px; font-size:0.8rem;">Direct Revenue: <strong id="totalRevenueDisplay" style="color:var(--success);">0.000 LCAI</strong></div>
+                <div style="margin-bottom:10px; font-size:0.8rem;">Revenue: <strong id="totalRevenueDisplay" style="color:var(--success);">0.000 LCAI</strong></div>
                 <button id="toggleFeesBtn" class="small-btn" style="width:100%; background:var(--owner);">Toggle Fees</button>
             </div>
         </div>
@@ -77,18 +77,13 @@
 
     <script>
         const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-        const BALL_CONTRACT_ADDR = "0xd4C9Ada3B12D100f8F03bA7D54d909A78646954a"; 
+        const BALL_CONTRACT_ADDR = "0xDd3b85AC849c562EA2E418E6210EBA84F02B936D"; 
 
         const BALL_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},{"inputs":[{"internalType":"string","name":"_userQuestion","type":"string"}],"name":"getPrediction","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalRevenueEarned","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bool","name":"_enabled","type":"bool"}],"name":"toggleFees","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"feesEnabled","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"latestAnswer","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"}];
         const IDENTITY_ABI = [{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
 
         let signer, ballContract, identityContract, provider;
-        
-        // GAS OVERRIDE: 10 GWEI (Applied ONLY to Admin tasks)
-        const verifyGasSettings = { 
-            maxFeePerGas: ethers.parseUnits("10", "gwei"), 
-            maxPriorityFeePerGas: ethers.parseUnits("10", "gwei") 
-        };
+        const verifyGasSettings = { maxFeePerGas: ethers.parseUnits("100", "gwei"), maxPriorityFeePerGas: ethers.parseUnits("100", "gwei") };
 
         async function hardSync() {
             try {
@@ -136,8 +131,10 @@
                     clearInterval(pollInterval);
                     document.getElementById('shakeBtn').disabled = false;
                     await hardSync();
-                } else if (pollCount > 15) {
-                    resText.innerText = "Processing... check Activity Log soon.";
+                } else if (pollCount > 10) {
+                    resText.innerText = "AIVM Cluster timeout. Checking PoI nodes...";
+                    clearInterval(pollInterval);
+                    document.getElementById('shakeBtn').disabled = false;
                 }
             }, 2000);
         }
@@ -168,17 +165,13 @@
                 btn.disabled = true;
                 const resText = document.getElementById('resultText');
                 try {
-                    const isFeesOn = await ballContract.feesEnabled();
-                    const val = isFeesOn ? ethers.parseEther("0.020") : 0n;
-                    resText.innerText = "Consulting AIVM Engine...";
-                    
-                    // v33.0: Lower gasLimit (5,000,000) to stay under block CAP
-                    const tx = await ballContract.getPrediction(q, { value: val, gasLimit: 5000000 });
+                    resText.innerText = "Consulting AIVM Cluster...";
+                    const tx = await ballContract.getPrediction(q, { gasLimit: 4000000 });
                     await tx.wait();
-                    resText.innerText = "Decoding AI response...";
+                    resText.innerText = "Finalizing inference...";
                     await pollForResult();
                 } catch (e) {
-                    resText.innerText = "AIVM Cluster busy or Gas Cap exceeded.";
+                    resText.innerText = "AIVM Error. Re-deploy v34 to IDE.";
                     btn.disabled = false;
                 }
             };
@@ -195,7 +188,7 @@
             document.getElementById('verifyBtn').onclick = async () => {
                 const addr = document.getElementById('verifyAddr').value;
                 const display = document.getElementById('actionResults');
-                display.style.display = 'block'; display.innerText = "Sending Verification (10 Gwei)...";
+                display.style.display = 'block'; display.innerText = "Sending Verification (100 Gwei)...";
                 try {
                     await (await identityContract.verifyIdentity(addr, verifyGasSettings)).wait();
                     display.innerText = "Verification Success!"; await hardSync();
@@ -205,7 +198,7 @@
             document.getElementById('revokeBtn').onclick = async () => {
                 const addr = document.getElementById('verifyAddr').value;
                 const display = document.getElementById('actionResults');
-                display.style.display = 'block'; display.innerText = "Revoking (10 Gwei)...";
+                display.style.display = 'block'; display.innerText = "Revoking (100 Gwei)...";
                 try {
                     await (await identityContract.revokeVerification(addr, verifyGasSettings)).wait();
                     display.innerText = "Revoked Successfully."; await hardSync();
