@@ -37,7 +37,7 @@
 <body>
 
 <div id="topNav">
-    <div class="nav-title"><h1>Lightchain Identity Portal (Testnet)</h1><span style="font-size:0.6rem; color:#999;">v55.5</span></div>
+    <div class="nav-title"><h1>Lightchain Identity Portal (Testnet)</h1><span style="font-size:0.6rem; color:#999;">v55.6</span></div>
     <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
 </div>
 
@@ -98,7 +98,7 @@
 
 <script>
     const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-    const BALL_CONTRACT_ADDR = "0x9C81c6Ab3f275c8504F2462bbb730B50d496A91d"; 
+    const BALL_CONTRACT_ADDR = "0x4c3Ef3A6a8838DE50646Ee22f9fCC7A6e700DA0F"; 
 
     const BALL_ABI = [
         "function getPrediction(string _userQuestion) payable",
@@ -131,13 +131,14 @@
             document.getElementById('tokenBalance').innerText = parseFloat(ethers.formatEther(balance)).toFixed(4);
             document.getElementById('vaultBalance').innerText = parseFloat(ethers.formatEther(vaultBal)).toFixed(4);
 
+            // FIXED: Removed syntax errors from Promise.all array
             const [profile, ballAdmin, isIdAdmin, isFeeOn, lastPayout, lastAns] = await Promise.all([
                 identityContract.getIdentity(address).catch(() => ["User", "", false]),
-                ballAdmin = ballContract.admin().catch(() => ""),
-                isIdAdmin = identityContract.isAdmin(address).catch(() => false),
-                isFeeOn = ballContract.feesEnabled().catch(() => false),
-                lastPayout = ballContract.lastPayoutTime().catch(() => 0),
-                lastAns = ballContract.latestAnswer(address).catch(() => "")
+                ballContract.admin().catch(() => ""),
+                identityContract.isAdmin(address).catch(() => false),
+                ballContract.feesEnabled().catch(() => false),
+                ballContract.lastPayoutTime().catch(() => 0),
+                ballContract.latestAnswer(address).catch(() => "")
             ]);
 
             document.getElementById('feeStatusText').innerText = isFeeOn ? "ACTIVE (0.1 LCAI)" : "DISABLED";
@@ -147,16 +148,10 @@
                 document.getElementById('resultText').innerText = lastAns;
             }
 
-            const nextPayout = Number(lastPayout) + 86400; // +1 day
+            const nextPayout = Number(lastPayout) + 86400;
             const now = Math.floor(Date.now() / 1000);
             const diff = nextPayout - now;
-            if (diff <= 0) {
-                document.getElementById('releaseCountdown').innerText = "Ready for next trigger";
-            } else {
-                const h = Math.floor(diff / 3600);
-                const m = Math.floor((diff % 3600) / 60);
-                document.getElementById('releaseCountdown').innerText = `${h}h ${m}m remaining`;
-            }
+            document.getElementById('releaseCountdown').innerText = (diff <= 0) ? "Ready for trigger" : `${Math.floor(diff/3600)}h remaining`;
 
             if (ballAdmin.toLowerCase() === address.toLowerCase()) document.getElementById('ownerConsole').style.display = 'block';
             if (isIdAdmin) document.getElementById('adminConsole').style.display = 'block';
@@ -165,9 +160,8 @@
                 document.getElementById('userProfile').style.display = 'block';
                 document.getElementById('userNameDisplay').innerHTML = `${profile[0]} <span style="color:var(--mimo); font-size:14px;">✓</span>`;
             }
-
             await scanHistory();
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error("Sync Error:", e); }
     }
 
     async function connectWallet() {
@@ -179,7 +173,7 @@
             identityContract = new ethers.Contract(IDENTITY_CONTRACT, IDENTITY_ABI, signer);
             document.getElementById('connectBtn').style.display = 'none';
             await hardSync();
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error("Connection Error:", e); }
     }
 
     async function scanHistory() {
@@ -191,18 +185,16 @@
             const feed = document.getElementById('txFeed');
             const combined = [...reqs.map(e => ({type:'req', text:e.args[1]})), ...ans.map(e => ({type:'ans', text:e.args[1]}))];
             
-            // FIX: Changed "Output" and "Input" to "Answer" and "Question"
             feed.innerHTML = combined.reverse().map(item => `
                 <div class="tx-item ${item.type === 'ans' ? 'success' : 'pending'}">
                     <strong>${item.type === 'ans' ? 'Answer' : 'Question'}:</strong><br>${item.text}
                 </div>
             `).join('');
-        } catch (e) { console.error("History Scan Error:", e); }
+        } catch (e) { console.error("History Error:", e); }
     }
 
     window.onload = () => {
         document.getElementById('connectBtn').onclick = connectWallet;
-
         document.getElementById('lookupBtn').onclick = async () => {
             const addr = document.getElementById('lookupAddr').value;
             const res = document.getElementById('lookupResults');
@@ -212,51 +204,33 @@
                 res.innerHTML = `<strong>User:</strong> ${data[0]}<br><strong>DID:</strong> <span style="color:var(--primary); word-break:break-all;">${data[1]}</span><br><strong>Status:</strong> ${data[2] ? '✅ Verified' : '❌ Unverified'}`;
             } catch(e) { res.innerText = "No record found."; }
         };
-
         document.getElementById('verifyBtn').onclick = async () => {
             const addr = document.getElementById('verifyAddr').value;
-            if(!addr) return;
             const out = document.getElementById('actionResults');
             out.style.display = 'block';
             out.innerText = "Broadcasting verification...";
-            try { 
-                const tx = await identityContract.verifyIdentity(addr);
-                out.innerText = "Anchoring on-chain...";
-                await tx.wait(); 
-                out.innerText = "✅ Successfully Verified!"; 
-                await hardSync(); 
-            } catch(e) { out.innerText = "❌ Transaction Failed."; }
+            try { await (await identityContract.verifyIdentity(addr)).wait(); out.innerText = "✅ Successfully Verified!"; await hardSync(); } 
+            catch(e) { out.innerText = "❌ Transaction Failed."; }
         };
-
         document.getElementById('revokeBtn').onclick = async () => {
             const addr = document.getElementById('verifyAddr').value;
-            if(!addr) return;
             const out = document.getElementById('actionResults');
             out.style.display = 'block';
             out.innerText = "Broadcasting revocation...";
-            try { 
-                const tx = await identityContract.revokeVerification(addr);
-                out.innerText = "Anchoring on-chain...";
-                await tx.wait(); 
-                out.innerText = "✅ Successfully Revoked!"; 
-                await hardSync(); 
-            } catch(e) { out.innerText = "❌ Transaction Failed."; }
+            try { await (await identityContract.revokeVerification(addr)).wait(); out.innerText = "✅ Successfully Revoked!"; await hardSync(); } 
+            catch(e) { out.innerText = "❌ Transaction Failed."; }
         };
-
         document.getElementById('feeOnBtn').onclick = async () => { await (await ballContract.toggleFees(true)).wait(); hardSync(); };
         document.getElementById('feeOffBtn').onclick = async () => { await (await ballContract.toggleFees(false)).wait(); hardSync(); };
-
         document.getElementById('shakeBtn').onclick = async () => {
             const q = document.getElementById('oracleQuestion').value;
-            if (!q) return;
             const resText = document.getElementById('resultText');
-            resText.innerHTML = "Broadcasting... check MetaMask.";
+            resText.innerHTML = "Consulting... check MetaMask.";
             try { 
                 const tx = await ballContract.getPrediction(q, { value: ethers.parseEther("0.1"), gasLimit: 3000000 });
-                resText.innerHTML = "Anchored. Awaiting inference...";
                 await tx.wait(); 
                 await hardSync(); 
-            } catch(e) { console.error(e); resText.innerHTML = "Error in consult."; }
+            } catch(e) { resText.innerHTML = "Error in consult."; }
         };
     };
 </script>
