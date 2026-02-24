@@ -25,7 +25,7 @@
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity testnet(Portal)</h1><span style="font-size:0.7rem; color:#999;">v51.0</span></div>
+        <div class="nav-title"><h1>Lightchain Identity (Portal)</h1><span style="font-size:0.7rem; color:#999;">v52.0</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -62,7 +62,7 @@
             <div id="oracleUI" style="display:none; width: 100%; max-width: 600px;">
                 <div class="card" style="text-align: center; border-top: 4px solid var(--success);">
                     <h2>AIVM Oracle</h2>
-                    <input type="text" id="oracleQuestion" placeholder="Ask the cluster...">
+                    <input type="text" id="oracleQuestion" placeholder="Consult the cluster...">
                     <button id="shakeBtn" class="primary-btn" style="background: var(--success);">Consult AIVM</button>
                     <div class="result-window" id="resultText">Awaiting inference...</div>
                 </div>
@@ -76,9 +76,9 @@
 
     <script>
         const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-        const BALL_CONTRACT_ADDR = "0x4aF354E426bAc4ff909a322D0d0650476B162ceb"; 
+        const BALL_CONTRACT_ADDR = "0x07Db64FEDf40495b31D46f7d16Dd0c588b0D6499"; 
 
-        const BALL_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},{"inputs":[{"internalType":"string","name":"_userQuestion","type":"string"}],"name":"getPrediction","outputs":[],"stateMutability":"payable","functionType":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalRevenueEarned","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bool","name":"_enabled","type":"bool"}],"name":"toggleFees","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"feesEnabled","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"latestAnswer","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"}];
+        const BALL_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"requestId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"}],"name":"InferenceRequested","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},{"inputs":[{"internalType":"string","name":"_userQuestion","type":"string"}],"name":"getPrediction","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"feesEnabled","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"latestAnswer","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalRevenueEarned","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}];
         const IDENTITY_ABI = [{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
 
         let signer, ballContract, identityContract, provider;
@@ -118,36 +118,22 @@
             document.getElementById('connectBtn').style.display = 'none';
             document.getElementById('disconnectBtn').style.display = 'block';
             await hardSync();
-            ballContract.on("OracleAnswer", scanChainHistory);
-        }
 
-        async function pollForResult() {
-            const resText = document.getElementById('resultText');
-            let count = 0;
-            const interval = setInterval(async () => {
-                const answer = await ballContract.latestAnswer(signer.address);
-                count++;
-                if (answer && answer !== "" && answer !== "AI_CONSENSUS_PENDING") {
-                    resText.innerHTML = `<span style="color:var(--success); font-weight:bold;">AIVM:</span><br>${answer}`;
-                    clearInterval(interval);
+            // ASYNCHRONOUS EVENT LISTENER: The "Success" moment
+            ballContract.on("OracleAnswer", async (user, answer) => {
+                if (user.toLowerCase() === (await signer.getAddress()).toLowerCase()) {
+                    document.getElementById('resultText').innerHTML = `<span style="color:var(--success); font-weight:bold;">AIVM VISION:</span><br>${answer}`;
                     document.getElementById('shakeBtn').disabled = false;
                     await hardSync();
-                } else {
-                    resText.innerText = `Synchronizing AI Cluster... [${count}s]`;
                 }
-                if (count > 25) { 
-                    resText.innerText = "Inference finishing. Check the Activity Log.";
-                    clearInterval(interval); 
-                    document.getElementById('shakeBtn').disabled = false; 
-                }
-            }, 2000);
+            });
         }
 
         async function scanChainHistory() {
             const events = await ballContract.queryFilter("OracleAnswer", -100);
             const feed = document.getElementById('txFeed');
             feed.innerHTML = events.reverse().map(e => `
-                <div class="tx-item"><strong>Q:</strong> "${e.args[1]}"<br><span style="font-size:0.6rem; color:#999;">AI: ${e.args[2]}</span></div>
+                <div class="tx-item"><strong>Q:</strong> "PoI Attestation Complete"<br><span style="font-size:0.6rem; color:#999;">Result: ${e.args[1].substring(0,50)}...</span></div>
             `).join('');
         }
 
@@ -157,50 +143,21 @@
                 const q = document.getElementById('oracleQuestion').value;
                 if (!q) return;
                 document.getElementById('shakeBtn').disabled = true;
-                document.getElementById('resultText').innerText = "Transmitting to AIVM...";
+                document.getElementById('resultText').innerText = "Requesting Inference from PoI Cluster...";
                 try {
                     const tx = await ballContract.getPrediction(q, { gasLimit: 3000000 });
                     await tx.wait();
-                    await pollForResult();
+                    document.getElementById('resultText').innerText = "Request Anchored. Waiting for AI Nodes to attest...";
                 } catch (e) { document.getElementById('shakeBtn').disabled = false; }
-            };
-
-            document.getElementById('lookupBtn').onclick = async () => {
-                const addr = document.getElementById('lookupAddr').value;
-                const res = await identityContract.getIdentity(addr);
-                const display = document.getElementById('lookupResults');
-                display.style.display = 'block';
-                display.innerHTML = `<strong>User:</strong> ${res[0]}<br><strong>Verified:</strong> ${res[2] ? '✅' : '❌'}`;
             };
 
             document.getElementById('verifyBtn').onclick = async () => {
                 const addr = document.getElementById('verifyAddr').value;
                 const display = document.getElementById('actionResults');
-                display.style.display = 'block';
-                display.innerText = "Sending Verification...";
-                try {
-                    const tx = await identityContract.verifyIdentity(addr);
-                    await tx.wait();
-                    display.innerText = "Verification Success!";
-                    await hardSync();
-                } catch(e) { display.innerText = "Error verifying."; }
-            };
-
-            document.getElementById('revokeBtn').onclick = async () => {
-                const addr = document.getElementById('verifyAddr').value;
-                const display = document.getElementById('actionResults');
-                display.style.display = 'block';
-                display.innerText = "Revoking Identity...";
-                try {
-                    const tx = await identityContract.revokeVerification(addr);
-                    await tx.wait();
-                    display.innerText = "Revoked Successfully.";
-                    await hardSync();
-                } catch(e) { display.innerText = "Error revoking."; }
+                display.style.display = 'block'; display.innerText = "Verifying...";
+                try { await (await identityContract.verifyIdentity(addr)).wait(); display.innerText = "Success!"; await hardSync(); } catch(e) { display.innerText = "Error."; }
             };
         };
     </script>
 </body>
 </html>
-
-
