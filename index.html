@@ -25,7 +25,7 @@
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity (Portal)</h1><span style="font-size:0.7rem; color:#999;">v40.0</span></div>
+        <div class="nav-title"><h1>Lightchain Identity (Portal)</h1><span style="font-size:0.7rem; color:#999;">v41.0</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -71,7 +71,7 @@
     </div>
     <script>
         const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-        const BALL_CONTRACT_ADDR = "0xE03589Ffd51804001C36d0FfeBD6daED711ea51d"; 
+        const BALL_CONTRACT_ADDR = "0xe1662e43B8C36b8999483D35c72339A3512Fe57D"; 
 
         const BALL_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"}],"name":"InferencePending","type":"event"},{"inputs":[{"internalType":"string","name":"_userQuestion","type":"string"}],"name":"getPrediction","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalRevenueEarned","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bool","name":"_enabled","type":"bool"}],"name":"toggleFees","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"feesEnabled","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"latestAnswer","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"}];
         const IDENTITY_ABI = [{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
@@ -112,7 +112,7 @@
             document.getElementById('disconnectBtn').style.display = 'block';
             await hardSync();
             ballContract.on("OracleAnswer", scanChainHistory);
-            ballContract.on("InferencePending", () => { document.getElementById('resultText').innerText = "Cluster active. Polling AIVM..."; });
+            ballContract.on("InferencePending", () => { document.getElementById('resultText').innerText = "AI Cluster engaged. Analyzing..."; });
         }
 
         async function pollForResult() {
@@ -121,16 +121,16 @@
             const pollInterval = setInterval(async () => {
                 const answer = await ballContract.latestAnswer(signer.address);
                 pollCount++;
-                if (answer && answer !== "" && answer !== "AIVM_INFERENCE_IN_PROGRESS" && !answer.includes("LINK_ACTIVE")) {
+                if (answer && answer !== "" && answer !== "AIVM_INFERENCE_IN_PROGRESS") {
                     resText.innerHTML = `<span style="color:#28a745; font-weight:bold;">AIVM VISION:</span><br>${answer}`;
                     clearInterval(pollInterval);
                     document.getElementById('shakeBtn').disabled = false;
                     await hardSync();
                 } else {
-                    resText.innerText = `Analyzing Neural Patterns... [${pollCount}s]`;
+                    resText.innerText = `Finalizing Inference... [${pollCount}s]`;
                 }
-                if (pollCount > 20) {
-                    resText.innerText = "Inference finalising. Results will appear in Activity Log.";
+                if (pollCount > 25) {
+                    resText.innerText = "Inference finishing. Results will update in Activity Log.";
                     clearInterval(pollInterval);
                     document.getElementById('shakeBtn').disabled = false;
                 }
@@ -162,13 +162,13 @@
                 btn.disabled = true;
                 const resText = document.getElementById('resultText');
                 try {
-                    resText.innerText = "Transmitting to Cluster...";
+                    resText.innerText = "Transmitting to AIVM Cluster...";
                     const val = (await ballContract.feesEnabled()) ? ethers.parseEther("0.020") : 0n;
                     const tx = await ballContract.getPrediction(q, { value: val, gasLimit: 3000000, ...globalGas });
                     await tx.wait();
                     await pollForResult();
                 } catch (e) {
-                    resText.innerText = "AIVM Busy. Verify MiMo Identity.";
+                    resText.innerText = "Connection lost. Verify MiMo Identity.";
                     btn.disabled = false;
                 }
             };
