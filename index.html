@@ -25,7 +25,7 @@
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity (Portal)</h1><span style="font-size:0.7rem; color:#999;">v45.0</span></div>
+        <div class="nav-title"><h1>Lightchain Identity (Portal)</h1><span style="font-size:0.7rem; color:#999;">v46.0</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -48,7 +48,7 @@
                     <button id="verifyBtn" class="small-btn" style="background:var(--success);">Verify</button>
                     <button id="revokeBtn" class="small-btn" style="background:var(--admin);">Revoke</button>
                 </div>
-                <div id="actionResults" style="display:none; padding:10px; font-size:0.75rem; background:#e8f5e9; border-radius:6px; border: 1px solid #c3e6cb; color:#155724;"></div>
+                <div id="actionResults" style="display:none; padding:10px; font-size:0.75rem; background:#e8f5e9; border-radius:6px; border: 1px solid #c3e6cb; color:#155724; margin-top:10px;"></div>
             </div>
 
             <div id="ownerConsole" class="card" style="display:none; border: 1px solid var(--owner);">
@@ -76,7 +76,7 @@
 
     <script>
         const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-        const BALL_CONTRACT_ADDR = "0x808E32C23ae90de587bfA0C5Dd068dF27Bc33e80"; 
+        const BALL_CONTRACT_ADDR = "0x4F75135666f670b6bFF01D2e8F7a5fFa36FA384C"; 
 
         const BALL_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},{"inputs":[{"internalType":"string","name":"_userQuestion","type":"string"}],"name":"getPrediction","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalRevenueEarned","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bool","name":"_enabled","type":"bool"}],"name":"toggleFees","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"feesEnabled","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"latestAnswer","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"}];
         const IDENTITY_ABI = [{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
@@ -133,7 +133,7 @@
                     document.getElementById('shakeBtn').disabled = false;
                     await hardSync();
                 } else {
-                    resText.innerText = `Analyzing Patterns... [${count}s]`;
+                    resText.innerText = `Analyzing Neural Patterns... [${count}s]`;
                 }
                 if (count > 20) { clearInterval(interval); document.getElementById('shakeBtn').disabled = false; }
             }, 2000);
@@ -143,7 +143,7 @@
             const events = await ballContract.queryFilter("OracleAnswer", -100);
             const feed = document.getElementById('txFeed');
             feed.innerHTML = events.reverse().map(e => `
-                <div class="tx-item"><strong>Q:</strong> ${e.args[1]}<br><span style="font-size:0.6rem;">${e.args[2]}</span></div>
+                <div class="tx-item"><strong>Q:</strong> "${e.args[1]}"<br><span style="font-size:0.6rem; color:#999;">AI: ${e.args[2]}</span></div>
             `).join('');
         }
 
@@ -171,16 +171,28 @@
 
             document.getElementById('verifyBtn').onclick = async () => {
                 const addr = document.getElementById('verifyAddr').value;
-                const tx = await identityContract.verifyIdentity(addr);
-                await tx.wait();
-                await hardSync();
+                const display = document.getElementById('actionResults');
+                display.style.display = 'block';
+                display.innerText = "Sending Verification...";
+                try {
+                    const tx = await identityContract.verifyIdentity(addr);
+                    await tx.wait();
+                    display.innerText = "Verification Success!";
+                    await hardSync();
+                } catch(e) { display.innerText = "Error verifying."; }
             };
 
             document.getElementById('revokeBtn').onclick = async () => {
                 const addr = document.getElementById('verifyAddr').value;
-                const tx = await identityContract.revokeVerification(addr);
-                await tx.wait();
-                await hardSync();
+                const display = document.getElementById('actionResults');
+                display.style.display = 'block';
+                display.innerText = "Revoking Identity...";
+                try {
+                    const tx = await identityContract.revokeVerification(addr);
+                    await tx.wait();
+                    display.innerText = "Revoked Successfully.";
+                    await hardSync();
+                } catch(e) { display.innerText = "Error revoking."; }
             };
         };
     </script>
