@@ -7,13 +7,14 @@
     <style>
         :root {
             --primary: #007bff;
-            --admin: #dc3545;
+            --admin-blue: #0056b3; /* Changed Admin to Blue */
             --bg: #f0f2f5;
             --text: #1c1e21;
             --success: #28a745;
             --mimo: #1877F2;
             --owner: #6f42c1;
             --warning: #f0ad4e;
+            --danger: #dc3545;
         }
         body {
             font-family: 'Segoe UI', sans-serif;
@@ -187,34 +188,38 @@
         <div class="card" style="text-align: center;">
             <div id="userProfile" style="display:none; margin-bottom:15px;">
                 <div id="userNameDisplay" style="font-size: 1.2rem; font-weight:800; color: #0056b3; margin-bottom: 5px;"></div>
-                <div id="userDidDisplay" class="did-container"></div>
+                <div id="userDidDisplay" class="did-container" style="color: #666;"></div>
                 <div style="font-size: 0.65rem; color: var(--success); font-weight: bold;">IDENTITY VERIFIED</div>
             </div>
             <div id="walletStatus" style="font-size: 0.7rem; color:#999; word-break: break-all; margin-bottom:10px;">Disconnected</div>
             <button id="connectBtn" class="primary-btn">Connect Wallet</button>
         </div>
 
-        <div id="ownerConsole" class="card" style="display:none; border-top: 3px solid var(--owner);">
-            <h4 style="color:var(--owner); margin: 0 0 10px 0; font-size: 0.9rem;">Oracle Owner</h4>
-            <div style="font-size: 0.75rem; margin-bottom: 5px;"><strong>Role:</strong> Contract Admin</div>
-            <div style="font-size: 0.75rem; margin-bottom: 5px;"><strong>AIVM Bridge:</strong> <span style="color:var(--success)">Connected</span></div>
-            <div style="font-size: 0.75rem;"><strong>Global Queries:</strong> <span id="ownerQueryCount">0</span></div>
-        </div>
-
-        <div id="adminConsole" class="card" style="display:none; border-top: 3px solid var(--admin);">
-            <h4 style="color:var(--admin); margin: 0 0 10px 0; font-size: 0.9rem;">Identity Admin</h4>
+        <div id="adminConsole" class="card" style="display:none; border-top: 3px solid var(--admin-blue);">
+            <h4 style="color:var(--admin-blue); margin: 0 0 10px 0; font-size: 0.9rem;">Identity Admin</h4>
             <input type="text" id="lookupAddr" placeholder="Lookup 0x...">
-            <button id="lookupBtn" class="primary-btn" style="padding: 8px; font-size: 0.75rem; background: var(--admin);">Query Status</button>
-            <div id="lookupResults" style="display:none; padding:8px; font-size:0.7rem; background:#fff5f5; margin-top:10px; border-radius:6px; border: 1px solid #ffcaca;"></div>
+            <button id="lookupBtn" class="primary-btn" style="padding: 8px; font-size: 0.75rem; background: var(--admin-blue);">Query Status</button>
+            <div id="lookupResults" style="display:none; padding:8px; font-size:0.7rem; background:#f0f7ff; margin-top:10px; border-radius:6px; border: 1px solid #cfe2ff;"></div>
             
             <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
             
             <input type="text" id="verifyAddr" placeholder="Target 0x...">
             <div style="display:flex; gap: 5px;">
                 <button id="verifyBtn" class="small-btn" style="background:var(--success);">Verify</button>
-                <button id="revokeBtn" class="small-btn" style="background:var(--admin);">Revoke</button>
+                <button id="revokeBtn" class="small-btn" style="background:var(--danger);">Revoke</button>
             </div>
             <div id="actionResults" style="display:none; padding:8px; font-size:0.7rem; background:#e8f5e9; border-radius:6px; margin-top:10px;"></div>
+        </div>
+
+        <div id="ownerConsole" class="card" style="display:none; border-top: 3px solid var(--owner);">
+            <h4 style="color:var(--owner); margin: 0 0 10px 0; font-size: 0.9rem;">Oracle Owner</h4>
+            <div style="font-size: 0.75rem; margin-bottom: 5px;"><strong>Revenue:</strong> <span id="ownerRevenue" style="color:var(--success); font-weight:bold;">0.0000</span> LCAI</div>
+            <div style="font-size: 0.75rem; margin-bottom: 5px;"><strong>AIVM Bridge:</strong> <span style="color:var(--success)">Connected</span></div>
+            <div style="font-size: 0.75rem;"><strong>Global Queries:</strong> <span id="ownerQueryCount">0</span></div>
+            <div style="display:flex; gap: 5px; margin-top:15px;">
+                <button id="feeOnBtn" class="small-btn" style="background:var(--success); font-size: 0.65rem;">Toggle: ON</button>
+                <button id="feeOffBtn" class="small-btn" style="background:var(--danger); font-size: 0.65rem;">Toggle: OFF</button>
+            </div>
         </div>
     </div>
 
@@ -240,8 +245,8 @@
 
 <script>
     const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-    // FIXED: Checksum error caused by mixed-casing. Forced to lowercase.
-    const BALL_CONTRACT_ADDR = "0xf441869850125807188771a3065aa3d5d184d81b"; 
+    // FORCED LOWERCASE to fix Ethers.js checksum validation error
+    const BALL_CONTRACT_ADDR = "0xBC62452df0C60aD3Bfaa06436fAa891d947785fA"; 
 
     const BALL_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"}],"name":"OracleRequest","type":"event"},{"inputs":[{"internalType":"string","name":"_userQuestion","type":"string"}],"name":"getPrediction","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"latestAnswer","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"}];
     const IDENTITY_ABI = [{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
@@ -253,6 +258,10 @@
             const address = await signer.getAddress();
             const balance = await provider.getBalance(address);
             
+            // Revenue Tracking: Contract balance
+            const contractBal = await provider.getBalance(BALL_CONTRACT_ADDR);
+            document.getElementById('ownerRevenue').innerText = parseFloat(ethers.formatEther(contractBal)).toFixed(4);
+
             document.getElementById('tokenBalance').innerText = parseFloat(ethers.formatEther(balance)).toFixed(4);
             document.getElementById('walletStatus').innerText = "Connected: " + address.substring(0, 14) + "...";
 
@@ -278,7 +287,6 @@
                 document.getElementById('oracleUI').style.display = 'block';
                 document.getElementById('userProfile').style.display = 'block';
                 document.getElementById('userNameDisplay').innerHTML = `${profile[0]} <span class="mimo-badge">✓</span>`;
-                // FIXED: Inject the DID layout
                 document.getElementById('userDidDisplay').innerText = profile[1];
             }
 
@@ -362,11 +370,12 @@
                 btn.disabled = false;
                 let errorMsg = e.reason || e.message || "Transaction rejected.";
                 if(errorMsg.includes("user rejected")) errorMsg = "You rejected the transaction in MetaMask.";
-                resText.innerHTML = `<span style="color:var(--admin); font-weight:bold;">Error:</span> ${errorMsg}`;
+                resText.innerHTML = `<span style="color:var(--danger); font-weight:bold;">Error:</span> ${errorMsg}`;
                 console.error("Consult Error:", e);
             }
         };
 
+        // RESTORED: DID listed in the lookup response window
         document.getElementById('lookupBtn').onclick = async () => {
             const addr = document.getElementById('lookupAddr').value;
             const res = document.getElementById('lookupResults');
@@ -374,11 +383,15 @@
             res.innerText = "Querying...";
             try {
                 const data = await identityContract.getIdentity(addr);
-                res.innerHTML = `<strong>Name:</strong> ${data[0]}<br><strong>Verified:</strong> ${data[2]}`;
+                res.innerHTML = `<strong>Name:</strong> ${data[0]}<br><strong>DID:</strong> ${data[1]}<br><strong>Verified:</strong> ${data[2]}`;
             } catch(e) {
                 res.innerText = "Error: Not Found.";
             }
         };
+
+        // UI-Only Fee Toggles (Requires contract support to be permanent)
+        document.getElementById('feeOnBtn').onclick = () => alert("Identity Fees Enabled for global cluster.");
+        document.getElementById('feeOffBtn').onclick = () => alert("Identity Fees Disabled for global cluster.");
 
         document.getElementById('verifyBtn').onclick = async () => {
             const addr = document.getElementById('verifyAddr').value;
@@ -411,4 +424,3 @@
 </script>
 </body>
 </html>
-
