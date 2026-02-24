@@ -8,64 +8,71 @@
         :root { --primary: #007bff; --admin: #dc3545; --bg: #f0f2f5; --text: #1c1e21; --success: #28a745; --mimo: #1877F2; --owner: #6f42c1; --warning: #f0ad4e; }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         #topNav { height: 60px; background: #fff; border-bottom: 1px solid #e1e4e8; display: flex; align-items: center; justify-content: space-between; padding: 0 25px; flex-shrink: 0; }
-        .nav-title h1 { font-size: 1.2rem; color: #0056b3; margin: 0; }
-        .token-display { background: #f8f9fa; padding: 8px 15px; border-radius: 20px; border: 1px solid #e1e4e8; font-weight: 700; font-size: 0.9rem; color: var(--success); }
-        .content-wrapper { display: flex; flex: 1; overflow: hidden; }
+        .nav-title h1 { font-size: 1.1rem; color: #0056b3; margin: 0; }
+        .token-display { background: #f8f9fa; padding: 8px 15px; border-radius: 20px; border: 1px solid #e1e4e8; font-weight: 700; font-size: 0.85rem; color: var(--success); }
+        .content-wrapper { display: flex; flex: 1; overflow: hidden; width: 100%; }
         
-        /* FIXED: Sidebar width and flex settings to prevent truncation */
-        #leftSidebar, #rightSidebar { width: 320px; min-width: 320px; background: #fff; padding: 20px; overflow-y: auto; border-right: 1px solid #e1e4e8; flex-shrink: 0; }
+        /* SIDEBAR LOCK: Prevents truncation and squishing */
+        #leftSidebar, #rightSidebar { 
+            width: 320px; 
+            min-width: 320px; 
+            max-width: 320px; 
+            background: #fff; 
+            padding: 20px; 
+            overflow-y: auto; 
+            border-right: 1px solid #e1e4e8; 
+            flex-shrink: 0; 
+            box-sizing: border-box;
+        }
         #rightSidebar { border-right: none; border-left: 1px solid #e1e4e8; }
         
-        .main-utility-area { flex: 1; padding: 40px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; background: #f8f9fa; }
+        .main-utility-area { flex: 1; padding: 30px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; background: #f8f9fa; }
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); margin-bottom: 20px; border: 1px solid #e1e4e8; width: 100%; box-sizing: border-box; }
-        .primary-btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; margin-top: 10px; transition: 0.2s; }
+        .primary-btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; margin-top: 10px; transition: 0.2s; }
         .small-btn { padding: 10px; font-size: 0.75rem; flex: 1; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; }
-        .mimo-badge { background: var(--mimo); color: white; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; margin-left: 8px; font-weight: bold; }
-        .result-window { margin-top: 20px; padding: 20px; background: #fdfdfd; border: 2px dashed #cbd5e0; border-radius: 8px; font-family: 'Courier New' , monospace; font-size: 1rem; color: #333; line-height: 1.4; min-height: 60px; word-break: break-word; }
-        .tx-item { font-size: 0.75rem; color: #444; padding: 12px 10px; border-bottom: 1px solid #f0f0f0; background: #fafafa; border-radius: 6px; margin-bottom: 8px; }
-        .tx-item.pending { border-left: 4px solid var(--warning); background: #fffdfa; }
+        .mimo-badge { background: var(--mimo); color: white; border-radius: 50%; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; margin-left: 8px; font-weight: bold; }
+        .result-window { margin-top: 20px; padding: 15px; background: #fdfdfd; border: 2px dashed #cbd5e0; border-radius: 8px; font-family: 'Courier New' , monospace; font-size: 0.95rem; color: #333; line-height: 1.4; min-height: 60px; word-break: break-word; }
+        .tx-item { font-size: 0.75rem; color: #444; padding: 10px; border-bottom: 1px solid #f0f0f0; background: #fafafa; border-radius: 6px; margin-bottom: 8px; }
+        .tx-item.pending { border-left: 4px solid var(--warning); }
         .tx-item.success { border-left: 4px solid var(--success); background: #f6fff6; }
-        input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; font-size: 0.85rem; }
+        input[type="text"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 8px; box-sizing: border-box; font-size: 0.8rem; }
     </style>
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity Portal</h1><span style="font-size:0.7rem; color:#999;">v55.1</span></div>
+        <div class="nav-title"><h1>Lightchain Identity Portal (Testnet)</h1><span style="font-size:0.6rem; color:#999;">v55.2</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
         <div id="leftSidebar">
             <div class="card" style="text-align: center;">
-                <div id="userStatusHeader" style="display:none; margin-bottom:15px; padding-bottom:15px; border-bottom:1px solid #eee;">
-                    <div id="userNameDisplay" style="font-size: 1.3rem; font-weight:800; color: #0056b3;"></div>
+                <div id="userProfile" style="display:none; margin-bottom:15px;">
+                    <div id="userNameDisplay" style="font-size: 1.2rem; font-weight:800; color: #0056b3; margin-bottom: 5px;"></div>
+                    <div style="font-size: 0.65rem; color: var(--success); font-weight: bold;">IDENTITY VERIFIED</div>
                 </div>
                 <div id="walletStatus" style="font-size: 0.7rem; color:#999; word-break: break-all; margin-bottom:10px;">Disconnected</div>
                 <button id="connectBtn" class="primary-btn">Connect Wallet</button>
             </div>
 
             <div id="adminConsole" class="card" style="display:none;">
-                <h4 style="color:var(--admin); margin: 0 0 10px 0;">Identity Admin</h4>
-                <label style="font-size: 0.7rem; color: #666;">Account Lookup</label>
-                <input type="text" id="lookupAddr" placeholder="0x...">
-                <button id="lookupBtn" class="primary-btn" style="padding: 8px; font-size: 0.8rem; margin-bottom: 15px;">Query Status</button>
-                <div id="lookupResults" style="display:none; padding:10px; font-size:0.75rem; background:#f0f7ff; margin-bottom:10px; border-radius:6px; border: 1px solid #b8daff;"></div>
-                
+                <h4 style="color:var(--admin); margin: 0 0 10px 0; font-size: 0.9rem;">Identity Admin</h4>
+                <input type="text" id="lookupAddr" placeholder="Lookup 0x...">
+                <button id="lookupBtn" class="primary-btn" style="padding: 8px; font-size: 0.75rem;">Query Status</button>
+                <div id="lookupResults" style="display:none; padding:8px; font-size:0.7rem; background:#f0f7ff; margin-top:10px; border-radius:6px; border: 1px solid #b8daff;"></div>
                 <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
-                
-                <label style="font-size: 0.7rem; color: #666;">Verification Actions</label>
                 <input type="text" id="verifyAddr" placeholder="Target 0x...">
-                <div style="display:flex; gap: 8px;">
+                <div style="display:flex; gap: 5px;">
                     <button id="verifyBtn" class="small-btn" style="background:var(--success);">Verify</button>
                     <button id="revokeBtn" class="small-btn" style="background:var(--admin);">Revoke</button>
                 </div>
-                <div id="actionResults" style="display:none; padding:10px; font-size:0.75rem; background:#e8f5e9; border-radius:6px; margin-top:10px;"></div>
+                <div id="actionResults" style="display:none; padding:8px; font-size:0.7rem; background:#e8f5e9; border-radius:6px; margin-top:10px;"></div>
             </div>
         </div>
 
         <div class="main-utility-area">
-            <div id="oracleUI" style="display:none; width: 100%; max-width: 600px;">
+            <div id="oracleUI" style="display:none; width: 100%; max-width: 550px;">
                 <div class="card" style="text-align: center; border-top: 4px solid var(--success);">
-                    <h2>AIVM Oracle</h2>
+                    <h2 style="font-size: 1.3rem; margin-top: 0;">AIVM Oracle</h2>
                     <input type="text" id="oracleQuestion" placeholder="Consult the cluster...">
                     <button id="shakeBtn" class="primary-btn" style="background: var(--success);">Consult AIVM</button>
                     <div class="result-window" id="resultText">Awaiting inference...</div>
@@ -75,9 +82,9 @@
 
         <div id="rightSidebar">
             <div class="card">
-                <h4 style="margin:0; color: #0056b3; font-size:0.9rem;">Activity Log</h4>
-                <div style="font-size: 0.8rem; margin:10px 0;">Total Queries: <strong id="globalCount">0</strong></div>
-                <div id="txFeed" style="max-height: 500px; overflow-y: auto;"></div>
+                <h4 style="margin:0; color: #0056b3; font-size:0.85rem;">Activity Log</h4>
+                <div style="font-size: 0.75rem; margin:8px 0;">Queries: <strong id="globalCount">0</strong></div>
+                <div id="txFeed" style="max-height: 550px; overflow-y: auto;"></div>
             </div>
         </div>
     </div>
@@ -90,72 +97,83 @@
         const IDENTITY_ABI = [{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
 
         let signer, ballContract, identityContract, provider;
-        let pollInterval;
 
         async function hardSync() {
             try {
                 const address = await signer.getAddress();
-                const [profile, balance, ballAdmin, isIdAdmin, total, lastAns] = await Promise.all([
-                    identityContract.getIdentity(address), provider.getBalance(address),
-                    ballContract.admin(), identityContract.isAdmin(address),
-                    ballContract.totalPredictions(), ballContract.latestAnswer(address)
-                ]);
-                document.getElementById('walletStatus').innerText = "Active: " + address.substring(0, 16) + "...";
-                document.getElementById('tokenBalance').innerText = parseFloat(ethers.formatEther(balance)).toFixed(4);
-                document.getElementById('globalCount').innerText = total.toString();
                 
+                // Fetch basic wallet data first (Fastest)
+                const balance = await provider.getBalance(address);
+                document.getElementById('tokenBalance').innerText = parseFloat(ethers.formatEther(balance)).toFixed(4);
+                document.getElementById('walletStatus').innerText = "Connected: " + address.substring(0, 14) + "...";
+
+                // Fetch contract data (Can be slower)
+                const [profile, ballAdmin, isIdAdmin, total, lastAns] = await Promise.all([
+                    identityContract.getIdentity(address).catch(() => ["User", "", false]), 
+                    ballContract.admin().catch(() => ""), 
+                    identityContract.isAdmin(address).catch(() => false),
+                    ballContract.totalPredictions().catch(() => 0), 
+                    ballContract.latestAnswer(address).catch(() => "")
+                ]);
+
+                document.getElementById('globalCount').innerText = total.toString();
                 if (lastAns && lastAns !== "AI_CLUSTER_SYNC_PENDING" && lastAns !== "") {
                     document.getElementById('resultText').innerText = lastAns;
                 }
                 
                 document.getElementById('adminConsole').style.display = isIdAdmin ? 'block' : 'none';
+                
                 if (profile[2]) {
                     document.getElementById('oracleUI').style.display = 'block';
-                    document.getElementById('userStatusHeader').style.display = 'block';
+                    document.getElementById('userProfile').style.display = 'block';
                     document.getElementById('userNameDisplay').innerHTML = `${profile[0]} <span class="mimo-badge">✓</span>`;
                 }
                 await scanHistory();
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error("Sync Failure:", e); }
         }
 
         async function connectWallet() {
-            if (!window.ethereum) return;
-            provider = new ethers.BrowserProvider(window.ethereum);
-            await window.ethereum.request({ method: 'eth_requestAccounts' });
-            signer = await provider.getSigner();
-            ballContract = new ethers.Contract(BALL_CONTRACT_ADDR, BALL_ABI, signer);
-            identityContract = new ethers.Contract(IDENTITY_CONTRACT, IDENTITY_ABI, signer);
-            document.getElementById('connectBtn').style.display = 'none';
-            await hardSync();
-            
-            ballContract.on("OracleAnswer", (user, answer) => {
-                if (user.toLowerCase() === signer.address.toLowerCase()) {
-                    document.getElementById('resultText').innerText = answer;
-                    document.getElementById('shakeBtn').disabled = false;
-                    hardSync();
-                }
-            });
+            try {
+                if (!window.ethereum) return alert("MetaMask not found!");
+                provider = new ethers.BrowserProvider(window.ethereum);
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
+                signer = await provider.getSigner();
+                
+                ballContract = new ethers.Contract(BALL_CONTRACT_ADDR, BALL_ABI, signer);
+                identityContract = new ethers.Contract(IDENTITY_CONTRACT, IDENTITY_ABI, signer);
+                
+                document.getElementById('connectBtn').style.display = 'none';
+                await hardSync();
+                
+                ballContract.on("OracleAnswer", (user, answer) => {
+                    if (user.toLowerCase() === signer.address.toLowerCase()) {
+                        document.getElementById('resultText').innerText = answer;
+                        document.getElementById('shakeBtn').disabled = false;
+                        hardSync();
+                    }
+                });
+            } catch (e) { console.error("Connection Error:", e); }
         }
 
         async function scanHistory() {
             try {
                 const [reqs, ans] = await Promise.all([
-                    ballContract.queryFilter(ballContract.filters.OracleRequest(), -5000),
-                    ballContract.queryFilter(ballContract.filters.OracleAnswer(), -5000)
+                    ballContract.queryFilter(ballContract.filters.OracleRequest(), -2000).catch(() => []),
+                    ballContract.queryFilter(ballContract.filters.OracleAnswer(), -2000).catch(() => [])
                 ]);
                 const feed = document.getElementById('txFeed');
                 const combined = [...reqs.map(e => ({type:'req', text:e.args[1]})), ...ans.map(e => ({type:'ans', text:e.args[1]}))];
                 
                 if (combined.length === 0) {
-                    feed.innerHTML = '<div style="text-align:center; color:#999; font-size:0.8rem; padding:20px;">No recent activity.</div>';
+                    feed.innerHTML = '<div style="text-align:center; color:#999; font-size:0.7rem; padding:20px;">No activity found in recent blocks.</div>';
                 } else {
                     feed.innerHTML = combined.reverse().map(item => `
                         <div class="tx-item ${item.type === 'ans' ? 'success' : 'pending'}">
-                            <strong>${item.type === 'ans' ? 'Vision Received' : 'Question Asked'}:</strong><br>${item.text}
+                            <strong>${item.type === 'ans' ? 'Vision' : 'Question'}:</strong><br>${item.text}
                         </div>
                     `).join('');
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error("History Scan Error:", e); }
         }
 
         window.onload = () => {
@@ -177,11 +195,11 @@
             document.getElementById('lookupBtn').onclick = async () => {
                 const addr = document.getElementById('lookupAddr').value;
                 const res = document.getElementById('lookupResults');
-                res.style.display = 'block'; res.innerText = "Querying Status...";
+                res.style.display = 'block'; res.innerText = "Querying...";
                 try {
                     const data = await identityContract.getIdentity(addr);
                     res.innerHTML = `<strong>Name:</strong> ${data[0]}<br><strong>Verified:</strong> ${data[2]}`;
-                } catch(e) { res.innerText = "Address not found."; }
+                } catch(e) { res.innerText = "Error: Not Found."; }
             };
 
             document.getElementById('verifyBtn').onclick = async () => {
