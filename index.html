@@ -28,13 +28,16 @@
         .primary-btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; margin-top: 10px; transition: 0.2s; }
         .small-btn { padding: 10px; font-size: 0.75rem; flex: 1; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; }
         .result-window { margin-top: 20px; padding: 15px; background: #fdfdfd; border: 2px dashed #cbd5e0; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.95rem; color: #333; line-height: 1.4; min-height: 80px; word-break: break-word; }
+        .tx-item { font-size: 0.75rem; color: #444; padding: 10px; border-bottom: 1px solid #f0f0f0; background: #fafafa; border-radius: 6px; margin-bottom: 8px; }
+        .tx-item.pending { border-left: 4px solid var(--warning); }
+        .tx-item.success { border-left: 4px solid var(--success); background: #f6fff6; }
         input[type="text"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 8px; box-sizing: border-box; font-size: 0.8rem; }
     </style>
 </head>
 <body>
 
 <div id="topNav">
-    <div class="nav-title"><h1>Lightchain Identity Portal (Testnet)</h1><span style="font-size:0.6rem; color:#999;">v55.3</span></div>
+    <div class="nav-title"><h1>Lightchain Identity Portal (Testnet)</h1><span style="font-size:0.6rem; color:#999;">v55.4</span></div>
     <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
 </div>
 
@@ -59,6 +62,7 @@
                 <button id="verifyBtn" class="small-btn" style="background:var(--success);">Verify</button>
                 <button id="revokeBtn" class="small-btn" style="background:var(--danger);">Revoke</button>
             </div>
+            <div id="actionResults" style="display:none; padding:8px; font-size:0.7rem; background:#e8f5e9; border-radius:6px; margin-top:10px; color:#333;"></div>
         </div>
 
         <div id="ownerConsole" class="card" style="display:none; border-top: 3px solid var(--owner);">
@@ -94,10 +98,28 @@
 
 <script>
     const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-    const BALL_CONTRACT_ADDR = "0x99201e272d8a625F0C976b03Eb150AEb9B53154d"; 
+    const BALL_CONTRACT_ADDR = "0x23f61606c0B9640638f41F1Eb1Aa5Da8adD5e9e0"; 
 
-    const BALL_ABI = [{"inputs":[{"internalType":"string","name":"_userQuestion","type":"string"}],"name":"getPrediction","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"feesEnabled","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"lastPayoutTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bool","name":"_status","type":"bool"}],"name":"toggleFees","outputs":[],"stateMutability":"nonpayable","type":"function"}];
-    const IDENTITY_ABI = [{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
+    // Streamlined Human-Readable ABIs
+    const BALL_ABI = [
+        "function getPrediction(string _userQuestion) payable",
+        "function admin() view returns (address)",
+        "function feesEnabled() view returns (bool)",
+        "function lastPayoutTime() view returns (uint256)",
+        "function toggleFees(bool _status)",
+        "function withdraw()",
+        "function totalPredictions() view returns (uint256)",
+        "function latestAnswer(address) view returns (string)",
+        "event OracleRequest(address indexed user, string question)",
+        "event OracleAnswer(address indexed user, string answer)"
+    ];
+
+    const IDENTITY_ABI = [
+        "function getIdentity(address _userAddress) view returns (string, string, bool)",
+        "function isAdmin(address _userAddress) view returns (bool)",
+        "function verifyIdentity(address _userAddress)",
+        "function revokeVerification(address _userAddress)"
+    ];
 
     let signer, ballContract, identityContract, provider;
 
@@ -110,23 +132,29 @@
             document.getElementById('tokenBalance').innerText = parseFloat(ethers.formatEther(balance)).toFixed(4);
             document.getElementById('vaultBalance').innerText = parseFloat(ethers.formatEther(vaultBal)).toFixed(4);
 
-            const [profile, ballAdmin, isIdAdmin, isFeeOn, lastPayout] = await Promise.all([
+            const [profile, ballAdmin, isIdAdmin, isFeeOn, lastPayout, lastAns] = await Promise.all([
                 identityContract.getIdentity(address).catch(() => ["User", "", false]),
                 ballContract.admin().catch(() => ""),
                 identityContract.isAdmin(address).catch(() => false),
                 ballContract.feesEnabled().catch(() => false),
-                ballContract.lastPayoutTime().catch(() => 0)
+                ballContract.lastPayoutTime().catch(() => 0),
+                ballContract.latestAnswer(address).catch(() => "")
             ]);
 
             document.getElementById('feeStatusText').innerText = isFeeOn ? "ACTIVE (0.1 LCAI)" : "DISABLED";
             document.getElementById('feeStatusText').style.color = isFeeOn ? "var(--success)" : "var(--danger)";
+
+            // Update UI with the actual returned text from the contract debugging
+            if (lastAns && lastAns !== "AI_CLUSTER_SYNC_PENDING" && lastAns !== "") {
+                document.getElementById('resultText').innerText = lastAns;
+            }
 
             // Countdown logic
             const nextPayout = Number(lastPayout) + 86400; // +1 day
             const now = Math.floor(Date.now() / 1000);
             const diff = nextPayout - now;
             if (diff <= 0) {
-                document.getElementById('releaseCountdown').innerText = "Ready for next consult";
+                document.getElementById('releaseCountdown').innerText = "Ready for next trigger";
             } else {
                 const h = Math.floor(diff / 3600);
                 const m = Math.floor((diff % 3600) / 60);
@@ -138,8 +166,10 @@
             if (profile[2]) {
                 document.getElementById('oracleUI').style.display = 'block';
                 document.getElementById('userProfile').style.display = 'block';
-                document.getElementById('userNameDisplay').innerHTML = `${profile[0]} <span style="color:var(--mimo)">✓</span>`;
+                document.getElementById('userNameDisplay').innerHTML = `${profile[0]} <span style="color:var(--mimo); font-size:14px;">✓</span>`;
             }
+
+            await scanHistory();
         } catch (e) { console.error(e); }
     }
 
@@ -155,22 +185,80 @@
         } catch (e) { console.error(e); }
     }
 
+    async function scanHistory() {
+        try {
+            const [reqs, ans] = await Promise.all([
+                ballContract.queryFilter(ballContract.filters.OracleRequest(), -2000).catch(() => []),
+                ballContract.queryFilter(ballContract.filters.OracleAnswer(), -2000).catch(() => [])
+            ]);
+            const feed = document.getElementById('txFeed');
+            const combined = [...reqs.map(e => ({type:'req', text:e.args[1]})), ...ans.map(e => ({type:'ans', text:e.args[1]}))];
+            feed.innerHTML = combined.reverse().map(item => `
+                <div class="tx-item ${item.type === 'ans' ? 'success' : 'pending'}">
+                    <strong>${item.type === 'ans' ? 'Output' : 'Input'}:</strong><br>${item.text}
+                </div>
+            `).join('');
+        } catch (e) { console.error("History Scan Error:", e); }
+    }
+
     window.onload = () => {
         document.getElementById('connectBtn').onclick = connectWallet;
+
         document.getElementById('lookupBtn').onclick = async () => {
             const addr = document.getElementById('lookupAddr').value;
             const res = document.getElementById('lookupResults');
             res.style.display = 'block';
             try {
                 const data = await identityContract.getIdentity(addr);
-                res.innerHTML = `<strong>User:</strong> ${data[0]}<br><strong>DID:</strong> <span style="color:var(--primary); word-break:break-all;">${data[1]}</span><br><strong>Status:</strong> ${data[2] ? 'Verified' : 'Unverified'}`;
-            } catch(e) { res.innerText = "Not found."; }
+                res.innerHTML = `<strong>User:</strong> ${data[0]}<br><strong>DID:</strong> <span style="color:var(--primary); word-break:break-all;">${data[1]}</span><br><strong>Status:</strong> ${data[2] ? '✅ Verified' : '❌ Unverified'}`;
+            } catch(e) { res.innerText = "No record found."; }
         };
+
+        // FIXED Verify & Revoke logic restored
+        document.getElementById('verifyBtn').onclick = async () => {
+            const addr = document.getElementById('verifyAddr').value;
+            if(!addr) return;
+            const out = document.getElementById('actionResults');
+            out.style.display = 'block';
+            out.innerText = "Broadcasting verification...";
+            try { 
+                const tx = await identityContract.verifyIdentity(addr);
+                out.innerText = "Anchoring on-chain...";
+                await tx.wait(); 
+                out.innerText = "✅ Successfully Verified!"; 
+                await hardSync(); 
+            } catch(e) { out.innerText = "❌ Transaction Failed."; }
+        };
+
+        document.getElementById('revokeBtn').onclick = async () => {
+            const addr = document.getElementById('verifyAddr').value;
+            if(!addr) return;
+            const out = document.getElementById('actionResults');
+            out.style.display = 'block';
+            out.innerText = "Broadcasting revocation...";
+            try { 
+                const tx = await identityContract.revokeVerification(addr);
+                out.innerText = "Anchoring on-chain...";
+                await tx.wait(); 
+                out.innerText = "✅ Successfully Revoked!"; 
+                await hardSync(); 
+            } catch(e) { out.innerText = "❌ Transaction Failed."; }
+        };
+
         document.getElementById('feeOnBtn').onclick = async () => { await (await ballContract.toggleFees(true)).wait(); hardSync(); };
         document.getElementById('feeOffBtn').onclick = async () => { await (await ballContract.toggleFees(false)).wait(); hardSync(); };
+
         document.getElementById('shakeBtn').onclick = async () => {
             const q = document.getElementById('oracleQuestion').value;
-            try { await (await ballContract.getPrediction(q, { value: ethers.parseEther("0.1"), gasLimit: 3000000 })).wait(); hardSync(); } catch(e) { console.error(e); }
+            if (!q) return;
+            const resText = document.getElementById('resultText');
+            resText.innerHTML = "Broadcasting... check MetaMask.";
+            try { 
+                const tx = await ballContract.getPrediction(q, { value: ethers.parseEther("0.1"), gasLimit: 3000000 });
+                resText.innerHTML = "Anchored. Awaiting inference...";
+                await tx.wait(); 
+                await hardSync(); 
+            } catch(e) { console.error(e); resText.innerHTML = "Error in consult."; }
         };
     };
 </script>
