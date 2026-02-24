@@ -25,7 +25,7 @@
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity (Testnet)</h1><span style="font-size:0.7rem; color:#999;">v34.0</span></div>
+        <div class="nav-title"><h1>Lightchain Identity (Testnet)</h1><span style="font-size:0.7rem; color:#999;">v35.0</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -77,13 +77,13 @@
 
     <script>
         const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-        const BALL_CONTRACT_ADDR = "0xDd3b85AC849c562EA2E418E6210EBA84F02B936D"; 
+        const BALL_CONTRACT_ADDR = "0xBddcD81d75b99f5Cc148D843ec9B113b3048b00F"; 
 
         const BALL_ABI = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"question","type":"string"},{"indexed":false,"internalType":"string","name":"answer","type":"string"}],"name":"OracleAnswer","type":"event"},{"inputs":[{"internalType":"string","name":"_userQuestion","type":"string"}],"name":"getPrediction","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"totalPredictions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalRevenueEarned","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bool","name":"_enabled","type":"bool"}],"name":"toggleFees","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"feesEnabled","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"latestAnswer","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"}];
-        const IDENTITY_ABI = [{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
+        const IDENTITY_ABI = [{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"getIdentity","outputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"string","name":"","type":"string"},{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isAdmin","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"verifyIdentity","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"}],"name":"revokeVerification","outputs":[],"stateMutability":"nonpayable","type":"function"}];
 
         let signer, ballContract, identityContract, provider;
-        const verifyGasSettings = { maxFeePerGas: ethers.parseUnits("100", "gwei"), maxPriorityFeePerGas: ethers.parseUnits("100", "gwei") };
+        const globalGas = { maxFeePerGas: ethers.parseUnits("100", "gwei"), maxPriorityFeePerGas: ethers.parseUnits("100", "gwei") };
 
         async function hardSync() {
             try {
@@ -126,13 +126,13 @@
             const pollInterval = setInterval(async () => {
                 const answer = await ballContract.latestAnswer(signer.address);
                 pollCount++;
-                if (answer && answer !== "") {
+                if (answer && answer !== "" && answer !== "The cosmic ether is silent. Try re-phrasing your inquiry.") {
                     resText.innerHTML = answer;
                     clearInterval(pollInterval);
                     document.getElementById('shakeBtn').disabled = false;
                     await hardSync();
                 } else if (pollCount > 10) {
-                    resText.innerText = "AIVM Cluster timeout. Checking PoI nodes...";
+                    resText.innerText = "Finalizing inference...";
                     clearInterval(pollInterval);
                     document.getElementById('shakeBtn').disabled = false;
                 }
@@ -165,13 +165,14 @@
                 btn.disabled = true;
                 const resText = document.getElementById('resultText');
                 try {
-                    resText.innerText = "Consulting AIVM Cluster...";
-                    const tx = await ballContract.getPrediction(q, { gasLimit: 4000000 });
+                    resText.innerText = "Transmitting to AI Hardware...";
+                    const val = (await ballContract.feesEnabled()) ? ethers.parseEther("0.020") : 0n;
+                    const tx = await ballContract.getPrediction(q, { value: val, gasLimit: 3000000, ...globalGas });
                     await tx.wait();
-                    resText.innerText = "Finalizing inference...";
+                    resText.innerText = "Parsing Consensus...";
                     await pollForResult();
                 } catch (e) {
-                    resText.innerText = "AIVM Error. Re-deploy v34 to IDE.";
+                    resText.innerText = "AIVM Rejection. Verify MiMo identity.";
                     btn.disabled = false;
                 }
             };
@@ -188,9 +189,9 @@
             document.getElementById('verifyBtn').onclick = async () => {
                 const addr = document.getElementById('verifyAddr').value;
                 const display = document.getElementById('actionResults');
-                display.style.display = 'block'; display.innerText = "Sending Verification (100 Gwei)...";
+                display.style.display = 'block'; display.innerText = "Sending Verification...";
                 try {
-                    await (await identityContract.verifyIdentity(addr, verifyGasSettings)).wait();
+                    await (await identityContract.verifyIdentity(addr, globalGas)).wait();
                     display.innerText = "Verification Success!"; await hardSync();
                 } catch(e) { display.innerText = "Error verifying."; }
             };
@@ -198,16 +199,16 @@
             document.getElementById('revokeBtn').onclick = async () => {
                 const addr = document.getElementById('verifyAddr').value;
                 const display = document.getElementById('actionResults');
-                display.style.display = 'block'; display.innerText = "Revoking (100 Gwei)...";
+                display.style.display = 'block'; display.innerText = "Revoking Identity...";
                 try {
-                    await (await identityContract.revokeVerification(addr, verifyGasSettings)).wait();
+                    await (await identityContract.revokeVerification(addr, globalGas)).wait();
                     display.innerText = "Revoked Successfully."; await hardSync();
                 } catch(e) { display.innerText = "Error revoking."; }
             };
 
             document.getElementById('toggleFeesBtn').onclick = async () => {
                 const current = await ballContract.feesEnabled();
-                await (await ballContract.toggleFees(!current)).wait();
+                await (await ballContract.toggleFees(!current, globalGas)).wait();
                 await hardSync();
             };
         };
