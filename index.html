@@ -18,14 +18,14 @@
         .primary-btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; margin-top: 10px; transition: 0.2s; }
         .small-btn { padding: 8px; font-size: 0.75rem; flex: 1; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; }
         .mimo-badge { background: var(--mimo); color: white; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; margin-left: 8px; font-weight: bold; }
-        .result-window { margin-top: 20px; padding: 20px; background: #f8f9fa; border: 2px dashed #cbd5e0; border-radius: 8px; font-family: 'Courier New' , monospace; font-size: 1rem; color: #333; line-height: 1.4; min-height: 60px; }
+        .result-window { margin-top: 20px; padding: 20px; background: #f8f9fa; border: 2px dashed #cbd5e0; border-radius: 8px; font-family: 'Courier New' , monospace; font-size: 1rem; color: #333; line-height: 1.4; min-height: 60px; word-break: break-word; }
         .tx-item { font-size: 0.7rem; color: #666; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
         input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; }
     </style>
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity Portal</h1><span style="font-size:0.7rem; color:#999;">v54.2</span></div>
+        <div class="nav-title"><h1>Lightchain Identity Portal</h1><span style="font-size:0.7rem; color:#999;">v54.3</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
@@ -153,12 +153,14 @@
         }
 
         async function scanHistory() {
-            const filter = ballContract.filters.OracleAnswer();
-            const events = await ballContract.queryFilter(filter, -100);
-            const feed = document.getElementById('txFeed');
-            feed.innerHTML = events.reverse().map(e => `
-                <div class="tx-item"><strong>Vision:</strong><br>${e.args[1].substring(0,70)}...</div>
-            `).join('');
+            try {
+                const filter = ballContract.filters.OracleAnswer();
+                const events = await ballContract.queryFilter(filter, -200);
+                const feed = document.getElementById('txFeed');
+                feed.innerHTML = events.reverse().map(e => `
+                    <div class="tx-item"><strong>Vision:</strong><br>${e.args[1].substring(0,100)}...</div>
+                `).join('');
+            } catch(e) {}
         }
 
         window.onload = () => {
@@ -178,7 +180,6 @@
                     await tx.wait();
                     resText.innerText = "Anchored. Awaiting consensus...";
                     
-                    // v54.2 Fallback Polling
                     pollInterval = setInterval(async () => {
                         const currentAns = await ballContract.latestAnswer(signer.address);
                         if (currentAns && currentAns !== "AI_CLUSTER_SYNC_PENDING" && currentAns !== "") {
@@ -187,7 +188,7 @@
                             clearInterval(pollInterval);
                             hardSync();
                         }
-                    }, 4000);
+                    }, 5000);
 
                 } catch (e) {
                     resText.innerText = "Error: Check Identity or Gas.";
@@ -202,7 +203,7 @@
                 res.style.display = 'block'; res.innerText = "Querying...";
                 try {
                     const data = await identityContract.getIdentity(addr);
-                    res.innerHTML = `<strong>Name:</strong> ${data[0] || "N/A"}<br><strong>Bio:</strong> ${data[1] || "N/A"}<br><strong>Verified:</strong> ${data[2]}`;
+                    res.innerHTML = `<strong>Name:</strong> ${data[0]}<br><strong>Bio:</strong> ${data[1]}<br><strong>Verified:</strong> ${data[2]}`;
                 } catch(e) { res.innerText = "Error querying."; }
             };
 
