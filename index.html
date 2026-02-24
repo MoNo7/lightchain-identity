@@ -5,7 +5,7 @@
     <title>Lightchain AI Identity Portal</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        :root { --primary: #007bff; --admin: #dc3545; --bg: #f0f2f5; --text: #1c1e21; --success: #28a745; --mimo: #1877F2; --owner: #6f42c1; }
+        :root { --primary: #007bff; --admin: #dc3545; --bg: #f0f2f5; --text: #1c1e21; --success: #28a745; --mimo: #1877F2; --owner: #6f42c1; --warning: #f0ad4e; }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         #topNav { height: 60px; background: #fff; border-bottom: 1px solid #e1e4e8; display: flex; align-items: center; justify-content: space-between; padding: 0 25px; box-sizing: border-box; }
         .nav-title h1 { font-size: 1.2rem; color: #0056b3; margin: 0; }
@@ -19,20 +19,25 @@
         .small-btn { padding: 8px; font-size: 0.75rem; flex: 1; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; }
         .mimo-badge { background: var(--mimo); color: white; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; margin-left: 8px; font-weight: bold; }
         .result-window { margin-top: 20px; padding: 20px; background: #f8f9fa; border: 2px dashed #cbd5e0; border-radius: 8px; font-family: 'Courier New' , monospace; font-size: 1rem; color: #333; line-height: 1.4; min-height: 60px; word-break: break-word; }
-        .tx-item { font-size: 0.7rem; color: #666; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+        .tx-item { font-size: 0.75rem; color: #444; padding: 12px 10px; border-bottom: 1px solid #f0f0f0; background: #fafafa; border-radius: 6px; margin-bottom: 8px; }
+        .tx-item.pending { border-left: 4px solid var(--warning); }
+        .tx-item.success { border-left: 4px solid var(--success); }
         input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; }
         .status-badge { font-size: 0.6rem; padding: 2px 6px; border-radius: 10px; margin-left: 5px; color: white; vertical-align: middle; }
     </style>
 </head>
 <body>
     <div id="topNav">
-        <div class="nav-title"><h1>Lightchain Identity Portal</h1><span style="font-size:0.7rem; color:#999;">v54.6</span></div>
+        <div class="nav-title"><h1>Lightchain Identity Portal</h1><span style="font-size:0.7rem; color:#999;">v54.7</span></div>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
         <div id="leftSidebar">
-            <div id="userStatusHeader" style="display:none; text-align:center; margin-bottom:15px;"><div id="userNameDisplay" style="font-weight:bold;"></div></div>
-            <div class="card">
+            <div class="card" style="text-align: center;">
+                <div id="userStatusHeader" style="display:none; margin-bottom:15px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
+                    <div id="userNameDisplay" style="font-size: 1.2rem; font-weight:bold; color: #0056b3;"></div>
+                </div>
+                <div style="font-size: 0.8rem; font-weight: bold; color: #333; margin-bottom: 5px;">Wallet Status</div>
                 <div id="walletStatus" style="font-size: 0.75rem; margin-bottom:10px; color:#666; word-break: break-all;">Disconnected</div>
                 <button id="connectBtn" class="primary-btn">Connect Wallet</button>
             </div>
@@ -117,12 +122,11 @@
                     ballContract.feesEnabled()
                 ]);
 
-                document.getElementById('walletStatus').innerText = "Active: " + address.substring(0, 10);
+                document.getElementById('walletStatus').innerText = "Active: " + address.substring(0, 10) + "...";
                 document.getElementById('tokenBalance').innerText = parseFloat(ethers.formatEther(balance)).toFixed(4);
                 document.getElementById('globalCount').innerText = total.toString();
                 document.getElementById('totalRev').innerText = ethers.formatEther(rev);
                 
-                // FEE BADGE UPDATE
                 const badge = document.getElementById('feeBadge');
                 badge.innerText = feeOn ? "FEES ON" : "FEES OFF";
                 badge.style.background = feeOn ? "#dc3545" : "#28a745";
@@ -165,13 +169,21 @@
 
         async function scanHistory() {
             try {
+                // Fetching last 5000 blocks to prevent RPC timeouts
                 const filter = ballContract.filters.OracleAnswer();
-                const events = await ballContract.queryFilter(filter, -10000);
+                const events = await ballContract.queryFilter(filter, -5000);
                 const feed = document.getElementById('txFeed');
-                feed.innerHTML = events.reverse().map(e => `
-                    <div class="tx-item"><strong>Vision:</strong><br>${e.args[1]}</div>
-                `).join('');
-            } catch(e) { console.error("History Error:", e); }
+                
+                if (events.length === 0) {
+                    feed.innerHTML = '<div style="text-align:center; color:#999; font-style:italic; padding: 10px;">No completed inferences in recent blocks. The AIVM Testnet cluster may be congested.</div>';
+                } else {
+                    feed.innerHTML = events.reverse().map(e => `
+                        <div class="tx-item success"><strong>Completed Vision:</strong><br>${e.args[1]}</div>
+                    `).join('');
+                }
+            } catch(e) { 
+                console.error("History Error:", e); 
+            }
         }
 
         window.onload = () => {
@@ -191,12 +203,21 @@
                 if (!q) return;
                 const btn = document.getElementById('shakeBtn');
                 const resText = document.getElementById('resultText');
+                
                 btn.disabled = true;
                 resText.innerText = "Broadcasting to PoI Cluster...";
+                
                 try {
                     const tx = await ballContract.getPrediction(q, { gasLimit: 3000000 });
+                    
+                    // Optimistically add the pending question to the top of the Activity Log
+                    const feed = document.getElementById('txFeed');
+                    const existingContent = feed.innerHTML.includes("No completed") ? "" : feed.innerHTML;
+                    feed.innerHTML = `<div class="tx-item pending"><strong>Pending Request:</strong><br>${q}</div>` + existingContent;
+
                     await tx.wait();
                     resText.innerText = "Anchored. Awaiting consensus...";
+                    
                     pollInterval = setInterval(async () => {
                         const currentAns = await ballContract.latestAnswer(signer.address);
                         if (currentAns && currentAns !== "AI_CLUSTER_SYNC_PENDING" && currentAns !== "") {
