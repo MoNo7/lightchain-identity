@@ -88,7 +88,7 @@
 <script>
     const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
 
-    const BALL_CONTRACT_ADDR = "0xCe6e831B2b15D801D6b170489F371B769788b1d0"; 
+    const BALL_CONTRACT_ADDR = "0xE711a45A29D559600EEEb4F1dcC5F03067737758"; 
 
     const BALL_ABI = ["function getPrediction(string) payable", "function fulfillOracle(address, string)", "function admin() view returns (address)", "function feesEnabled() view returns (bool)", "function lastPayoutTime() view returns (uint256)", "function toggleFees(bool)", "function latestAnswer(address) view returns (string)", "event OracleRequest(address indexed, string, bytes32)", "event OracleAnswer(address indexed, string)"];
     const IDENTITY_ABI = ["function getIdentity(address) view returns (string, string, bool)", "function isAdmin(address) view returns (bool)", "function verifyIdentity(address)", "function revokeVerification(address)"];
@@ -203,3 +203,4 @@
 </script>
 </body>
 </html>
+
