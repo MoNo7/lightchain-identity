@@ -185,7 +185,10 @@
                     await tx.wait();
                     statusBox.innerHTML = `<span style="color:var(--success)">Verified: ${target.substring(0,8)}...</span>`;
                     await hardSync();
-                } catch(e) { statusBox.innerText = "Error: Admin role required."; }
+                } catch(e) { 
+                    console.error("FULL ERROR:", e);
+                    statusBox.innerHTML = `<span style="color:var(--danger); font-size:0.75rem;">Revert Reason: ${e.reason || e.shortMessage || "Check browser console"}</span>`; 
+                }
             };
 
             document.getElementById('withdrawBtn').onclick = async () => {
@@ -199,4 +202,5 @@
     </script>
 </body>
 </html>
+
 
