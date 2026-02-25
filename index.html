@@ -27,7 +27,7 @@
 <body>
 
 <div id="topNav">
-    <div class="nav-title"><h1>Lightchain Identity Portal (Testnet)</h1><span style="font-size:0.6rem; color:#999;">v56.5</span></div>
+    <div class="nav-title"><h1>Lightchain Identity Portal (Testnet)</h1><span style="font-size:0.6rem; color:#999;">v56.6 (Official API)</span></div>
     <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
 </div>
 
@@ -54,16 +54,6 @@
             </div>
             <div id="actionResults" style="display:none; padding:10px; font-size:0.75rem; background:#e8f5e9; border-radius:8px; margin-top:10px; border: 1px solid var(--success); text-align:center;"></div>
         </div>
-
-        <div id="ownerConsole" class="card" style="display:none; border-top: 3px solid var(--owner);">
-            <h4 style="color:var(--owner); margin: 0 0 10px 0; font-size: 0.9rem;">Oracle Owner</h4>
-            <div style="font-size: 0.75rem; margin-bottom: 5px;"><strong>Vault Balance:</strong> <span id="vaultBalance" style="color:var(--success); font-weight:bold;">0.0000</span> LCAI</div>
-            <div style="font-size: 0.7rem; margin-bottom: 10px; color:#666;">Next Release: <span id="releaseCountdown">Calculating...</span></div>
-            <div style="display:flex; gap: 5px; margin-top:10px;">
-                <button id="feeOnBtn" class="small-btn" style="background:var(--success);">Toggle: ON</button>
-                <button id="feeOffBtn" class="small-btn" style="background:var(--danger);">Toggle: OFF</button>
-            </div>
-        </div>
     </div>
 
     <div class="main-utility-area">
@@ -87,10 +77,22 @@
 
 <script>
     const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-    const BALL_CONTRACT_ADDR = "0x5d3F2f191acD0A6FC990BD0f8945537795F0E77F"; 
+    const BALL_CONTRACT_ADDR = "0x5fA4E5074b4CabF227eD895317eF2956D023e6F2"; 
 
-    const BALL_ABI = ["function getPrediction(string) payable", "function fulfillOracle(address, string)", "function admin() view returns (address)", "function feesEnabled() view returns (bool)", "function lastPayoutTime() view returns (uint256)", "function toggleFees(bool)", "function latestAnswer(address) view returns (string)", "event OracleRequest(address indexed, string, bytes32)", "event OracleAnswer(address indexed, string)"];
-    const IDENTITY_ABI = ["function getIdentity(address) view returns (string, string, bool)", "function isAdmin(address) view returns (bool)", "function verifyIdentity(address)", "function revokeVerification(address)"];
+    const BALL_ABI = [
+        "function getPrediction(string) payable", 
+        "function fulfillOracle(address, string)", 
+        "function admin() view returns (address)", 
+        "function latestAnswer(address) view returns (string)", 
+        "event OracleRequest(address indexed, string, bytes32)", 
+        "event OracleAnswer(address indexed, string)"
+    ];
+    const IDENTITY_ABI = [
+        "function getIdentity(address) view returns (string, string, bool)", 
+        "function isAdmin(address) view returns (bool)", 
+        "function verifyIdentity(address)", 
+        "function revokeVerification(address)"
+    ];
 
     let signer, ballContract, identityContract, provider;
 
@@ -98,20 +100,16 @@
         try {
             const address = await signer.getAddress();
             const balance = await provider.getBalance(address);
-            const vaultBal = await provider.getBalance(BALL_CONTRACT_ADDR);
             document.getElementById('tokenBalance').innerText = parseFloat(ethers.formatEther(balance)).toFixed(4);
-            document.getElementById('vaultBalance').innerText = parseFloat(ethers.formatEther(vaultBal)).toFixed(4);
 
             const res = await Promise.all([
                 identityContract.getIdentity(address).catch(() => ["User", "", false]),
                 ballContract.admin().catch(() => ""),
                 identityContract.isAdmin(address).catch(() => false),
-                ballContract.feesEnabled().catch(() => false),
-                ballContract.lastPayoutTime().catch(() => 0),
                 ballContract.latestAnswer(address).catch(() => "")
             ]);
 
-            const [profile, ballAdmin, isIdAdmin, isFeeOn, lastPayout, lastAns] = res;
+            const [profile, ballAdmin, isIdAdmin, lastAns] = res;
 
             if (lastAns && lastAns !== "") {
                 if (lastAns === "AI_CLUSTER_SYNC_PENDING") {
@@ -121,10 +119,6 @@
                 }
             }
             
-            const diff = (Number(lastPayout) + 86400) - Math.floor(Date.now() / 1000);
-            document.getElementById('releaseCountdown').innerText = (diff <= 0) ? "Ready" : `${Math.floor(diff/3600)}h remaining`;
-
-            if (ballAdmin.toLowerCase() === address.toLowerCase()) document.getElementById('ownerConsole').style.display = 'block';
             if (isIdAdmin) document.getElementById('adminConsole').style.display = 'block';
             if (profile[2]) {
                 document.getElementById('oracleUI').style.display = 'block';
@@ -143,7 +137,6 @@
         ballContract = new ethers.Contract(BALL_CONTRACT_ADDR, BALL_ABI, signer);
         identityContract = new ethers.Contract(IDENTITY_CONTRACT, IDENTITY_ABI, signer);
         
-        // Live listener for AI response events
         ballContract.on("OracleAnswer", (user, answer) => {
             signer.getAddress().then(addr => {
                 if(user.toLowerCase() === addr.toLowerCase() && answer !== "AI_CLUSTER_SYNC_PENDING") {
@@ -173,36 +166,23 @@
 
     window.onload = () => {
         document.getElementById('connectBtn').onclick = connectWallet;
-        document.getElementById('lookupBtn').onclick = async () => {
-            const addr = document.getElementById('lookupAddr').value;
-            const resBox = document.getElementById('lookupResults');
-            resBox.style.display = 'block';
-            try {
-                const data = await identityContract.getIdentity(addr);
-                resBox.innerHTML = `<strong>User:</strong> ${data[0]} <br><strong>DID:</strong> ${data[1]} <br><strong>Status:</strong> ${data[2] ? '✅' : '❌'} `;
-            } catch(e) { resBox.innerText = "Error."; }
-        };
-        document.getElementById('verifyBtn').onclick = async () => {
-            const out = document.getElementById('actionResults');
-            out.style.display = 'block'; out.innerText = "Pending...";
-            try { await (await identityContract.verifyIdentity(document.getElementById('verifyAddr').value)).wait(); out.innerText = "Success!"; await hardSync(); } catch(e) { out.innerText = "Failed."; }
-        };
         document.getElementById('shakeBtn').onclick = async () => {
             document.getElementById('resultText').innerHTML = '<span class="pulsing-text">Broadcasting to AI Router...</span>';
             try { 
-                // Increased gasLimit for internal router call
-                await (await ballContract.getPrediction(document.getElementById('oracleQuestion').value, { value: ethers.parseEther("0.1"), gasLimit: 6000000 })).wait();
+                // Manual Gas Limit of 8,000,000 to match IDE settings
+                const tx = await ballContract.getPrediction(document.getElementById('oracleQuestion').value, { 
+                    value: ethers.parseEther("0.1"), 
+                    gasLimit: 8000000 
+                });
+                await tx.wait();
                 document.getElementById('resultText').innerHTML = '<span class="pulsing-text">AI Cluster Processing...</span>';
             } 
             catch(e) { 
-                console.error(e);
-                document.getElementById('resultText').innerText = "Consult Error."; 
+                console.error("Consult Error:", e);
+                document.getElementById('resultText').innerText = "Consult Error. Check Console."; 
             }
         };
     };
 </script>
 </body>
 </html>
-
-
-
