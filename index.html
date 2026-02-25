@@ -16,9 +16,10 @@
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #e1e4e8; width: 100%; box-sizing: border-box; }
         .primary-btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; margin-top: 10px; }
         .small-btn { padding: 10px; font-size: 0.75rem; flex: 1; border: none; border-radius: 6px; cursor: pointer; color: white; }
-        .result-window { margin-top: 20px; padding: 15px; background: #fdfdfd; border: 2px dashed #cbd5e0; border-radius: 8px; min-height: 80px; }
+        .result-window { margin-top: 20px; padding: 15px; background: #fdfdfd; border: 2px dashed #cbd5e0; border-radius: 8px; min-height: 80px; font-size: 0.9rem; }
         input[type="text"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 8px; box-sizing: border-box; }
         .pulsing-text { animation: pulse 1.5s infinite; color: var(--warning); font-weight: bold; }
+        .status-box { padding: 10px; margin-top: 10px; border-radius: 6px; font-size: 0.75rem; display: none; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
@@ -42,17 +43,24 @@
                 <input type="text" id="lookupAddr" placeholder="Lookup 0x...">
                 <button id="lookupBtn" class="primary-btn" style="background: var(--admin-blue);">Query Status</button>
                 <div id="lookupResults" style="display:none; padding:12px; font-size:0.75rem; background:#f8fbff; margin-top:10px; border-radius:8px; border: 1px solid #b8daff;"></div>
+                
                 <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
+                
                 <input type="text" id="verifyAddr" placeholder="Target 0x...">
                 <div style="display:flex; gap: 5px;">
                     <button id="verifyBtn" class="small-btn" style="background:var(--success);">Verify</button>
                     <button id="revokeBtn" class="small-btn" style="background:var(--danger);">Revoke</button>
                 </div>
+                <div id="adminActionResult" class="status-box"></div>
             </div>
 
             <div id="ownerSection" class="card" style="display:none; border-top: 4px solid var(--owner);">
                 <h4 style="color:var(--owner); margin:0;">Contract Owner</h4>
-                <div id="ownerAddrDisplay" style="font-size:0.65rem; word-break:break-all; margin-top:10px;"></div>
+                <div id="ownerAddrDisplay" style="font-size:0.6rem; color:#666; word-break:break-all; margin-top:10px;"></div>
+                <div style="margin-top:10px; font-size:0.9rem; font-weight:bold;">
+                    Revenue: <span id="contractRevenue" style="color:var(--success)">0.00</span> LCAI
+                </div>
+                <button id="withdrawBtn" class="primary-btn" style="background:var(--owner); padding: 5px; font-size:0.75rem;">Withdraw All</button>
             </div>
         </div>
 
@@ -77,10 +85,21 @@
 
     <script>
         const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-        const BALL_CONTRACT_ADDR = "0xf98Ea3F204De78C785CfBF14cbE7C901F640a0C1"; 
+        const BALL_CONTRACT_ADDR = "0xD616856f996E9C12b60a2ae32BFdAac419e448Cf"; 
         
-        const BALL_ABI = ["function getPrediction(string) payable", "function admin() view returns (address)", "function latestAnswer(address) view returns (string)", "event OracleAnswer(address indexed, string)"];
-        const IDENTITY_ABI = ["function getIdentity(address) view returns (string, string, bool)", "function isAdmin(address) view returns (bool)", "function verifyIdentity(address)", "function revokeVerification(address)"];
+        const BALL_ABI = [
+            "function getPrediction(string) payable", 
+            "function admin() view returns (address)", 
+            "function latestAnswer(address) view returns (string)", 
+            "function withdraw() external",
+            "event OracleAnswer(address indexed, string)"
+        ];
+        const IDENTITY_ABI = [
+            "function getIdentity(address) view returns (string, string, bool)", 
+            "function isAdmin(address) view returns (bool)", 
+            "function verifyIdentity(address)", 
+            "function revokeVerification(address)"
+        ];
 
         let signer, ballContract, identityContract, provider;
 
@@ -90,27 +109,30 @@
                 const balance = await provider.getBalance(address);
                 document.getElementById('tokenBalance').innerText = parseFloat(ethers.formatEther(balance)).toFixed(4);
 
-                const [profile, ballAdmin, isIdAdmin, lastAns] = await Promise.all([
+                const [profile, ballAdmin, isIdAdmin, lastAns, contractBal] = await Promise.all([
                     identityContract.getIdentity(address),
                     ballContract.admin(),
                     identityContract.isAdmin(address),
-                    ballContract.latestAnswer(address)
+                    ballContract.latestAnswer(address),
+                    provider.getBalance(BALL_CONTRACT_ADDR)
                 ]);
 
                 if (isIdAdmin) document.getElementById('adminConsole').style.display = 'block';
                 if (ballAdmin.toLowerCase() === address.toLowerCase()) {
                     document.getElementById('ownerSection').style.display = 'block';
-                    document.getElementById('ownerAddrDisplay').innerText = `You are the owner of ${BALL_CONTRACT_ADDR}`;
+                    document.getElementById('ownerAddrDisplay').innerText = `Contract: ${BALL_CONTRACT_ADDR}`;
+                    document.getElementById('contractRevenue').innerText = parseFloat(ethers.formatEther(contractBal)).toFixed(2);
                 }
 
                 document.getElementById('oracleUI').style.display = 'block';
                 document.getElementById('userProfile').style.display = 'block';
                 document.getElementById('userNameDisplay').innerText = profile[0];
                 if (lastAns) document.getElementById('resultText').innerText = lastAns;
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error("Sync Error:", e); }
         }
 
         async function connectWallet() {
+            if (!window.ethereum) return alert("MetaMask not found!");
             provider = new ethers.BrowserProvider(window.ethereum);
             signer = await provider.getSigner();
             ballContract = new ethers.Contract(BALL_CONTRACT_ADDR, BALL_ABI, signer);
@@ -128,30 +150,51 @@
 
         window.onload = () => {
             document.getElementById('connectBtn').onclick = connectWallet;
+
             document.getElementById('shakeBtn').onclick = async () => {
                 const q = document.getElementById('oracleQuestion').value;
                 const box = document.getElementById('resultText');
-                box.innerHTML = '<span class="pulsing-text">Processing...</span>';
+                if (!q) return;
+                box.innerHTML = '<span class="pulsing-text">Validating Identity & Fee...</span>';
                 try {
-                    const tx = await ballContract.getPrediction(q, { value: ethers.parseEther("0.1"), gasLimit: 1000000 });
+                    const tx = await ballContract.getPrediction(q, { value: ethers.parseEther("0.1"), gasLimit: 2000000 });
+                    box.innerHTML = '<span class="pulsing-text">Broadcasting Transaction...</span>';
                     await tx.wait();
-                    box.innerHTML = '<span class="pulsing-text">AI Cluster Thinking...</span>';
-                } catch(e) { box.innerText = "Error: Check Identity or Address."; }
+                    box.innerHTML = '<span class="pulsing-text">AI Cluster Processing Inference...</span>';
+                } catch(e) { 
+                    console.error(e);
+                    box.innerHTML = `<span style="color:var(--danger)">Inference Reverted: ${e.reason || "Check if your address is verified in the Portal."}</span>`; 
+                }
             };
 
             document.getElementById('lookupBtn').onclick = async () => {
                 const res = await identityContract.getIdentity(document.getElementById('lookupAddr').value);
                 const box = document.getElementById('lookupResults');
                 box.style.display = 'block';
-                box.innerHTML = `Name: ${res[0]}<br>Status: ${res[2] ? 'VERIFIED' : 'UNVERIFIED'}`;
+                box.innerHTML = `<strong>Name:</strong> ${res[0]}<br><strong>Status:</strong> ${res[2] ? '<span style="color:var(--success)">VERIFIED</span>' : '<span style="color:var(--danger)">UNVERIFIED</span>'}`;
             };
 
             document.getElementById('verifyBtn').onclick = async () => {
-                const tx = await identityContract.verifyIdentity(document.getElementById('verifyAddr').value);
-                document.getElementById('lookupResults').innerHTML = '<span class="pulsing-text">Verifying...</span>';
-                await tx.wait();
-                await hardSync();
-                document.getElementById('lookupResults').innerText = "Successfully Verified!";
+                const target = document.getElementById('verifyAddr').value;
+                const resBox = document.getElementById('adminActionResult');
+                resBox.style.display = 'block';
+                resBox.style.background = '#f8fbff';
+                resBox.innerHTML = '<span class="pulsing-text">Executing Verification...</span>';
+                try {
+                    const tx = await identityContract.verifyIdentity(target);
+                    await tx.wait();
+                    resBox.style.color = 'var(--success)';
+                    resBox.innerText = `Verified: ${target.substring(0,6)}...`;
+                    await hardSync();
+                } catch(e) { resBox.innerText = "Error: Admin role required."; }
+            };
+
+            document.getElementById('withdrawBtn').onclick = async () => {
+                try {
+                    const tx = await ballContract.withdraw();
+                    await tx.wait();
+                    await hardSync();
+                } catch(e) { alert("Withdrawal failed."); }
             };
         };
     </script>
