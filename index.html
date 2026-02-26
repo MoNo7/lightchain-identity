@@ -83,56 +83,38 @@
 
     <script>
 const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-const BALL_CONTRACT_ADDR = "0xB1B62e33b48A8643DeeE518cCAC4CA68eaf43b53"; 
+const BALL_CONTRACT_ADDR = "0x94b86f6C4bf01EA00af919bCf3635C3bb11B2Aa1"; 
 
 const BALL_ABI = [
     "function getPrediction(string _question) payable",
     "function admin() view returns (address)",
     "function latestAnswer(address) view returns (string)",
     "function withdraw() external",
-    "event OracleAnswer(address indexed user, string answer, bytes32 taskId)",
-    "event OracleError(address indexed user, string reason, bytes32 taskId)"
+    "event OracleAnswer(address indexed user, string answer, bytes32 taskId)"
 ];
 
-const IDENTITY_ABI = [
-    "function getIdentity(address) view returns (string, string, bool)",
-    "function isAdmin(address) view returns (bool)",
-    "function verifyIdentity(address)",
-    "function revokeVerification(address)"
-];
+const IDENTITY_ABI = ["function getIdentity(address) view returns (string, string, bool)", "function isAdmin(address) view returns (bool)", "function verifyIdentity(address)"];
 
 let signer, ballContract, identityContract, provider;
 
 async function hardSync() {
     try {
         const address = await signer.getAddress();
-        const [profile, ballAdmin, isIdAdmin, lastAns, balance, contractBal] = await Promise.all([
+        const [profile, lastAns, balance, contractBal] = await Promise.all([
             identityContract.getIdentity(address),
-            ballContract.admin(),
-            identityContract.isAdmin(address),
             ballContract.latestAnswer(address),
             provider.getBalance(address),
             provider.getBalance(BALL_CONTRACT_ADDR)
         ]);
 
         document.getElementById('tokenBalance').innerText = parseFloat(ethers.formatEther(balance)).toFixed(4);
-        if (isIdAdmin) document.getElementById('adminConsole').style.display = 'block';
-        
-        if (ballAdmin.toLowerCase() === address.toLowerCase()) {
-            document.getElementById('ownerSection').style.display = 'block';
-            document.getElementById('ownerAddrDisplay').innerText = `Contract: ${BALL_CONTRACT_ADDR}`;
-            document.getElementById('contractRevenue').innerText = parseFloat(ethers.formatEther(contractBal)).toFixed(4);
-        }
-
-        document.getElementById('oracleUI').style.display = 'block';
-        document.getElementById('userProfile').style.display = 'block';
+        document.getElementById('contractRevenue').innerText = parseFloat(ethers.formatEther(contractBal)).toFixed(4);
         document.getElementById('userNameDisplay').innerText = profile[0];
         document.getElementById('verifyTag').innerText = profile[2] ? "VERIFIED" : "UNVERIFIED";
         document.getElementById('verifyTag').style.color = profile[2] ? "var(--success)" : "var(--danger)";
         
         if (lastAns) {
             document.getElementById('resultText').innerText = lastAns;
-            document.getElementById('resultText').classList.remove('pulsing-text');
         }
     } catch (e) { console.error("Sync Error:", e); }
 }
@@ -143,7 +125,7 @@ async function connectWallet() {
     ballContract = new ethers.Contract(BALL_CONTRACT_ADDR, BALL_ABI, signer);
     identityContract = new ethers.Contract(IDENTITY_CONTRACT, IDENTITY_ABI, signer);
 
-    // Listen for a successful AI response
+    // FIXED RESPONSE LISTENER
     ballContract.on("OracleAnswer", async (user, answer, taskId) => {
         const myAddr = await signer.getAddress();
         if (user.toLowerCase() === myAddr.toLowerCase()) {
@@ -153,23 +135,14 @@ async function connectWallet() {
         }
     });
 
-    // Listen for an error directly from the AI Cluster
-    ballContract.on("OracleError", async (user, reason, taskId) => {
-        const myAddr = await signer.getAddress();
-        if (user.toLowerCase() === myAddr.toLowerCase()) {
-            document.getElementById('resultText').innerHTML = `<span style="color:var(--danger)">Oracle Error: ${reason}</span>`;
-            document.getElementById('resultText').classList.remove('pulsing-text');
-        }
-    });
-
     document.getElementById('connectBtn').style.display = 'none';
+    document.getElementById('oracleUI').style.display = 'block';
+    document.getElementById('userProfile').style.display = 'block';
     await hardSync();
 }
 
-window.onload = () => {
-    document.getElementById('connectBtn').onclick = connectWallet;
-
-document.getElementById('shakeBtn').onclick = async () => {
+// FIXED PREDICTION CALL WITH ERROR HANDLING
+async function requestInference() {
     const q = document.getElementById('oracleQuestion').value;
     const box = document.getElementById('resultText');
     if (!q) return;
@@ -186,60 +159,30 @@ document.getElementById('shakeBtn').onclick = async () => {
         box.innerHTML = '<span class="pulsing-text">Awaiting AI callback...</span>';
         
     } catch(e) {
-        console.error("Full Error:", e);
-        let errorMsg = "Check Verification/Balance";
+        console.error("Full Error Object:", e);
+        let errorMsg = "Transaction Failed";
         
-        // Improved Revert Reason Extraction
-        if (e.reason) {
-            errorMsg = e.reason;
-        } else if (e.info && e.info.error && e.info.error.message) {
-            errorMsg = e.info.error.message;
-        } else if (e.data) {
-            // Decodes custom error if necessary
-            try { errorMsg = ballContract.interface.parseError(e.data).name; } catch(err) {}
+        // Deep extraction of the 'require' string
+        if (e.reason) errorMsg = e.reason;
+        else if (e.info && e.info.error) errorMsg = e.info.error.message;
+        else if (e.message) {
+            if (e.message.includes("USER_NOT_VERIFIED")) errorMsg = "IDENTITY ERROR: Your wallet is not verified.";
+            else if (e.message.includes("MIN_FEE")) errorMsg = "FEE ERROR: 0.15 LCAI required.";
+            else errorMsg = "Contract Reverted (Check browser console)";
         }
 
         box.innerHTML = `<span style="color:var(--danger)">Oracle Reverted: ${errorMsg}</span>`;
     }
-};
+}
 
-    document.getElementById('lookupBtn').onclick = async () => {
-        const target = document.getElementById('lookupAddr').value;
-        const res = await identityContract.getIdentity(target);
-        const box = document.getElementById('lookupResults');
-        box.style.display = 'block';
-        box.innerHTML = `<strong>Name:</strong> ${res[0]}<br><strong>Status:</strong> ${res[2] ? 'VERIFIED' : 'UNVERIFIED'}`;
-    };
-
-    document.getElementById('verifyBtn').onclick = async () => {
-        const target = document.getElementById('verifyAddr').value;
-        const statusBox = document.getElementById('adminActionResult');
-        statusBox.style.display = 'block';
-        statusBox.innerHTML = '<span class="pulsing-text">Broadcasting Verification...</span>';
-        try {
-            const tx = await identityContract.verifyIdentity(target);
-            await tx.wait();
-            statusBox.innerHTML = `<span style="color:var(--success)">Verified: ${target.substring(0,8)}...</span>`;
-            await hardSync();
-        } catch(e) {
-            console.error("Verification Error:", e);
-            statusBox.innerHTML = `<span style="color:var(--danger); font-size:0.75rem;">Revert Reason: ${e.reason || e.shortMessage || "Check browser console"}</span>`;
-        }
-    };
-
-    document.getElementById('withdrawBtn').onclick = async () => {
-        try {
-            const tx = await ballContract.withdraw();
-            await tx.wait();
-            await hardSync();
-        } catch(e) {
-            alert("Withdrawal failed.");
-        }
-    };
+window.onload = () => {
+    document.getElementById('connectBtn').onclick = connectWallet;
+    document.getElementById('shakeBtn').onclick = requestInference;
 };
     </script>
 </body>
 </html>
+
 
 
 
