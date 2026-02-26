@@ -83,7 +83,7 @@
 
     <script>
 const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-const BALL_CONTRACT_ADDR = "0x6F1BAC163A117380B8002d467A487dd99938E32C"; 
+const BALL_CONTRACT_ADDR = "0xa8dc20a5bE8e94afEFDbDBEBf3632e41254e29cF"; 
 
 const BALL_ABI = [
     "function getPrediction(string _question) payable",
@@ -103,16 +103,21 @@ const IDENTITY_ABI = [
 let signer, ballContract, identityContract, provider;
 
 function parseBlockchainError(e) {
-    console.log("Parsing Error:", e);
+    console.log("Deep Diagnostic:", e);
+    // 1. Check for standard revert reasons
     if (e.reason) return e.reason;
-    if (e.info?.error?.message) return e.info.error.message;
+    // 2. Check for the specific 'DIAGNOSTIC' strings from our new contract
     if (e.message) {
-        if (e.message.includes("USER_NOT_VERIFIED")) return "Identity Error: Wallet not verified.";
-        if (e.message.includes("MIN_FEE")) return "Fee Error: 0.15 LCAI required.";
-        const match = e.message.match(/'([^']+)'/);
-        return match ? match[1] : "Transaction Reverted";
+        if (e.message.includes("DIAGNOSTIC")) {
+            return e.message.match(/DIAGNOSTIC: (.*?)"/)[1];
+        }
+        if (e.message.includes("AI Cluster Rejected")) {
+            return "AI Cluster Busy: Try again in 30 seconds.";
+        }
     }
-    return "Wallet connection or gas error.";
+    // 3. Fallback for Ethers v6 info objects
+    if (e.info?.error?.message) return e.info.error.message;    
+    return "Transaction Reverted: Check if contract itself is Verified.";
 }
 
 async function hardSync() {
@@ -183,10 +188,17 @@ document.getElementById('shakeBtn').onclick = async () => {
     if (!q) return;
     box.innerHTML = '<span class="pulsing-text">Consulting the Cluster...</span>';
     try {
-        const tx = await ballContract.getPrediction(q, { value: ethers.parseEther("0.15"), gasLimit: 3000000 });
+        const tx = await ballContract.getPrediction(q, { 
+            value: ethers.parseEther("0.15")
+        });
+        box.innerHTML = '<span class="pulsing-text">Broadcasting to Blockchain...</span>';
         await tx.wait();
-        box.innerHTML = '<span class="pulsing-text">Inference broadcasted...</span>';
-    } catch(e) { box.innerHTML = `<span style="color:var(--danger)">Error: ${parseBlockchainError(e)}</span>`; }
+        box.innerHTML = '<span class="pulsing-text">Request Accepted. Awaiting AI Response...</span>';  
+    } catch(e) {
+        const diagnostic = parseBlockchainError(e);
+        box.innerHTML = `<span style="color:var(--danger)">Oracle Reverted: ${diagnostic}</span>`;
+        console.error("Troubleshooting Evidence:", diagnostic);
+    }
 };
 
 document.getElementById('verifyBtn').onclick = async () => {
@@ -214,5 +226,6 @@ window.onload = () => { document.getElementById('connectBtn').onclick = connectW
     </script>
 </body>
 </html>
+
 
 
