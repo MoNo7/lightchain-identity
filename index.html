@@ -83,7 +83,7 @@
 
     <script>
 const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-const BALL_CONTRACT_ADDR = "0x0511B136c0CB731FA23808D886c752E4B5cc81d1"; 
+const BALL_CONTRACT_ADDR = "0xB1B62e33b48A8643DeeE518cCAC4CA68eaf43b53"; 
 
 const BALL_ABI = [
     "function getPrediction(string _question) payable",
@@ -178,28 +178,25 @@ document.getElementById('shakeBtn').onclick = async () => {
     
     try {
         const tx = await ballContract.getPrediction(q, {
-            value: ethers.parseEther("0.15"),
-            gasLimit: 3000000 
+            value: ethers.parseEther("0.15")
         });
         
-        box.innerHTML = '<span class="pulsing-text">Broadcasting to Cluster...</span>';
+        box.innerHTML = '<span class="pulsing-text">Broadcasting...</span>';
         await tx.wait();
         box.innerHTML = '<span class="pulsing-text">Awaiting AI callback...</span>';
         
     } catch(e) {
-        console.error("Full Error Object:", e);
+        console.error("Full Error:", e);
+        let errorMsg = "Check Verification/Balance";
         
-        // Robust Error Extraction
-        let errorMsg = "Check Verification or Gas";
-        
+        // Improved Revert Reason Extraction
         if (e.reason) {
-            errorMsg = e.reason; // Standard revert string
+            errorMsg = e.reason;
         } else if (e.info && e.info.error && e.info.error.message) {
-            errorMsg = e.info.error.message; // Deep RPC error
-        } else if (e.message) {
-            if (e.message.includes("USER_NOT_VERIFIED")) errorMsg = "Identity Registry: Your wallet is not verified.";
-            else if (e.message.includes("INSUFFICIENT_FEE")) errorMsg = "Fee Error: Must send 0.15 LCAI.";
-            else errorMsg = e.message.substring(0, 60);
+            errorMsg = e.info.error.message;
+        } else if (e.data) {
+            // Decodes custom error if necessary
+            try { errorMsg = ballContract.interface.parseError(e.data).name; } catch(err) {}
         }
 
         box.innerHTML = `<span style="color:var(--danger)">Oracle Reverted: ${errorMsg}</span>`;
@@ -243,6 +240,7 @@ document.getElementById('shakeBtn').onclick = async () => {
     </script>
 </body>
 </html>
+
 
 
 
