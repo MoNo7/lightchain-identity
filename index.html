@@ -83,7 +83,7 @@
 
     <script>
 const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-const BALL_CONTRACT_ADDR = "0xB85E4e843EDA08FaefFe37E0aAcD3E940bA14040"; 
+const BALL_CONTRACT_ADDR = "0xb2Ae96584313Cf72F1BdC7F40Dea131D0f15A765"; 
 
 const BALL_ABI = [
     "function getPrediction(string _question) payable",
@@ -99,7 +99,6 @@ const IDENTITY_ABI = [
     "function verifyIdentity(address)",
     "function revokeVerification(address)"
 ];
-let signer, ballContract, identityContract, provider;
 
 async function hardSync() {
     try {
@@ -113,18 +112,13 @@ async function hardSync() {
             provider.getBalance(BALL_CONTRACT_ADDR)
         ]);
 
-        // 1. Update Profile UI
         document.getElementById('tokenBalance').innerText = parseFloat(ethers.formatEther(balance)).toFixed(4);
         document.getElementById('userNameDisplay').innerText = profile[0];
         document.getElementById('verifyTag').innerText = profile[2] ? "VERIFIED" : "UNVERIFIED";
         document.getElementById('verifyTag').style.color = profile[2] ? "var(--success)" : "var(--danger)";
 
-        // 2. Show Admin Section if you are a Registry Admin
-        if (isRegAdmin) {
-            document.getElementById('adminConsole').style.display = 'block';
-        }
-
-        // 3. Show Owner Section if you own the Magic8Ball contract
+        if (isRegAdmin) document.getElementById('adminConsole').style.display = 'block';
+        
         if (ballAdmin.toLowerCase() === address.toLowerCase()) {
             document.getElementById('ownerSection').style.display = 'block';
             document.getElementById('ownerAddrDisplay').innerText = `Contract: ${BALL_CONTRACT_ADDR}`;
@@ -141,7 +135,6 @@ async function connectWallet() {
     ballContract = new ethers.Contract(BALL_CONTRACT_ADDR, BALL_ABI, signer);
     identityContract = new ethers.Contract(IDENTITY_CONTRACT, IDENTITY_ABI, signer);
 
-    // FIXED RESPONSE LISTENER
     ballContract.on("OracleAnswer", async (user, answer, taskId) => {
         const myAddr = await signer.getAddress();
         if (user.toLowerCase() === myAddr.toLowerCase()) {
@@ -157,8 +150,7 @@ async function connectWallet() {
     await hardSync();
 }
 
-// FIXED PREDICTION CALL WITH ERROR HANDLING
-async function requestInference() {
+document.getElementById('shakeBtn').onclick = async () => {
     const q = document.getElementById('oracleQuestion').value;
     const box = document.getElementById('resultText');
     if (!q) return;
@@ -167,37 +159,22 @@ async function requestInference() {
     
     try {
         const tx = await ballContract.getPrediction(q, {
-            value: ethers.parseEther("0.15")
+            value: ethers.parseEther("0.15"),
+            gasLimit: 3000000 // FIX: Manually set gas limit for complex inference calls
         });
-        
-        box.innerHTML = '<span class="pulsing-text">Broadcasting...</span>';
         await tx.wait();
         box.innerHTML = '<span class="pulsing-text">Awaiting AI callback...</span>';
-        
     } catch(e) {
-        console.error("Full Error Object:", e);
-        let errorMsg = "Transaction Failed";
-        
-        // Deep extraction of the 'require' string
-        if (e.reason) errorMsg = e.reason;
-        else if (e.info && e.info.error) errorMsg = e.info.error.message;
-        else if (e.message) {
-            if (e.message.includes("USER_NOT_VERIFIED")) errorMsg = "IDENTITY ERROR: Your wallet is not verified.";
-            else if (e.message.includes("MIN_FEE")) errorMsg = "FEE ERROR: 0.15 LCAI required.";
-            else errorMsg = "Contract Reverted (Check browser console)";
-        }
-
-        box.innerHTML = `<span style="color:var(--danger)">Oracle Reverted: ${errorMsg}</span>`;
+        console.error("Inference Error:", e);
+        box.innerHTML = `<span style="color:var(--danger)">Reverted: ${e.reason || "Check Wallet"}</span>`;
     }
-}
-
-window.onload = () => {
-    document.getElementById('connectBtn').onclick = connectWallet;
-    document.getElementById('shakeBtn').onclick = requestInference;
 };
+
+window.onload = () => { document.getElementById('connectBtn').onclick = connectWallet; };
     </script>
 </body>
 </html>
+
 
 
 
