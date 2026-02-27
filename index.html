@@ -141,9 +141,46 @@
         document.getElementById('connectBtn').addEventListener('click', init);
         
         // Placeholder for future SnarkJS/zkPass integration
-        document.getElementById('verifyBtn').addEventListener('click', () => {
-            alert("This will launch the zkPass widget to generate your local ZK proof, and then prompt MetaMask to call verifyAndMint() on the SBT contract.");
-        });
+document.getElementById('verifyBtn').addEventListener('click', async () => {
+    try {
+        document.getElementById('status').innerText = "Initiating Minting Transaction...";
+        
+        // Define the SBT Contract Instance
+        const sbtContract = new ethers.Contract(
+            SBT_ADDR, 
+            ["function verifyAndMint(uint[2] _pA, uint[2][2] _pB, uint[2] _pC, uint[1] _pubSignals) external"], 
+            signer
+        );
+
+        /** * DUMMY PROOF DATA 
+         * These are placeholder values. In production, these are generated 
+         * locally by SnarkJS or provided by the zkPass SDK.
+         */
+        const pA = ["0", "0"];
+        const pB = [["0", "0"], ["0", "0"]];
+        const pC = ["0", "0"];
+        const pubSignals = [Math.floor(Math.random() * 1000000).toString()]; // Unique Nullifier
+
+        // 1. Send the Transaction
+        const tx = await sbtContract.verifyAndMint(pA, pB, pC, pubSignals);
+        document.getElementById('status').innerText = "Transaction Sent! Waiting for confirmation...";
+        
+        // 2. Wait for block confirmation
+        await tx.wait();
+        
+        document.getElementById('status').innerText = "SBT Minted Successfully!";
+        document.getElementById('status').style.color = "var(--primary)";
+
+        // 3. Refresh the UI to reveal the Dashboard
+        await checkVerification();
+
+    } catch (error) {
+        console.error("Minting failed:", error);
+        document.getElementById('status').innerText = "Minting failed. Check console for details.";
+        document.getElementById('status').style.color = "#ff4444";
+    }
+});
     </script>
 </body>
 </html>
+
