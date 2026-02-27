@@ -153,31 +153,45 @@
             }
         }
 
-        document.getElementById('generateArtBtn').onclick = async () => {
-            const prompt = document.getElementById('artPrompt').value;
-            if(!prompt) return;
+document.getElementById('generateArtBtn').onclick = async () => {
+    const prompt = document.getElementById('artPrompt').value;
+    if(!prompt) return;
+    
+    try {
+        const router = new ethers.Contract(ROUTER_ADDR, ["function requestInferenceV2(uint256 m, string p) external payable returns (bytes32)"], signer);
+        
+        // 1. REAL ANCHOR: This creates a unique Task ID on Lightchain Testnet
+        const tx = await router.requestInferenceV2(2, prompt, { value: ethers.parseEther("0.1") });
+        const receipt = await tx.wait();
+        
+        // Extract Task ID from the event logs
+        const taskId = receipt.logs[0].topics[1]; 
+
+        const newTask = { prompt, taskId, ready: false, url: null };
+        userTasks.push(newTask);
+        localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
+        renderLog();
+        
+        // 2. REAL FETCH: Poll the API for the actual generated image
+        const pollResult = async () => {
+            const resp = await fetch(`${CHAT_API}/chat/status?taskId=${taskId}`);
+            const data = await resp.json();
             
-            try {
-                const router = new ethers.Contract(ROUTER_ADDR, ["function requestInferenceV2(uint256 m, string p) external payable returns (bytes32)"], signer);
-                const tx = await router.requestInferenceV2(2, prompt, { value: ethers.parseEther("0.1") });
-                
-                const newTask = { prompt, tx: tx.hash, ready: false, url: null };
-                userTasks.push(newTask);
+            if(data.ready && data.url) {
+                newTask.ready = true;
+                newTask.url = data.url; // The real unique URL from the GPU cluster
                 localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
                 renderLog();
-                
-                await tx.wait();
-                // Simulation of API result fetching
-                setTimeout(() => {
-                    newTask.ready = true;
-                    newTask.url = "https://images.unsplash.com/photo-1614728263952-84ea256f9679?auto=format&fit=crop&w=800&q=80"; // Mock response
-                    localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
-                    renderLog();
-                }, 5000);
-
-            } catch (e) { alert("Inference Anchoring Failed."); }
+            } else {
+                setTimeout(pollResult, 3000); // Retry every 3 seconds
+            }
         };
+        pollResult();
 
+    } catch (e) { 
+        alert("Inference Anchoring Failed. Ensure you have LCAI for the 0.1 fee."); 
+    }
+};
         function switchTab(tab) {
             if (document.getElementById('tab-' + tab).classList.contains('disabled')) return;
             document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
@@ -195,3 +209,4 @@
     </script>
 </body>
 </html>
+
