@@ -33,13 +33,13 @@
 </head>
 <body>
     <div class="container">
-        <header>
-            <h2>Lightchain AI <span class="highlight">Identity</span></h2>
-            <div>
-                <span id="walletBadge" class="badge" style="display:none; margin-right: 15px;">Connected</span>
-                <button id="connectBtn" class="btn">Connect Wallet</button>
-            </div>
-        </header>
+<header>
+    <h2>Lightchain AI <span class="highlight">Identity</span></h2>
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <span id="sbtStatusBadge" class="badge" style="display:none;"></span>
+        <button id="connectBtn" class="btn" style="width: auto;">Connect Wallet</button>
+    </div>
+</header>
 
         <div id="gateArea" class="card visible" style="text-align: center; margin-top: 40px;">
             <h3 style="font-size: 20px; margin-bottom: 15px;">Privacy-Preserving KYC</h3>
@@ -82,53 +82,53 @@
         let signer;
         let provider;
 
-        async function init() {
-            if (typeof window.ethereum !== 'undefined') {
-                try {
-                    provider = new ethers.BrowserProvider(window.ethereum);
-                    signer = await provider.getSigner();
-                    
-                    const address = await signer.getAddress();
-                    document.getElementById('connectBtn').innerText = address.substring(0,6) + "..." + address.slice(-4);
-                    document.getElementById('walletBadge').style.display = "inline-block";
-                    document.getElementById('displaySbtAddr').innerText = SBT_ADDR;
-                    
-                    document.getElementById('status').innerText = "Checking ZK Verification status...";
-                    await checkVerification();
-                } catch (error) {
-                    console.error("Connection failed:", error);
-                    document.getElementById('status').innerText = "Connection failed. Please try again.";
-                }
-            } else {
-                document.getElementById('status').innerText = "Please install MetaMask to use this portal.";
-            }
+async function init() {
+    if (typeof window.ethereum !== 'undefined') {
+        try {
+            provider = new ethers.BrowserProvider(window.ethereum);
+            signer = await provider.getSigner();
+            
+            const address = await signer.getAddress();
+            // Update Wallet Button Text
+            document.getElementById('connectBtn').innerText = address.substring(0,6) + "..." + address.slice(-4);
+            
+            await checkVerification();
+        } catch (error) {
+            console.error("Connection failed:", error);
         }
+    }
+}
 
-        async function checkVerification() {
-            try {
-                // Connect to your newly deployed ZK-SBT contract
-                const sbtContract = new ethers.Contract(SBT_ADDR, ["function hasSBT(address) view returns (bool)"], signer);
-                const userAddr = await signer.getAddress();
-                
-                // Read state from the Lightchain testnet
-                const isVerified = await sbtContract.hasSBT(userAddr);
+async function checkVerification() {
+    try {
+        const sbtContract = new ethers.Contract(SBT_ADDR, ["function hasSBT(address) view returns (bool)"], signer);
+        const userAddr = await signer.getAddress();
+        const isVerified = await sbtContract.hasSBT(userAddr);
 
-                if (isVerified) {
-                    // Unlock the dashboard
-                    document.getElementById('gateArea').classList.replace('visible', 'gated');
-                    document.getElementById('dashboardArea').classList.replace('gated', 'visible');
-                } else {
-                    // Enable the mint button for unverified users
-                    document.getElementById('verifyBtn').disabled = false;
-                    document.getElementById('status').innerText = "No ZK-SBT found. Please complete verification.";
-                    document.getElementById('status').style.color = "#ffaa00";
-                }
-            } catch (error) {
-                console.error("Verification check failed:", error);
-                document.getElementById('status').innerText = "Error checking verification status. Is the contract address correct?";
-                document.getElementById('status').style.color = "#ff4444";
-            }
+        const badge = document.getElementById('sbtStatusBadge');
+        badge.style.display = "inline-block";
+
+        if (isVerified) {
+            // Update Badge to Verified
+            badge.innerText = "✓ ZK-SBT";
+            badge.style.borderColor = "var(--primary)";
+            badge.style.color = "var(--primary)";
+            
+            // Unlock the dashboard
+            document.getElementById('gateArea').classList.replace('visible', 'gated');
+            document.getElementById('dashboardArea').classList.replace('gated', 'visible');
+        } else {
+            // Update Badge to Unverified
+            badge.innerText = "✕ Unverified";
+            badge.style.borderColor = "#ff4444";
+            badge.style.color = "#ff4444";
+            
+            document.getElementById('verifyBtn').disabled = false;
         }
+    } catch (error) {
+        console.error("Verification check failed:", error);
+    }
+}
 
         function switchTab(tab) {
             document.getElementById('oracleView').className = tab === 'oracle' ? 'card visible' : 'card gated';
@@ -183,5 +183,6 @@ document.getElementById('verifyBtn').addEventListener('click', async () => {
     </script>
 </body>
 </html>
+
 
 
