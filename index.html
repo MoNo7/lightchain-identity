@@ -8,7 +8,6 @@
     <style>
         :root { --primary: #00d1ff; --bg: #050505; --sidebar: #0d0d0e; --card: #141417; --text: #e0e0e0; --glow: 0 0 15px rgba(0, 209, 255, 0.4); }
         body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; }
-        
         aside { width: 260px; background: var(--sidebar); border-right: 1px solid #222; display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; }
         .logo { font-size: 20px; font-weight: bold; margin-bottom: 30px; }
         .logo span { color: var(--primary); }
@@ -16,30 +15,24 @@
         .nav-item:hover:not(.disabled) { background: #1a1a1c; color: white; }
         .nav-item.active { background: rgba(0, 209, 255, 0.1); color: var(--primary); border-left: 3px solid var(--primary); }
         .nav-item.disabled { opacity: 0.2; cursor: not-allowed; }
-        
         .status-container { margin-top: auto; padding: 15px; background: #000; border: 1px solid #222; border-radius: 12px; font-size: 11px; }
         .status-dot { height: 8px; width: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
         .status-online { background: #00ff88; box-shadow: 0 0 8px #00ff88; }
         .status-offline { background: #ff4444; }
-
         main { flex: 1; padding: 40px; overflow-y: auto; display: flex; flex-direction: column; }
         header { display: flex; justify-content: flex-end; align-items: center; gap: 15px; margin-bottom: 40px; }
         .sbt-badge { padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 800; border: 1px solid var(--primary); color: var(--primary); background: rgba(0, 209, 255, 0.05); }
-        
         .card { background: var(--card); border: 1px solid #222; padding: 30px; border-radius: 16px; width: 100%; max-width: 900px; align-self: center; }
         .btn { background: var(--primary); color: #000; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
         .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); margin-top: 15px; }
         .gated { display: none !important; }
         input { width: 100%; padding: 15px; background: #000; border: 1px solid #333; color: white; margin-bottom: 20px; border-radius: 8px; font-size: 16px; }
-
         #artLayout { display: flex; gap: 25px; }
         #artWorkArea { flex: 2; position: relative; }
         #artLog { flex: 1; background: #000; border: 1px solid #222; border-radius: 12px; padding: 15px; max-height: 550px; overflow-y: auto; }
-        
         .log-entry { font-size: 11px; padding: 12px; border-bottom: 1px solid #222; cursor: pointer; border-radius: 6px; margin-bottom: 8px; }
         .log-entry.pending { color: #888; border-left: 3px solid #444; }
         .log-entry.ready { color: var(--primary); border-left: 3px solid var(--primary); font-weight: bold; background: rgba(0,209,255,0.05); }
-        
         #artViewer { margin-top: 20px; border: 1px dashed #333; border-radius: 12px; min-height: 400px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #080808; overflow: hidden; padding: 20px; }
         #artViewer img { max-width: 100%; max-height: 350px; border-radius: 8px; box-shadow: var(--glow); margin-bottom: 15px; }
     </style>
@@ -47,51 +40,46 @@
 <body>
     <aside>
         <div class="logo">LCAI <span>Identity</span></div>
-        <div id="tab-oracle" class="nav-item active" onclick="switchTab('oracle')">AIVM Oracle</div>
-        <div id="tab-art" class="nav-item disabled" onclick="switchTab('art')">AI Art</div>
-        <div id="tab-identity" class="nav-item disabled" onclick="switchTab('identity')">Identity Registry</div>
+        <div id="tab-oracle" class="nav-item" onclick="switchTab('oracle')">AIVM Oracle</div>
+        <div id="tab-art" class="nav-item active" onclick="switchTab('art')">AI Art</div>
+        <div id="tab-identity" class="nav-item" onclick="switchTab('identity')">Identity Registry</div>
         <div class="status-container">
-            <div id="gpuStatus"><span class="status-dot status-offline"></span> GPU Cluster: Checking...</div>
-            <div style="color: #555; margin-top: 5px;">Model: Stable-Diffusion-XL</div>
+            <div id="gpuStatus"><span class="status-dot status-offline"></span> Cluster: Offline</div>
+            <div style="color: #555; margin-top: 5px;">SDXL-Turbo (v2.0)</div>
         </div>
     </aside>
-
     <main>
         <header>
             <span id="sbtBadge" class="sbt-badge" style="display:none;"></span>
             <button id="connectBtn" class="btn" style="width: auto;">Connect Wallet</button>
         </header>
-
         <div id="gateView" class="card">
-            <h2>Identity Verification Required</h2>
-            <p style="color:#888;">Mint your Soulbound Identity Token to unlock the AIVM Creative Suite.</p>
+            <h2>Identity Required</h2>
+            <p style="color:#888;">Mint your Soulbound Identity Token to unlock GPU generation.</p>
             <button id="verifyBtn" class="btn" disabled onclick="verifyAndMint()">Verify & Mint ZK-SBT</button>
-            <p id="status" style="margin-top:20px; color:#666;">Connect wallet to check verification status.</p>
         </div>
-
         <div id="artView" class="card gated">
             <h2>AI Art Generator</h2>
             <div id="artLayout">
                 <div id="artWorkArea">
-                    <input type="text" id="artPrompt" placeholder="A panda railroad worker on mars, hyper-realistic...">
+                    <input type="text" id="artPrompt" placeholder="A cosmic panda railroad worker...">
                     <button id="generateArtBtn" class="btn">Generate Art (0.1 LCAI)</button>
                     <div id="artViewer">
                         <div id="viewerContent" style="width:100%; text-align:center;">
                             <span id="viewerStatus" style="color:#555;">Ready for inference.</span>
                         </div>
-                        <button id="downloadBtn" class="btn btn-outline gated" onclick="downloadArt()">Download Masterpiece</button>
+                        <button id="downloadBtn" class="btn btn-outline gated" onclick="downloadArt()">Download Art</button>
                     </div>
                 </div>
                 <div id="artLog"><div id="logItems"></div></div>
             </div>
         </div>
-
         <div id="identityView" class="card gated">
-            <h2>Registry Settings</h2>
+            <h2>Registry</h2>
             <div style="background:#000; border: 1px solid #333; padding:25px; border-radius:12px;">
-                <p>Identity Status: <b style="color:var(--primary)">✓ ZK-VERIFIED</b></p>
+                <p>Status: <b style="color:var(--primary)">✓ ZK-VERIFIED</b></p>
                 <p id="displaySbtAddr" style="font-family:monospace; color:var(--primary); font-size: 11px; margin-top:10px;"></p>
-                <button class="btn btn-outline" onclick="localStorage.clear(); location.reload();">Reset Portal History</button>
+                <button class="btn btn-outline" onclick="localStorage.clear(); location.reload();">Reset Session</button>
             </div>
         </div>
     </main>
@@ -112,22 +100,18 @@
                 document.getElementById('displaySbtAddr').innerText = `SBT: ${SBT_ADDR}`;
                 renderLog();
                 checkVerification();
-                updateGPUStatus();
+                updateHealth();
                 userTasks.forEach((t, i) => { if(!t.ready && t.taskId) pollTask(i); });
             }
         }
 
-        async function updateGPUStatus() {
+        async function updateHealth() {
             try {
                 const resp = await fetch(`${CHAT_API}/chat/health`);
-                const statusEl = document.getElementById('gpuStatus');
-                if(resp.ok) {
-                    statusEl.innerHTML = `<span class="status-dot status-online"></span> GPU Cluster: Online`;
-                } else {
-                    statusEl.innerHTML = `<span class="status-dot status-offline"></span> GPU Cluster: Busy`;
-                }
+                const el = document.getElementById('gpuStatus');
+                el.innerHTML = resp.ok ? `<span class="status-dot status-online"></span> Cluster: Online` : `<span class="status-dot status-offline"></span> Cluster: Busy`;
             } catch (e) { console.error("Health check failed"); }
-            setTimeout(updateGPUStatus, 30000);
+            setTimeout(updateHealth, 30000);
         }
 
         async function checkVerification() {
@@ -143,7 +127,6 @@
                     switchTab('art');
                 } else {
                     document.getElementById('verifyBtn').disabled = false;
-                    document.getElementById('status').innerText = "ZK-SBT not detected.";
                 }
             } catch (e) { console.error(e); }
         }
@@ -154,7 +137,7 @@
             userTasks.forEach((t, i) => {
                 const div = document.createElement('div');
                 div.className = `log-entry ${t.ready ? 'ready' : 'pending'}`;
-                div.innerHTML = `<b>#${i+1}</b> ${t.prompt.substring(0,18)}...<br><small>${t.ready ? '✓ READY' : '⟳ PROCESSING'}</small>`;
+                div.innerHTML = `<b>#${i+1}</b> ${t.prompt.substring(0,18)}...<br><small>${t.ready ? '✓ READY' : '⟳ IN QUEUE'}</small>`;
                 div.onclick = () => viewArt(i);
                 list.prepend(div);
             });
@@ -165,28 +148,25 @@
             const content = document.getElementById('viewerContent');
             const status = document.getElementById('viewerStatus');
             const dlBtn = document.getElementById('downloadBtn');
-            
             if(task.ready) {
                 status.style.display = "none";
-                content.innerHTML = `<img id="currentArt" src="${task.url}" alt="AI Result">`;
+                content.innerHTML = `<img id="currArt" src="${task.url}" alt="Result">`;
                 dlBtn.classList.remove('gated');
             } else {
                 content.innerHTML = "";
                 status.style.display = "block";
-                status.innerText = `Task Anchored: ${task.taskId.substring(0,12)}... Waiting for GPU result.`;
+                status.innerText = `Task Anchored. Processing ID: ${task.taskId.substring(0,12)}...`;
                 dlBtn.classList.add('gated');
             }
         }
 
         function downloadArt() {
-            const img = document.getElementById('currentArt');
+            const img = document.getElementById('currArt');
             if(!img) return;
-            const link = document.createElement('a');
-            link.href = img.src;
-            link.download = `LCAI-Art-${Date.now()}.png`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            const a = document.createElement('a');
+            a.href = img.src;
+            a.download = `LCAI-Art-${Date.now()}.png`;
+            a.click();
         }
 
         document.getElementById('generateArtBtn').onclick = async () => {
@@ -194,8 +174,7 @@
             if(!prompt) return alert("Enter a prompt");
             const status = document.getElementById('viewerStatus');
             status.style.color = "var(--primary)";
-            status.innerText = "Step 1: Signing Anchor Transaction...";
-            
+            status.innerText = "Anchoring Task...";
             try {
                 const router = new ethers.Contract(ROUTER_ADDR, [
                     "function requestInferenceV2(uint256 m, string p) external payable returns (bytes32)",
@@ -205,29 +184,21 @@
                 const tx = await router.requestInferenceV2(2, prompt, { value: ethers.parseEther("0.1") });
                 const receipt = await tx.wait();
                 
-                // PRECISION LOG FILTER: Extract TaskID from the specific event signature
+                // RESILIENT LOG EXTRACTION: Calculate hash and find matching log
                 const eventHash = ethers.id("InferenceRequested(bytes32,address,uint256)");
                 const log = receipt.logs.find(x => x.topics[0] === eventHash);
-                
-                if(!log) {
-                    // Fallback to searching all topics if explicit hash fails
-                    for (const l of receipt.logs) {
-                        if (l.topics.length >= 2) { var taskId = l.topics[1]; break; }
-                    }
-                } else {
-                    var taskId = log.topics[1];
-                }
+                const taskId = log ? log.topics[1] : receipt.logs[0]?.topics[1];
 
-                if(!taskId) throw new Error("TaskID extraction failed");
+                if(!taskId) throw new Error("ID extraction failed");
 
                 const newTask = { prompt, taskId, ready: false, url: null };
                 userTasks.push(newTask);
                 localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
                 renderLog();
                 pollTask(userTasks.length - 1);
-                status.innerText = "Step 2: Anchored! GPU cluster generating image...";
+                status.innerText = "Task Anchored. GPU cluster processing...";
             } catch (e) { 
-                status.innerText = "Inference Failed. Check LCAI balance or gas price.";
+                status.innerText = "Inference Failed. Check LCAI balance or logs.";
                 status.style.color = "#ff4444";
                 console.error(e);
             }
@@ -243,7 +214,7 @@
                     task.url = data.url;
                     localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
                     renderLog();
-                    if(document.getElementById('artView').offsetParent !== null) viewArt(index);
+                    if(document.getElementById('artView').offsetParent) viewArt(index);
                 } else { setTimeout(() => pollTask(index), 5000); }
             } catch (e) { setTimeout(() => pollTask(index), 5000); }
         }
@@ -255,7 +226,6 @@
             document.querySelectorAll('main > .card').forEach(c => c.classList.add('gated'));
             document.getElementById(tab + 'View').classList.remove('gated');
         }
-
         document.getElementById('connectBtn').onclick = init;
     </script>
 </body>
