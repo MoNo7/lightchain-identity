@@ -155,29 +155,41 @@
 
 document.getElementById('generateArtBtn').onclick = async () => {
     const prompt = document.getElementById('artPrompt').value;
-    if(!prompt) return;  
+    if(!prompt) return alert("Please enter a prompt");
+    
     const loader = document.getElementById('viewerStatus');
-    loader.innerText = "Step 1: Anchoring Task on AIVM Router...";    
+    loader.style.color = "var(--primary)";
+    loader.innerText = "Step 1: Anchoring Task on AIVM Router...";
+    
     try {
-        const router = new ethers.Contract(ROUTER_ADDR, ["function requestInferenceV2(uint256 m, string p) external payable returns (bytes32)"], signer);        
-        // 1. ANCHOR: Send the 0.1 LCAI fee
+        const router = new ethers.Contract(
+            ROUTER_ADDR, 
+            ["function requestInferenceV2(uint256 m, string p) external payable returns (bytes32)", "event InferenceRequested(bytes32 indexed taskId, address indexed requester, uint256 modelId)"], 
+            signer
+        );
+        
+        // 1. Send transaction with 0.1 LCAI fee
         const tx = await router.requestInferenceV2(2, prompt, { value: ethers.parseEther("0.1") });
-        const receipt = await tx.wait();        
-        // 2. EXTRACT: Get the real Task ID from the logs
-        // The first log topic[1] of the request event is our unique ID
-        const taskId = receipt.logs[0].topics[1]; 
+        const receipt = await tx.wait();
+        
+        // 2. BETTER EXTRACTION: Find the specific log that contains the Task ID
+        const eventTopic = ethers.id("InferenceRequested(bytes32,address,uint256)");
+        const log = receipt.logs.find(l => l.topics[0] === eventTopic);
+        
+        if (!log) throw new Error("Task ID not found in transaction logs");
+        const taskId = log.topics[1]; 
+
         const newTask = { prompt, taskId, ready: false, url: null };
         userTasks.push(newTask);
         localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
         renderLog();
-      
-        loader.innerText = "Step 2: Task Anchored. Waiting for GPU Cluster...";
-        // 3. SECURE POLLING: Retry until the API acknowledges the task
-        let attempts = 0;
+        
+        loader.innerText = "Step 2: Task Anchored. GPU Cluster Processing...";
+
+        // 3. SECURE POLLING: Check the API for the result
         const pollResult = async () => {
             try {
                 const resp = await fetch(`${CHAT_API}/chat/status?taskId=${taskId}`);
-                if (!resp.ok) throw new Error("API not ready");              
                 const data = await resp.json();
                 
                 if(data.ready && data.url) {
@@ -185,24 +197,20 @@ document.getElementById('generateArtBtn').onclick = async () => {
                     newTask.url = data.url; 
                     localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
                     renderLog();
-                    viewArt(userTasks.length - 1); // Auto-show the result
+                    viewArt(userTasks.length - 1);
                 } else {
-                    attempts++;
-                    if (attempts < 20) { // Poll for up to 60 seconds
-                        setTimeout(pollResult, 3000);
-                    } else {
-                        loader.innerText = "Timeout: Task is still in PoI queue.";
-                    }
+                    setTimeout(pollResult, 4000); // Poll every 4 seconds
                 }
             } catch (err) {
-                // If API is 404/Error, just wait and try again instead of failing
-                setTimeout(pollResult, 3000);
+                setTimeout(pollResult, 4000); // Keep trying even if API returns 404
             }
         };
         pollResult();
+
     } catch (e) { 
         console.error("Inference Error:", e);
-        loader.innerText = "Inference Failed. Check gas/funds.";
+        loader.innerText = "Inference Failed. Check LCAI balance or gas.";
+        loader.style.color = "#ff4444";
     }
 };
         function switchTab(tab) {
@@ -222,5 +230,6 @@ document.getElementById('generateArtBtn').onclick = async () => {
     </script>
 </body>
 </html>
+
 
 
