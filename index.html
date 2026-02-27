@@ -21,7 +21,7 @@
         .sbt-badge { padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 800; border: 1px solid var(--primary); color: var(--primary); background: rgba(0, 209, 255, 0.05); display: none; }
         .card { background: var(--card); border: 1px solid #222; padding: 30px; border-radius: 16px; width: 100%; max-width: 900px; align-self: center; }
         .btn { background: var(--primary); color: #000; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        .gated { display: none !important; } 
+        .gated { display: none !important; }
         input { width: 100%; padding: 15px; background: #000; border: 1px solid #333; color: white; margin-bottom: 20px; border-radius: 8px; font-size: 16px; }
         #artLayout { display: flex; gap: 25px; }
         #artLog { flex: 1; background: #000; border: 1px solid #222; border-radius: 12px; padding: 15px; max-height: 550px; overflow-y: auto; }
@@ -49,7 +49,7 @@
 
         <div id="gateView" class="card">
             <h2>Identity Required</h2>
-            <p id="gateStatus" style="color:#888; margin-bottom:20px;">Connect wallet to verify your ZK-Identity.</p>
+            <p id="gateStatus" style="color:#888; margin-bottom:20px;">Connect wallet to verify ZK-SBT.</p>
             <button id="verifyBtn" class="btn gated" onclick="location.reload()">Refresh Session</button>
         </div>
 
@@ -93,6 +93,7 @@
                 checkIdentity(addr);
                 updateHealth();
                 renderLog();
+                // RESUME POLLING
                 userTasks.forEach((t, i) => { if(!t.ready) pollTask(i); });
             } catch (e) { console.error(e); }
         }
@@ -100,7 +101,6 @@
         async function checkIdentity(addr) {
             const sbt = new ethers.Contract(SBT_ADDR, ["function hasSBT(address) view returns (bool)"], provider);
             const identity = new ethers.Contract(IDENTITY_ADDR, ["function isVerified(address) view returns (bool)", "function isAdmin(address) view returns (bool)"], provider);
-            
             const [hasSBT, isVerified, isAdmin] = await Promise.all([sbt.hasSBT(addr), identity.isVerified(addr), identity.isAdmin(addr)]);
             
             if (hasSBT || isVerified) {
@@ -117,8 +117,6 @@
                         <p>Role: <b style="color:var(--primary)">${isAdmin ? 'Protocol Admin' : 'Verified User'}</b></p>
                         <button class="btn" style="margin-top:15px; font-size:12px;" onclick="localStorage.clear(); location.reload();">Clear Cache</button>
                     </div>`;
-            } else {
-                document.getElementById('gateStatus').innerText = "Identity Token not found. Please verify to continue.";
             }
         }
 
@@ -126,21 +124,27 @@
             const prompt = document.getElementById('artPrompt').value;
             const status = document.getElementById('viewerStatus');
             if(!prompt) return;
-            status.innerText = "Anchoring...";
+            status.innerText = "Step 1: Anchoring...";
             try {
                 const router = new ethers.Contract(ROUTER_ADDR, ["function requestInferenceV2(uint256 m, string p) external payable", "event InferenceRequested(bytes32 indexed taskId, address indexed requester, uint256 modelId)"], signer);
                 const tx = await router.requestInferenceV2(2, prompt, { value: ethers.parseEther("0.1") });
+                status.innerText = "Step 2: Confirming...";
                 const receipt = await tx.wait();
                 
-                let taskId = receipt.logs.find(l => l.topics[0] === ethers.id("InferenceRequested(bytes32,address,uint256)"))?.topics[1];
+                // EVENT-DRIVEN LOG SCRAPER
+                const eventHash = ethers.id("InferenceRequested(bytes32,address,uint256)");
+                let taskId = receipt.logs.find(l => l.topics[0] === eventHash)?.topics[1];
+                
                 if(!taskId) throw "ID Missing";
 
+                // IMMEDIATE LISTING IN ACTIVITY
                 const idx = userTasks.push({ prompt, taskId, ready: false, url: null }) - 1;
                 localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
                 renderLog();
+                
                 pollTask(idx);
-                status.innerText = "Processing...";
-            } catch (e) { status.innerText = "Failed."; console.error(e); }
+                status.innerText = "Step 3: Processing on GPU Cluster...";
+            } catch (e) { status.innerText = "Inference Failed."; console.error(e); }
         };
 
         async function pollTask(i) {
@@ -163,7 +167,7 @@
             userTasks.forEach((t, i) => {
                 const div = document.createElement('div');
                 div.className = `log-entry ${t.ready ? 'ready' : ''}`;
-                div.innerHTML = `<b>#${i+1}</b> ${t.prompt.substring(0,15)}...<br><small>${t.ready ? 'READY' : 'QUEUED'}</small>`;
+                div.innerHTML = `<b>#${i+1}</b> ${t.prompt.substring(0,15)}...<br><small>${t.ready ? '✓ READY' : '⟳ QUEUED'}</small>`;
                 div.onclick = () => viewArt(i);
                 list.prepend(div);
             });
@@ -174,15 +178,10 @@
             const content = document.getElementById('viewerContent');
             const dl = document.getElementById('downloadBtn');
             if(t.ready) {
-                content.innerHTML = `<img id="resImg" src="${t.url}" style="width:100%; border-radius:8px;">`;
+                content.innerHTML = `<img id="resImg" src="${t.url}" style="width:100%; border-radius:8px; box-shadow: var(--glow);">`;
                 dl.classList.remove('gated');
-                dl.onclick = () => { const a=document.createElement('a'); a.href=t.url; a.download=`LCAI-${i}.png`; a.click(); };
-            } else content.innerHTML = `<span style="color:#555;">ID: ${t.taskId.substring(0,10)}...</span>`;
-        }
-
-        function switchTab(tab) {
-            document.querySelectorAll('main > .card').forEach(c => c.classList.add('gated'));
-            document.getElementById(tab + 'View').classList.remove('gated');
+                dl.onclick = () => { const a=document.createElement('a'); a.href=t.url; a.download=`LCAI-Art.png`; a.click(); };
+            } else content.innerHTML = `<span style="color:#555;">ID: ${t.taskId.substring(0,12)}...</span>`;
         }
 
         async function updateHealth() {
@@ -193,6 +192,11 @@
                     document.getElementById('gpuStatus').innerText = 'Cluster: Online';
                 }
             } catch(e) {}
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('main > .card').forEach(c => c.classList.add('gated'));
+            document.getElementById(tab + 'View').classList.remove('gated');
         }
     </script>
 </body>
