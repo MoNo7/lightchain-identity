@@ -2,207 +2,120 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Lightchain AI Identity Portal</title>
+    <title>Lightchain AI | Oracle Portal</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        :root { --primary: #007bff; --admin-blue: #0056b3; --bg: #f0f2f5; --text: #1c1e21; --success: #28a745; --mimo: #1877F2; --owner: #6f42c1; --warning: #f0ad4e; --danger: #dc3545; }
+        :root { --primary: #007bff; --bg: #f0f2f5; --text: #1c1e21; --success: #28a745; --warning: #f0ad4e; --danger: #dc3545; }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         #topNav { height: 60px; background: #fff; border-bottom: 1px solid #e1e4e8; display: flex; align-items: center; justify-content: space-between; padding: 0 25px; flex-shrink: 0; }
-        .token-display { background: #f8f9fa; padding: 8px 15px; border-radius: 20px; border: 1px solid #e1e4e8; font-weight: 700; font-size: 0.85rem; color: var(--success); }
+        .token-display { background: #f8f9fa; padding: 8px 15px; border-radius: 20px; border: 1px solid #e1e4e8; font-weight: 700; color: var(--success); }
         .content-wrapper { display: flex; flex: 1; overflow: hidden; }
-        #leftSidebar, #rightSidebar { width: 320px; background: #fff; padding: 20px; overflow-y: auto; border-right: 1px solid #e1e4e8; box-sizing: border-box; }
-        #rightSidebar { border-right: none; border-left: 1px solid #e1e4e8; }
-        .main-utility-area { flex: 1; padding: 30px; display: flex; flex-direction: column; align-items: center; background: #f8f9fa; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #e1e4e8; width: 100%; box-sizing: border-box; }
-        .primary-btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; margin-top: 10px; }
-        .small-btn { padding: 10px; font-size: 0.75rem; flex: 1; border: none; border-radius: 6px; cursor: pointer; color: white; }
-        .result-window { margin-top: 20px; padding: 15px; background: #fdfdfd; border: 2px dashed #cbd5e0; border-radius: 8px; min-height: 80px; font-size: 0.9rem; }
-        input[type="text"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 8px; box-sizing: border-box; }
-        .pulsing-text { animation: pulse 1.5s infinite; color: var(--warning); font-weight: bold; }
-        .status-box { padding: 10px; margin-top: 10px; border-radius: 6px; font-size: 0.75rem; display: block; border: 1px solid #eee; background: #f9f9f9; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        #sidebar { width: 320px; background: #fff; padding: 20px; border-right: 1px solid #e1e4e8; }
+        .main-area { flex: 1; padding: 40px; display: flex; flex-direction: column; align-items: center; background: #f8f9fa; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #e1e4e8; width: 100%; max-width: 500px; text-align: center; }
+        .primary-btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; }
+        .result-window { margin-top: 20px; padding: 20px; background: #1a1a1a; color: #00ff00; border-radius: 8px; font-family: 'Courier New', monospace; min-height: 100px; text-align: left; }
+        input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 15px; box-sizing: border-box; }
+        .log-entry { font-size: 0.75rem; border-bottom: 1px solid #eee; padding: 5px 0; color: #666; }
+        .pulsing { animation: pulse 1.5s infinite; color: var(--warning); }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     </style>
 </head>
 <body>
     <div id="topNav">
-        <h1 style="font-size: 1.1rem; color: #0056b3; margin: 0;">Identity Portal</h1>
+        <h1 style="font-size: 1.1rem; color: #0056b3; margin: 0;">AIVM Oracle Portal</h1>
         <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
     </div>
     <div class="content-wrapper">
-        <div id="leftSidebar">
-            <div class="card" style="text-align: center;">
-                <div id="userProfile" style="display:none; margin-bottom:15px;">
-                    <div id="userNameDisplay" style="font-size: 1.1rem; font-weight:800; color: #0056b3;"></div>
-                    <div id="verifyTag" style="font-size: 0.65rem; font-weight: bold;">CONNECTED</div>
-                </div>
-                <button id="connectBtn" class="primary-btn">Connect Wallet</button>
+        <div id="sidebar">
+            <div class="card" style="margin-bottom: 20px;">
+                <h3 id="userName">Not Connected</h3>
+                <span id="statusTag" style="font-weight: bold; font-size: 0.8rem;"></span>
+                <button id="connectBtn" class="primary-btn" style="margin-top:15px;">Connect Wallet</button>
             </div>
-            
-            <div id="adminConsole" class="card" style="display:none; border-top: 4px solid var(--admin-blue);">
-                <h4 style="color:var(--admin-blue); margin: 0 0 10px 0;">Identity Management</h4>
-                <input type="text" id="lookupAddr" placeholder="Lookup 0x...">
-                <button id="lookupBtn" class="primary-btn" style="background: var(--admin-blue);">Query Status</button>
-                <div id="lookupResults" style="display:none; padding:12px; font-size:0.75rem; background:#f8fbff; margin-top:10px; border-radius:8px; border: 1px solid #b8daff;"></div>
-                <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
-                <input type="text" id="verifyAddr" placeholder="Target 0x...">
-                <div style="display:flex; gap: 5px;">
-                    <button id="verifyBtn" class="small-btn" style="background:var(--success);">Verify</button>
-                    <button id="revokeBtn" class="small-btn" style="background:var(--danger);">Revoke</button>
-                </div>
-                <div id="adminActionResult" class="status-box" style="display:none;"></div>
-            </div>
-
-            <div id="ownerSection" class="card" style="display:none; border-top: 4px solid var(--owner);">
-                <h4 style="color:var(--owner); margin:0;">Contract Owner</h4>
-                <div id="ownerAddrDisplay" style="font-size:0.6rem; color:#666; word-break:break-all; margin-top:10px;"></div>
-                <div style="margin-top:10px; font-size:0.9rem; font-weight:bold;"> Revenue: <span id="contractRevenue" style="color:var(--success)">0.0000</span> LCAI </div>
-                <button id="withdrawBtn" class="primary-btn" style="background:var(--owner); padding: 5px; font-size:0.75rem;">Withdraw All</button>
-            </div>
-        </div>
-
-        <div class="main-utility-area">
-            <div id="oracleUI" style="display:none; width: 100%; max-width: 500px;">
-                <div class="card" style="text-align: center; border-top: 4px solid var(--success);">
-                    <h2>AIVM Oracle</h2>
-                    <input type="text" id="oracleQuestion" placeholder="Ask the cluster...">
-                    <button id="shakeBtn" class="primary-btn" style="background: var(--success);">Request Inference</button>
-                    <div class="result-window" id="resultText">Awaiting inference...</div>
-                </div>
-            </div>
-        </div>
-
-        <div id="rightSidebar">
             <div class="card">
-                <h4 style="margin:0;">Cluster Logs</h4>
-                <div id="txFeed" style="font-size: 0.75rem; margin-top:10px; max-height: 400px; overflow-y:auto;"></div>
+                <h4 style="margin:0 0 10px 0;">Cluster Logs</h4>
+                <div id="txFeed"></div>
+            </div>
+        </div>
+        <div class="main-area">
+            <div id="oracleUI" style="display:none; width: 100%; max-width: 500px;">
+                <div class="card">
+                    <h2>Magic 8-Ball AI</h2>
+                    <input type="text" id="question" placeholder="Ask the cluster...">
+                    <button id="askBtn" class="primary-btn" style="background: var(--success);">Ask Oracle (0.15 LCAI)</button>
+                    <div class="result-window" id="resultText">> Awaiting command...</div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        const IDENTITY_CONTRACT = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-        const BALL_CONTRACT_ADDR = "0xe6be06aa48d760dd5a63Faa49C3208D7B61C8973"; 
+        const ID_ADDR = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
+        const BALL_ADDR = "0xa32D6b69f075a4B6F92b45Bc26a5C5D0615E2D6c"; 
         
-        const BALL_ABI = [
+        const ABI = [
             "function getPrediction(string _question) payable",
-            "function admin() view returns (address)",
             "function latestAnswer(address) view returns (string)",
-            "function withdraw() external",
             "event OracleAnswer(address indexed user, string answer, bytes32 taskId)",
             "event OracleRequest(address indexed user, string question, bytes32 taskId)"
         ];
-
-        // FIXED IDENTITY ABI (using 'verify' and 'revoke' instead of long names)
-        const IDENTITY_ABI = [
-            "function getIdentity(address) view returns (string, string, bool)",
-            "function isAdmin(address) view returns (bool)",
-            "function verify(address _user)", 
-            "function revoke(address _user)"
-        ];
+        const ID_ABI = ["function getIdentity(address) view returns (string, string, bool)"];
         
-        let signer, ballContract, identityContract, provider;
+        let signer, contract, idContract, provider;
 
-        function logToSidebar(msg) {
-            const feed = document.getElementById('txFeed');
+        function log(msg) {
             const entry = document.createElement('div');
-            entry.style.borderBottom = "1px solid #eee"; entry.style.padding = "5px 0";
-            entry.innerHTML = `<span style="color:#666">[${new Date().toLocaleTimeString()}]</span> ${msg}`;
-            feed.prepend(entry);
+            entry.className = 'log-entry';
+            entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            document.getElementById('txFeed').prepend(entry);
         }
 
-        async function hardSync() {
-            const address = await signer.getAddress();
-            const [profile, ballAdmin, isRegAdmin, lastAns, balance, contractBal] = await Promise.all([
-                identityContract.getIdentity(address),
-                ballContract.admin(),
-                identityContract.isAdmin(address),
-                ballContract.latestAnswer(address),
-                provider.getBalance(address),
-                provider.getBalance(BALL_CONTRACT_ADDR)
-            ]);
-            document.getElementById('tokenBalance').innerText = parseFloat(ethers.formatEther(balance)).toFixed(4);
-            document.getElementById('userNameDisplay').innerText = profile[0] || "Anonymous";
-            document.getElementById('verifyTag').innerText = profile[2] ? "VERIFIED" : "UNVERIFIED";
-            document.getElementById('verifyTag').style.color = profile[2] ? "var(--success)" : "var(--danger)";
-            
-            if (isRegAdmin) document.getElementById('adminConsole').style.display = 'block';
-            if (ballAdmin.toLowerCase() === address.toLowerCase()) {
-                document.getElementById('ownerSection').style.display = 'block';
-                document.getElementById('ownerAddrDisplay').innerText = `Contract: ${BALL_CONTRACT_ADDR}`;
-                document.getElementById('contractRevenue').innerText = parseFloat(ethers.formatEther(contractBal)).toFixed(4);
-            }
-            if (lastAns) document.getElementById('resultText').innerText = lastAns;
-        }
-
-        async function connectWallet() {
-            if (!window.ethereum) return alert("Install MetaMask");
+        async function connect() {
             provider = new ethers.BrowserProvider(window.ethereum);
             signer = await provider.getSigner();
-            ballContract = new ethers.Contract(BALL_CONTRACT_ADDR, BALL_ABI, signer);
-            identityContract = new ethers.Contract(IDENTITY_CONTRACT, IDENTITY_ABI, signer);
+            const addr = await signer.getAddress();
+            contract = new ethers.Contract(BALL_ADDR, ABI, signer);
+            idContract = new ethers.Contract(ID_ADDR, ID_ABI, signer);
 
-            ballContract.on("OracleRequest", (user, q, taskId) => { logToSidebar(`Request: ${q.substring(0,15)}...`); });
-            ballContract.on("OracleAnswer", async (user, answer) => {
-                const myAddr = await signer.getAddress();
-                if (user.toLowerCase() === myAddr.toLowerCase()) {
-                    document.getElementById('resultText').innerText = answer;
-                    logToSidebar("Oracle Answered!");
-                    await hardSync();
-                }
-            });
+            const [id, bal, lastAns] = await Promise.all([
+                idContract.getIdentity(addr),
+                provider.getBalance(addr),
+                contract.latestAnswer(addr)
+            ]);
 
+            document.getElementById('tokenBalance').innerText = parseFloat(ethers.formatEther(bal)).toFixed(4);
+            document.getElementById('userName').innerText = id[0] || "User: " + addr.substring(0,6);
+            document.getElementById('statusTag').innerText = id[2] ? "VERIFIED" : "UNVERIFIED";
+            document.getElementById('statusTag').style.color = id[2] ? "green" : "red";
             document.getElementById('connectBtn').style.display = 'none';
             document.getElementById('oracleUI').style.display = 'block';
-            document.getElementById('userProfile').style.display = 'block';
-            await hardSync();
+            if (lastAns) document.getElementById('resultText').innerText = "> Oracle: " + lastAns;
+
+            contract.on("OracleRequest", (u, q, id) => log(`Request: ${q.substring(0,10)}...`));
+            contract.on("OracleAnswer", (u, a) => {
+                if (u.toLowerCase() === addr.toLowerCase()) {
+                    document.getElementById('resultText').innerText = "> Oracle: " + a;
+                    log("AI Callback Received!");
+                }
+            });
         }
 
-        // --- IDENTITY MANAGEMENT BUTTONS ---
-        document.getElementById('lookupBtn').onclick = async () => {
-            const addr = document.getElementById('lookupAddr').value;
-            const resBox = document.getElementById('lookupResults');
-            if (!ethers.isAddress(addr)) return alert("Invalid Address");
+        document.getElementById('askBtn').onclick = async () => {
+            const q = document.getElementById('question').value;
+            const res = document.getElementById('resultText');
             try {
-                const data = await identityContract.getIdentity(addr);
-                resBox.style.display = 'block';
-                resBox.innerHTML = `<strong>Name:</strong> ${data[0]}<br><strong>Status:</strong> ${data[2] ? 'Verified' : 'Unverified'}`;
-            } catch (e) { alert("Lookup failed"); }
-        };
-
-        document.getElementById('verifyBtn').onclick = async () => {
-            const addr = document.getElementById('verifyAddr').value;
-            const statusBox = document.getElementById('adminActionResult');
-            try {
-                statusBox.style.display = 'block'; statusBox.innerText = "Processing Verification...";
-                const tx = await identityContract.verify(addr);
+                res.innerHTML = '<span class="pulsing">> Sending request...</span>';
+                const tx = await contract.getPrediction(q, { value: ethers.parseEther("0.15") });
+                log(`Tx: ${tx.hash.substring(0,10)}...`);
                 await tx.wait();
-                statusBox.innerText = "Success: User Verified";
-            } catch (e) { statusBox.innerText = "Error: Only Admins can verify"; }
+                res.innerHTML = '<span class="pulsing">> Request confirmed. Awaiting AI...</span>';
+            } catch (e) {
+                res.innerText = "> Error: " + (e.reason || "Reverted. Check Portal status.");
+            }
         };
 
-        document.getElementById('revokeBtn').onclick = async () => {
-            const addr = document.getElementById('verifyAddr').value;
-            const statusBox = document.getElementById('adminActionResult');
-            try {
-                statusBox.style.display = 'block'; statusBox.innerText = "Processing Revocation...";
-                const tx = await identityContract.revoke(addr);
-                await tx.wait();
-                statusBox.innerText = "Success: Identity Revoked";
-            } catch (e) { statusBox.innerText = "Error: Action Failed"; }
-        };
-
-        document.getElementById('shakeBtn').onclick = async () => {
-            const q = document.getElementById('oracleQuestion').value;
-            const box = document.getElementById('resultText');
-            try {
-                box.innerHTML = '<span class="pulsing-text">Consulting Cluster...</span>';
-                const tx = await ballContract.getPrediction(q, { value: ethers.parseEther("0.15") });
-                await tx.wait();
-                logToSidebar("Transaction Confirmed. Waiting for AI...");
-            } catch (e) { box.innerText = "Error: " + (e.reason || "Reverted"); }
-        };
-
-        window.onload = () => { document.getElementById('connectBtn').onclick = connectWallet; };
+        document.getElementById('connectBtn').onclick = connect;
     </script>
 </body>
 </html>
