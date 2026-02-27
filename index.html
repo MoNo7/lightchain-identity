@@ -140,20 +140,29 @@ document.getElementById('generateArtBtn').onclick = async () => {
     if(!prompt) return alert("Please enter a prompt");
     
     const loader = document.getElementById('artLoading');
-    loader.innerText = "Step 1: Anchoring Task on Lightchain Testnet...";
+    loader.innerText = "Step 1: Anchoring Task on AIVM Router...";
     
     try {
-        // 1. REAL ANCHORING: Request inference via the AIVM Router
-        // Using the AIVMInferenceV2 contract address from the LCAI Smart Contract repo
         const routerAddr = "0x0269683E61b210d56b3D692603336fEB27B8a83a";
-        const router = new ethers.Contract(routerAddr, ["function requestInferenceV2(uint256 modelId, string prompt) payable returns (bytes32)"], signer);
         
-        const tx = await router.requestInferenceV2(2, prompt, { value: ethers.parseEther("0.1") });
+        // Using the AIVMInferenceV2 interface found in the Lightchain Smart Contract repo
+        const router = new ethers.Contract(
+            routerAddr, 
+            ["function requestInferenceV2(uint256 modelId, string prompt) external payable returns (bytes32)"], 
+            signer
+        );
+        
+        // Model ID 2 is typically reserved for Stable Diffusion on the Lightchain testnet
+        const tx = await router.requestInferenceV2(2, `Generate art: ${prompt}`, { 
+            value: ethers.parseEther("0.1") 
+        });
+        
+        loader.innerText = "Transaction pending... checking mempool.";
         await tx.wait();
+        
+        loader.innerText = "Step 2: AIVM Cluster generating image (Waiting for PoI)...";
 
-        loader.innerText = "Step 2: AIVM GPU Cluster generating image...";
-
-        // 2. REAL API CALL: Fetch from the Lightchain Chat API
+        // REAL API CALL: Requesting the actual pixels from the Chat API
         const response = await fetch(`${CHAT_API}/chat/send`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -165,15 +174,14 @@ document.getElementById('generateArtBtn').onclick = async () => {
         });
         
         const data = await response.json();
-        
         if(data.image_url) {
-            document.getElementById('artResult').innerHTML = `<img src="${data.image_url}" alt="AI Result" style="box-shadow: var(--glow); border-radius: 8px;">`;
+            document.getElementById('artResult').innerHTML = `<img src="${data.image_url}" style="border: 2px solid var(--primary); box-shadow: var(--glow); border-radius: 8px;">`;
         } else {
-            loader.innerText = "Task Anchored. Waiting for PoI Consensus verification...";
+            loader.innerText = "Task Anchored. Check the [Lightchain Explorer](https://testnet.lightscan.app/address/0x4D36B31d4BFB957A5D816B0f420a9e755EFc6a2c) for PoI status.";
         }
     } catch (e) {
-        loader.innerText = "Error: Inference failed. Ensure you have LCAI for gas.";
         console.error(e);
+        loader.innerText = "Inference Failed. Do you have 0.1 LCAI for the fee?";
     }
 };
 
@@ -188,6 +196,7 @@ document.getElementById('generateArtBtn').onclick = async () => {
     </script>
 </body>
 </html>
+
 
 
 
