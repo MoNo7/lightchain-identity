@@ -9,7 +9,6 @@
         :root { --primary: #00d1ff; --bg: #050505; --sidebar: #0d0d0e; --card: #141417; --text: #e0e0e0; --glow: 0 0 15px rgba(0, 209, 255, 0.4); }
         body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; }
         
-        /* Sidebar Styles */
         aside { width: 260px; background: var(--sidebar); border-right: 1px solid #222; display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; }
         .logo { font-size: 20px; font-weight: bold; margin-bottom: 30px; }
         .logo span { color: var(--primary); }
@@ -51,7 +50,6 @@
         <div id="tab-oracle" class="nav-item active" onclick="switchTab('oracle')">AIVM Oracle</div>
         <div id="tab-art" class="nav-item disabled" onclick="switchTab('art')">AI Art</div>
         <div id="tab-identity" class="nav-item disabled" onclick="switchTab('identity')">Identity Registry</div>
-        
         <div class="status-container">
             <div id="gpuStatus"><span class="status-dot status-offline"></span> GPU Cluster: Checking...</div>
             <div style="color: #555; margin-top: 5px;">Model: Stable-Diffusion-XL</div>
@@ -66,9 +64,9 @@
 
         <div id="gateView" class="card">
             <h2>Identity Verification Required</h2>
-            <p style="color:#888;">Mint your Soulbound Identity Token to unlock GPU accelerated art generation.</p>
+            <p style="color:#888;">Mint your Soulbound Identity Token to unlock the AIVM Creative Suite.</p>
             <button id="verifyBtn" class="btn" disabled onclick="verifyAndMint()">Verify & Mint ZK-SBT</button>
-            <p id="status" style="margin-top:20px; color:#666;">Waiting for wallet connection...</p>
+            <p id="status" style="margin-top:20px; color:#666;">Connect wallet to check verification status.</p>
         </div>
 
         <div id="artView" class="card gated">
@@ -91,9 +89,9 @@
         <div id="identityView" class="card gated">
             <h2>Registry Settings</h2>
             <div style="background:#000; border: 1px solid #333; padding:25px; border-radius:12px;">
-                <p>Identity: <b style="color:var(--primary)">✓ ZK-VERIFIED</b></p>
-                <p id="displaySbtAddr" style="font-family:monospace; color:var(--primary); font-size: 11px;"></p>
-                <button class="btn btn-outline" onclick="localStorage.clear(); location.reload();">Reset Session History</button>
+                <p>Identity Status: <b style="color:var(--primary)">✓ ZK-VERIFIED</b></p>
+                <p id="displaySbtAddr" style="font-family:monospace; color:var(--primary); font-size: 11px; margin-top:10px;"></p>
+                <button class="btn btn-outline" onclick="localStorage.clear(); location.reload();">Reset Portal History</button>
             </div>
         </div>
     </main>
@@ -111,6 +109,7 @@
                 signer = await provider.getSigner();
                 const address = await signer.getAddress();
                 document.getElementById('connectBtn').innerText = address.substring(0,6) + "..." + address.slice(-4);
+                document.getElementById('displaySbtAddr').innerText = `SBT: ${SBT_ADDR}`;
                 renderLog();
                 checkVerification();
                 updateGPUStatus();
@@ -144,7 +143,7 @@
                     switchTab('art');
                 } else {
                     document.getElementById('verifyBtn').disabled = false;
-                    document.getElementById('status').innerText = "ZK-SBT not detected in your wallet.";
+                    document.getElementById('status').innerText = "ZK-SBT not detected.";
                 }
             } catch (e) { console.error(e); }
         }
@@ -174,23 +173,27 @@
             } else {
                 content.innerHTML = "";
                 status.style.display = "block";
-                status.innerText = `Anchored Task: ${task.taskId.substring(0,12)}... Waiting for GPU result.`;
+                status.innerText = `Task Anchored: ${task.taskId.substring(0,12)}... Waiting for GPU result.`;
                 dlBtn.classList.add('gated');
             }
         }
 
         function downloadArt() {
             const img = document.getElementById('currentArt');
+            if(!img) return;
             const link = document.createElement('a');
             link.href = img.src;
             link.download = `LCAI-Art-${Date.now()}.png`;
+            document.body.appendChild(link);
             link.click();
+            document.body.removeChild(link);
         }
 
         document.getElementById('generateArtBtn').onclick = async () => {
             const prompt = document.getElementById('artPrompt').value;
             if(!prompt) return alert("Enter a prompt");
             const status = document.getElementById('viewerStatus');
+            status.style.color = "var(--primary)";
             status.innerText = "Step 1: Signing Anchor Transaction...";
             
             try {
@@ -205,8 +208,17 @@
                 // PRECISION LOG FILTER: Extract TaskID from the specific event signature
                 const eventHash = ethers.id("InferenceRequested(bytes32,address,uint256)");
                 const log = receipt.logs.find(x => x.topics[0] === eventHash);
-                if(!log) throw new Error("InferenceRequested event not found in logs");
-                const taskId = log.topics[1];
+                
+                if(!log) {
+                    // Fallback to searching all topics if explicit hash fails
+                    for (const l of receipt.logs) {
+                        if (l.topics.length >= 2) { var taskId = l.topics[1]; break; }
+                    }
+                } else {
+                    var taskId = log.topics[1];
+                }
+
+                if(!taskId) throw new Error("TaskID extraction failed");
 
                 const newTask = { prompt, taskId, ready: false, url: null };
                 userTasks.push(newTask);
