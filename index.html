@@ -48,7 +48,7 @@
 
         <div id="gateView" class="card">
             <h2>ZK-KYC Required</h2>
-            <button id="verifyBtn" class="btn" disabled onclick="verifyAndMint()">Verify & Mint ZK-SBT</button>
+            <button id="verifyBtn" class="btn" disabled>Verify & Mint ZK-SBT</button>
             <p id="status" style="text-align:center; margin-top:20px; color:#666;">Connect wallet to check status.</p>
         </div>
 
@@ -145,10 +145,13 @@
                 const tx = await router.requestInferenceV2(2, prompt, { value: ethers.parseEther("0.1") });
                 const receipt = await tx.wait();
                 
-                // ROBUST LOG FINDER: Searches every log for the taskId
+                // ROBUST LOG FINDER: Searches every log for any taskId (indexed topic)
                 let taskId = null;
                 for (const log of receipt.logs) {
-                    if (log.topics.length > 1) { taskId = log.topics[1]; break; }
+                    if (log.topics.length > 1) { 
+                        taskId = log.topics[1]; 
+                        break; 
+                    }
                 }
 
                 if(!taskId) throw new Error("ID extraction failed");
@@ -160,7 +163,7 @@
                 pollTask(userTasks.length - 1);
                 loader.innerText = "Step 2: Anchored! Cluster generating...";
             } catch (e) { 
-                loader.innerText = "Inference Failed. Check gas or 0.1 LCAI balance.";
+                loader.innerText = "Inference Failed. Check LCAI balance or gas.";
                 console.error(e); 
             }
         };
