@@ -6,22 +6,38 @@
     <title>Lightchain AI | Privacy Identity Portal</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        :root { --primary: #00ffa3; --bg: #050505; --sidebar: #0d0d0e; --card: #141417; --text: #e0e0e0; --glow: 0 0 15px rgba(0, 255, 163, 0.4); }
+        :root { 
+            --primary: #00d1ff; /* Deep Cyber Blue */
+            --bg: #050505; 
+            --sidebar: #0d0d0e; 
+            --card: #141417; 
+            --text: #e0e0e0; 
+            --glow: 0 0 15px rgba(0, 209, 255, 0.4); 
+        }
         body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        
+        /* Sidebar Styles */
         aside { width: 260px; background: var(--sidebar); border-right: 1px solid #222; display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; }
         .logo { font-size: 20px; font-weight: bold; margin-bottom: 40px; }
         .logo span { color: var(--primary); }
         .nav-item { padding: 12px 15px; border-radius: 8px; cursor: pointer; margin-bottom: 10px; transition: 0.3s; color: #888; display: flex; align-items: center; gap: 10px; }
         .nav-item:hover:not(.disabled) { background: #1a1a1c; color: white; }
-        .nav-item.active { background: rgba(0, 255, 163, 0.1); color: var(--primary); border-left: 3px solid var(--primary); }
+        .nav-item.active { background: rgba(0, 209, 255, 0.1); color: var(--primary); border-left: 3px solid var(--primary); }
         .nav-item.disabled { opacity: 0.3; cursor: not-allowed; }
+        
+        /* Main Content */
         main { flex: 1; padding: 40px; overflow-y: auto; display: flex; flex-direction: column; }
         header { display: flex; justify-content: flex-end; align-items: center; gap: 15px; margin-bottom: 40px; }
-        .sbt-badge { padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 800; border: 1px solid var(--primary); box-shadow: var(--glow); color: var(--primary); background: rgba(0, 255, 163, 0.05); }
+        
+        /* Premium Badge */
+        .sbt-badge { padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 800; border: 1px solid var(--primary); box-shadow: var(--glow); color: var(--primary); background: rgba(0, 209, 255, 0.05); }
+        
         .card { background: var(--card); border: 1px solid #222; padding: 30px; border-radius: 16px; width: 100%; max-width: 800px; align-self: center; }
         .btn { background: var(--primary); color: #000; border: none; padding: 14px 28px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
         .btn:disabled { background: #333; color: #666; cursor: not-allowed; }
+        
         .gated { display: none; }
+        input { width: 100%; padding: 12px; background: #000; border: 1px solid #333; color: white; margin-bottom: 20px; border-radius: 8px; box-sizing: border-box; }
         #status { text-align: center; margin-top: 20px; font-size: 14px; color: #888; }
     </style>
 </head>
@@ -29,6 +45,7 @@
     <aside id="sidebarNav">
         <div class="logo">LCAI <span>Identity</span></div>
         <div id="tab-oracle" class="nav-item active" onclick="switchTab('oracle')">AIVM Oracle</div>
+        <div id="tab-art" class="nav-item disabled" onclick="switchTab('art')">AI Art</div>
         <div id="tab-identity" class="nav-item disabled" onclick="switchTab('identity')">Identity Registry</div>
         <div style="margin-top: auto; font-size: 11px; color: #444;">Testnet v2.0-Alpha</div>
     </aside>
@@ -41,7 +58,7 @@
 
         <div id="gateView" class="card">
             <h2>ZK-KYC Required</h2>
-            <p style="color:#888;">Access to the AIVM Oracle is restricted to verified identities. Please mint your ZK-SBT to proceed.</p>
+            <p style="color:#888;">Access to the AIVM Oracle and Creative tools is restricted. Please mint your ZK-SBT to proceed.</p>
             <button id="verifyBtn" class="btn" disabled>Verify via zkPass & Mint SBT</button>
             <p id="status">Please connect your wallet.</p>
         </div>
@@ -49,8 +66,15 @@
         <div id="oracleView" class="card gated">
             <h2>AIVM Oracle</h2>
             <p style="color:#888;">Submit prompt requests to the Lightchain AI decentralized cluster.</p>
-            <input type="text" placeholder="Ask the cluster..." style="width:100%; padding:12px; background:#000; border:1px solid #333; color:white; margin-bottom:20px; border-radius:8px;">
+            <input type="text" placeholder="Ask the cluster...">
             <button class="btn" style="width:auto;" onclick="alert('Inference Request Sent')">Submit Request</button>
+        </div>
+
+        <div id="artView" class="card gated">
+            <h2>AI Art Generator</h2>
+            <p style="color:#888;">Generate high-fidelity artwork using the LCAI GPU cluster.</p>
+            <input type="text" placeholder="A futuristic city in cyber-blue, cinematic lighting...">
+            <button class="btn" style="width:auto;" onclick="alert('Art generation task anchored to testnet.')">Generate Art</button>
         </div>
 
         <div id="identityView" class="card gated">
@@ -73,10 +97,7 @@
                 signer = await provider.getSigner();
                 const address = await signer.getAddress();
                 document.getElementById('connectBtn').innerText = address.substring(0,6) + "..." + address.slice(-4);
-                
-                // Immediately update the display address to remove "Loading..."
                 document.getElementById('displaySbtAddr').innerText = SBT_ADDR;
-                
                 await checkVerification();
             }
         }
@@ -94,6 +115,7 @@
                     document.getElementById('gateView').classList.add('gated');
                     document.getElementById('oracleView').classList.remove('gated');
                     document.getElementById('tab-identity').classList.remove('disabled');
+                    document.getElementById('tab-art').classList.remove('disabled');
                 } else {
                     badge.innerText = "UNVERIFIED";
                     badge.style.color = "#ff4444";
@@ -112,6 +134,7 @@
             tabEl.classList.add('active');
 
             document.getElementById('oracleView').classList.add('gated');
+            document.getElementById('artView').classList.add('gated');
             document.getElementById('identityView').classList.add('gated');
             document.getElementById(tab + 'View').classList.remove('gated');
         }
@@ -122,7 +145,7 @@
                 const tx = await sbtContract.verifyAndMint(["0","0"],[["0","0"],["0","0"]],["0","0"],[Math.floor(Math.random()*100000).toString()]);
                 await tx.wait();
                 await checkVerification();
-            } catch (e) { alert("Transaction failed or rejected."); }
+            } catch (e) { alert("Transaction failed."); }
         };
 
         document.getElementById('connectBtn').onclick = init;
