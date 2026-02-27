@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lightchain AI | Privacy Identity Portal</title>
+    <title>Lightchain AI | Portal</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
         :root { --primary: #00d1ff; --bg: #050505; --sidebar: #0d0d0e; --card: #141417; --text: #e0e0e0; --glow: 0 0 15px rgba(0, 209, 255, 0.4); }
-        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; margin: 0; display: flex; height: 100 vh; overflow: hidden; }
         aside { width: 260px; background: var(--sidebar); border-right: 1px solid #222; display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; }
         .logo { font-size: 20px; font-weight: bold; margin-bottom: 40px; }
         .logo span { color: var(--primary); }
@@ -30,7 +30,6 @@
         .log-entry.ready { color: var(--primary); border-left: 3px solid var(--primary); font-weight: bold; background: rgba(0,209,255,0.05); }
         #artViewer { margin-top: 20px; border: 1px dashed #333; border-radius: 12px; min-height: 400px; display: flex; align-items: center; justify-content: center; background: #080808; overflow: hidden; }
         #artViewer img { max-width: 100%; max-height: 100%; box-shadow: var(--glow); border-radius: 8px; }
-        #viewerStatus { font-size: 14px; text-align: center; }
     </style>
 </head>
 <body>
@@ -50,9 +49,9 @@
 
         <div id="gateView" class="card">
             <h2>ZK-KYC Required</h2>
-            <p style="color:#888; margin-bottom: 20px;">Verification required to unlock the AI Creative Suite.</p>
+            <p style="color:#888; margin-bottom: 20px;">Identity verification is required to access the AIVM Creative Suite.</p>
             <button id="verifyBtn" class="btn" disabled onclick="verifyAndMint()">Verify & Mint ZK-SBT</button>
-            <p id="status" style="text-align:center; margin-top:20px; color:#666;">Connect wallet to check verification status.</p>
+            <p id="status" style="text-align:center; margin-top:20px; color:#666;">Connect wallet to check status.</p>
         </div>
 
         <div id="artView" class="card gated">
@@ -63,10 +62,7 @@
                     <button id="generateArtBtn" class="btn" style="width: auto;">Generate Art</button>
                     <div id="artViewer"><span id="viewerStatus" style="color:#555;">Ready for your prompt.</span></div>
                 </div>
-                <div id="artLog">
-                    <div style="font-size: 10px; color: #555; margin-bottom: 10px; text-transform: uppercase; font-weight: bold;">Inference Log</div>
-                    <div id="logItems"></div>
-                </div>
+                <div id="artLog"><div id="logItems"></div></div>
             </div>
         </div>
 
@@ -110,24 +106,20 @@
             try {
                 const sbt = new ethers.Contract(SBT_ADDR, ["function hasSBT(address) view returns (bool)"], signer);
                 const isVerified = await sbt.hasSBT(await signer.getAddress());
-                const badge = document.getElementById('sbtBadge');
-                badge.style.display = "inline-block";
-                
                 if (isVerified) {
+                    const badge = document.getElementById('sbtBadge');
                     badge.innerText = "ZK-VERIFIED";
+                    badge.style.display = "inline-block";
                     badge.style.color = "var(--primary)";
                     document.getElementById('gateView').classList.add('gated');
                     document.getElementById('tab-identity').classList.remove('disabled');
                     document.getElementById('tab-art').classList.remove('disabled');
-                    // Automatically show oracle by default if verified
                     switchTab('oracle');
                 } else {
-                    badge.innerText = "UNVERIFIED";
-                    badge.style.color = "#ff4444";
                     document.getElementById('verifyBtn').disabled = false;
-                    document.getElementById('status').innerText = "No Identity SBT found. Please verify to continue.";
+                    document.getElementById('status').innerText = "Identity SBT not found. Please verify.";
                 }
-            } catch (e) { console.error("Identity Check Failed:", e); }
+            } catch (e) { console.error(e); }
         }
 
         function renderLog() {
@@ -164,19 +156,17 @@
             loader.style.color = "var(--primary)";
 
             try {
-                const router = new ethers.Contract(ROUTER_ADDR, [
-                    "function requestInferenceV2(uint256 m, string p) external payable returns (bytes32)",
-                    "event InferenceRequested(bytes32 indexed taskId, address indexed requester, uint256 modelId)"
-                ], signer);
-                
+                const router = new ethers.Contract(ROUTER_ADDR, ["function requestInferenceV2(uint256 m, string p) external payable returns (bytes32)"], signer);
                 const tx = await router.requestInferenceV2(2, prompt, { value: ethers.parseEther("0.1") });
                 const receipt = await tx.wait();
                 
-                // ROBUST LOG SCANNER: Searches every log for the TaskID indexed topic
-                const eventHash = ethers.id("InferenceRequested(bytes32,address,uint256)");
-                const log = receipt.logs.find(x => x.topics[0] === eventHash);
-                if (!log) throw new Error("Could not extract TaskID from logs");
-                const taskId = log.topics[1];
+                // ROBUST LOG SCANNER: Finds any 32-byte indexed topic in the logs
+                let taskId = null;
+                for (const log of receipt.logs) {
+                    if (log.topics.length > 1) { taskId = log.topics[1]; break; }
+                }
+
+                if(!taskId) throw new Error("Could not extract TaskID");
 
                 const newTask = { prompt, taskId, ready: false, url: null };
                 userTasks.push(newTask);
@@ -185,7 +175,7 @@
                 pollTask(userTasks.length - 1);
                 loader.innerText = "Step 2: Task Anchored. Waiting for GPU results...";
             } catch (e) { 
-                loader.innerText = "Inference Failed. Check LCAI balance or gas.";
+                loader.innerText = "Inference Failed. Check gas or 0.1 LCAI balance.";
                 loader.style.color = "#ff4444";
                 console.error("Art Error:", e);
             }
