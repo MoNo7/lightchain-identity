@@ -13,18 +13,16 @@
         .logo span { color: var(--primary); }
         .nav-item { padding: 12px 15px; border-radius: 8px; cursor: pointer; margin-bottom: 10px; transition: 0.3s; color: #888; display: flex; align-items: center; gap: 10px; }
         .nav-item.active { background: rgba(0, 209, 255, 0.1); color: var(--primary); border-left: 3px solid var(--primary); }
-        .nav-item.disabled { opacity: 0.2; cursor: not-allowed; }
         .status-container { margin-top: auto; padding: 15px; background: #000; border: 1px solid #222; border-radius: 12px; font-size: 11px; }
         .status-dot { height: 8px; width: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; background: #ff4444; }
         .online { background: #00ff88; box-shadow: 0 0 8px #00ff88; }
         main { flex: 1; padding: 40px; overflow-y: auto; display: flex; flex-direction: column; }
         header { display: flex; justify-content: flex-end; align-items: center; gap: 15px; margin-bottom: 40px; }
-        .sbt-badge { padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 800; border: 1px solid var(--primary); color: var(--primary); background: rgba(0, 209, 255, 0.05); display: none; }
+        .sbt-badge { padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 800; border: 1px solid var(--primary); color: var(--primary); background: rgba(0, 209, 255, 0.05); }
         .card { background: var(--card); border: 1px solid #222; padding: 30px; border-radius: 16px; width: 100%; max-width: 900px; align-self: center; }
         .btn { background: var(--primary); color: #000; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .gated { display: none !important; }
-        input { width: 100%; padding: 15px; background: #000; border: 1px solid #333; color: white; margin-bottom: 20px; border-radius: 8px; }
+        input { width: 100%; padding: 15px; background: #000; border: 1px solid #333; color: white; margin-bottom: 20px; border-radius: 8px; font-size: 16px; }
         #artLayout { display: flex; gap: 25px; }
         #artWorkArea { flex: 2; }
         #artLog { flex: 1; background: #000; border: 1px solid #222; border-radius: 12px; padding: 15px; max-height: 550px; overflow-y: auto; }
@@ -46,14 +44,13 @@
 
     <main>
         <header>
-            <span id="sbtBadge" class="sbt-badge"></span>
+            <span id="sbtBadge" class="sbt-badge" style="display:none;"></span>
             <button id="connectBtn" class="btn">Connect Wallet</button>
         </header>
 
         <div id="gateView" class="card">
             <h2>Identity Required</h2>
-            <p style="color:#888; margin-bottom:20px;">Verification required to unlock AIVM generation.</p>
-            <button id="verifyBtn" class="btn">Verify & Mint ZK-SBT</button>
+            <button id="verifyBtn" class="btn" onclick="location.reload()">Refresh Status</button>
         </div>
 
         <div id="artView" class="card gated">
@@ -73,147 +70,118 @@
     </main>
 
     <script>
-       const SBT_ADDR = "0xa344e0f391e8DCfd6195D89b910C5Beb27525c4F";
-const ROUTER_ADDR = "0x0269683E61b210d56b3D692603336fEB27B8a83a";
-const CHAT_API = "https://chat2.lightchain.ai/api/v1"; 
+        const SBT_ADDR = "0xa344e0f391e8DCfd6195D89b910C5Beb27525c4F";
+        const ROUTER_ADDR = "0x0269683E61b210d56b3D692603336fEB27B8a83a";
+        const CHAT_API = "https://chat2.lightchain.ai/api/v1";
 
-let signer, userTasks = JSON.parse(localStorage.getItem('lcai_art_tasks') || '[]');
+        let provider, signer, userTasks = JSON.parse(localStorage.getItem('lcai_art_tasks') || '[]');
 
-async function init() {
-    if (window.ethereum) {
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        signer = await provider.getSigner();
-        const address = await signer.getAddress();
-        document.getElementById('connectBtn').innerText = address.substring(0,6) + "..." + address.slice(-4);
-        
-        renderLog(); 
-        checkVerification();
-        updateHealth();
-        
-        // AUTO-RECOVERY: Resume polling for any tasks in the persistent history
-        userTasks.forEach((t, i) => { if(!t.ready && t.taskId) pollTask(i); });
-    }
-}
+        async function init() {
+            if (!window.ethereum) return;
+            provider = new ethers.BrowserProvider(window.ethereum);
+            signer = await provider.getSigner();
+            const addr = await signer.getAddress();
+            document.getElementById('connectBtn').innerText = addr.substring(0,6)+"..."+addr.slice(-4);
+            
+            // 1. Restore Identity Gate
+            const sbt = new ethers.Contract(SBT_ADDR, ["function hasSBT(address) view returns (bool)"], provider);
+            const verified = await sbt.hasSBT(addr);
+            if (verified) {
+                document.getElementById('gateView').classList.add('gated');
+                document.getElementById('artView').classList.remove('gated');
+                document.getElementById('sbtBadge').style.display = 'block';
+                document.getElementById('sbtBadge').innerText = 'ZK-VERIFIED';
+            }
 
-async function updateHealth() {
-    try {
-        const resp = await fetch(`${CHAT_API}/chat/health`);
-        const el = document.getElementById('gpuStatus');
-        if(resp.ok) {
-            el.innerHTML = `<span class="status-dot online"></span> Cluster: Online`;
-        } else {
-            el.innerHTML = `<span class="status-dot"></span> Cluster: Busy`;
+            // 2. Load History & Start Polling
+            renderLog();
+            updateHealth();
+            userTasks.forEach((t, i) => { if(!t.ready) pollTask(i); });
         }
-    } catch (e) { console.error("Health check failed"); }
-    setTimeout(updateHealth, 30000);
-}
 
-async function checkVerification() {
-    try {
-        const sbt = new ethers.Contract(SBT_ADDR, ["function hasSBT(address) view returns (bool)"], signer);
-        const isVerified = await sbt.hasSBT(await signer.getAddress());
-        if (isVerified) {
-            document.getElementById('sbtBadge').style.display = "inline-block";
-            document.getElementById('sbtBadge').innerText = "ZK-VERIFIED";
-            document.getElementById('gateView').classList.add('gated');
-            document.getElementById('artView').classList.remove('gated');
-        }
-    } catch (e) { console.error("Identity Check Failed", e); }
-}
+        document.getElementById('generateArtBtn').onclick = async () => {
+            const prompt = document.getElementById('artPrompt').value;
+            const status = document.getElementById('viewerStatus');
+            status.innerText = "Step 1: Anchoring Transaction...";
+            
+            try {
+                const router = new ethers.Contract(ROUTER_ADDR, ["function requestInferenceV2(uint256 m, string p) external payable"], signer);
+                const tx = await router.requestInferenceV2(2, prompt, { value: ethers.parseEther("0.1") });
+                const receipt = await tx.wait();
+                
+                // FILTERED LOG FINDER: Searches for the specific 32-byte task ID
+                let taskId = null;
+                const eventHash = ethers.id("InferenceRequested(bytes32,address,uint256)");
+                for (const log of receipt.logs) {
+                    if (log.topics[0] === eventHash) { taskId = log.topics[1]; break; }
+                }
+                
+                if(!taskId) throw "Task ID not found in logs";
 
-function renderLog() {
-    const list = document.getElementById('logItems');
-    list.innerHTML = '';
-    userTasks.forEach((t, i) => {
-        const div = document.createElement('div');
-        div.className = `log-entry ${t.ready ? 'ready' : 'pending'}`;
-        div.onclick = () => viewArt(i);
-        div.innerHTML = `<b>#${i+1}</b> ${t.prompt.substring(0,18)}...<br><small>${t.ready ? '✓ READY' : '⟳ IN QUEUE'}</small>`;
-        list.prepend(div);
-    });
-}
-
-function viewArt(index) {
-    const task = userTasks[index];
-    const content = document.getElementById('viewerContent');
-    const status = document.getElementById('viewerStatus');
-    const dlBtn = document.getElementById('downloadBtn');
-    
-    if(task.ready) {
-        status.style.display = "none";
-        content.innerHTML = `<img id="currArt" src="${task.url}" alt="AI Result" style="max-width:100%; border-radius:8px;">`;
-        dlBtn.classList.remove('gated');
-        dlBtn.onclick = () => {
-            const a = document.createElement('a');
-            a.href = task.url;
-            a.download = `LCAI-Art-${index}.png`;
-            a.click();
+                // SAVE TO ACTIVITY LOG: Permanent storage by ID
+                const index = userTasks.push({ prompt, taskId, ready: false, url: null }) - 1;
+                localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
+                
+                renderLog();
+                pollTask(index);
+                status.innerText = "Step 2: Processing on GPU Cluster...";
+            } catch (e) { 
+                status.innerText = "Inference Failed. Check LCAI Balance.";
+                console.error(e); 
+            }
         };
-    } else {
-        content.innerHTML = "";
-        status.style.display = "block";
-        status.innerText = `ID: ${task.taskId.substring(0,12)}... Waiting for GPU result.`;
-        dlBtn.classList.add('gated');
-    }
-}
 
-document.getElementById('generateArtBtn').onclick = async () => {
-    const prompt = document.getElementById('artPrompt').value;
-    if(!prompt) return alert("Enter a prompt");
-    const status = document.getElementById('viewerStatus');
-    status.innerText = "Anchoring Task...";
-    
-    try {
-        const router = new ethers.Contract(ROUTER_ADDR, [
-            "function requestInferenceV2(uint256 m, string p) external payable"
-        ], signer);
-        
-        const tx = await router.requestInferenceV2(2, prompt, { value: ethers.parseEther("0.1") });
-        const receipt = await tx.wait();
-        
-        // TOPIC SCRAPER: Scans raw logs to link the chain txn to the AI task ID
-        let taskId = null;
-        for (const log of receipt.logs) {
-            if (log.address.toLowerCase() === ROUTER_ADDR.toLowerCase() && log.topics.length > 1) {
-                taskId = log.topics[1];
-                break;
+        async function pollTask(i) {
+            const task = userTasks[i];
+            try {
+                const res = await fetch(`${CHAT_API}/chat/status?taskId=${task.taskId}`);
+                const data = await res.json();
+                if (data.ready && data.url) {
+                    task.ready = true;
+                    task.url = data.url;
+                    localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
+                    renderLog();
+                    if(document.getElementById('artView').offsetParent) viewArt(i);
+                } else { setTimeout(() => pollTask(i), 5000); }
+            } catch (e) { setTimeout(() => pollTask(i), 5000); }
+        }
+
+        function renderLog() {
+            const list = document.getElementById('logItems');
+            list.innerHTML = '';
+            userTasks.forEach((t, i) => {
+                const div = document.createElement('div');
+                div.className = `log-entry ${t.ready ? 'ready' : 'pending'}`;
+                div.innerHTML = `<b>#${i+1}</b> ${t.prompt.substring(0,15)}...<br><small>${t.ready ? '✓ READY' : '⟳ IN QUEUE'}</small>`;
+                div.onclick = () => viewArt(i);
+                list.prepend(div);
+            });
+        }
+
+        function viewArt(i) {
+            const t = userTasks[i];
+            const content = document.getElementById('viewerContent');
+            const dl = document.getElementById('downloadBtn');
+            if(t.ready) {
+                content.innerHTML = `<img id="resImg" src="${t.url}" style="width:100%; border-radius:8px;">`;
+                dl.classList.remove('gated');
+                dl.onclick = () => { const a=document.createElement('a'); a.href=t.url; a.download=`LCAI-${i}.png`; a.click(); };
+            } else {
+                content.innerHTML = `<span style="color:#555;">Processing ID: ${t.taskId.substring(0,10)}...</span>`;
+                dl.classList.add('gated');
             }
         }
 
-        if(!taskId) throw new Error("TaskID extraction failed");
+        async function updateHealth() {
+            const dot = document.getElementById('dot');
+            try {
+                const res = await fetch(`${CHAT_API}/chat/health`);
+                if(res.ok) { dot.classList.add('online'); document.getElementById('gpuStatus').innerText = 'Cluster: Online'; }
+            } catch(e) {}
+        }
 
-        // SAVE TO ACTIVITY LOG: Immediate persistence
-        const newTask = { prompt, taskId, ready: false, url: null };
-        const index = userTasks.push(newTask) - 1;
-        localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
-        
-        renderLog();
-        pollTask(index);
-        status.innerText = "Task Anchored! Generating...";
-        
-    } catch (e) { 
-        status.innerText = "Inference Failed. Check LCAI balance.";
-        console.error(e);
-    }
-};
-
-async function pollTask(index) {
-    const task = userTasks[index];
-    try {
-        const resp = await fetch(`${CHAT_API}/chat/status?taskId=${task.taskId}`);
-        const data = await resp.json();
-        if(data.ready && data.url) {
-            task.ready = true;
-            task.url = data.url;
-            localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
-            renderLog();
-            if(document.getElementById('artView').offsetParent) viewArt(index);
-        } else { setTimeout(() => pollTask(index), 5000); }
-    } catch (e) { setTimeout(() => pollTask(index), 5000); }
-}
-
-document.getElementById('connectBtn').onclick = init;
+        document.getElementById('connectBtn').onclick = init;
+        window.onload = init;
     </script>
 </body>
 </html>
-
