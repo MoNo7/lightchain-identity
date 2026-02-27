@@ -135,8 +135,52 @@ async function syncRegistry(addr) {
     }
 }
 
-// ... Keep existing generateArtBtn, pollTask, and renderLog functions ...
+document.getElementById('generateArtBtn').onclick = async () => {
+            const prompt = document.getElementById('artPrompt').value;
+            const status = document.getElementById('viewerStatus');
+            if(!prompt) return;
+            status.innerText = "Anchoring...";
+            try {
+                const router = new ethers.Contract(ROUTER_ADDR, ["function requestInferenceV2(uint256 m, string p) external payable", "event InferenceRequested(bytes32 indexed taskId, address indexed requester, uint256 modelId)"], signer);
+                const tx = await router.requestInferenceV2(2, prompt, { value: ethers.parseEther("0.1") });
+                const receipt = await tx.wait();
+                
+                let taskId = receipt.logs.find(l => l.topics[0] === ethers.id("InferenceRequested(bytes32,address,uint256)"))?.topics[1];
+                if(!taskId) throw "ID Missing";
 
+                const idx = userTasks.push({ prompt, taskId, ready: false, url: null }) - 1;
+                localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
+                renderLog();
+                pollTask(idx);
+                status.innerText = "Processing on GPU...";
+            } catch (e) { status.innerText = "Failed."; console.error(e); }
+        };
+
+        async function pollTask(i) {
+            const t = userTasks[i];
+            try {
+                const res = await fetch(`${CHAT_API}/chat/status?taskId=${t.taskId}`);
+                const data = await res.json();
+                if (data.ready && data.url) {
+                    t.ready = true; t.url = data.url;
+                    localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
+                    renderLog();
+                    if(document.getElementById('artView').offsetParent) viewArt(i);
+                } else setTimeout(() => pollTask(i), 5000);
+            } catch (e) { setTimeout(() => pollTask(i), 5000); }
+        }
+
+        function renderLog() {
+            const list = document.getElementById('logItems');
+            list.innerHTML = '';
+            userTasks.forEach((t, i) => {
+                const div = document.createElement('div');
+                div.className = `log-entry ${t.ready ? 'ready' : ''}`;
+                div.innerHTML = `<b>#${i+1}</b> ${t.prompt.substring(0,15)}...<br><small>${t.ready ? 'READY' : 'QUEUED'}</small>`;
+                div.onclick = () => viewArt(i);
+                list.prepend(div);
+            });
+        }
 document.getElementById('connectBtn').onclick = connect;
     </script>
 </body>
