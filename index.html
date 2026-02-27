@@ -169,40 +169,52 @@
             a.click();
         }
 
-        document.getElementById('generateArtBtn').onclick = async () => {
-            const prompt = document.getElementById('artPrompt').value;
-            if(!prompt) return alert("Enter a prompt");
-            const status = document.getElementById('viewerStatus');
-            status.style.color = "var(--primary)";
-            status.innerText = "Anchoring Task...";
+document.getElementById('generateArtBtn').onclick = async () => {
+    const prompt = document.getElementById('artPrompt').value;
+    if(!prompt) return alert("Enter a prompt");
+    const status = document.getElementById('viewerStatus');
+    status.style.color = "var(--primary)";
+    status.innerText = "Anchoring Task...";
+    
+    try {
+        const router = new ethers.Contract(ROUTER_ADDR, [
+            "function requestInferenceV2(uint256 m, string p) external payable returns (bytes32)",
+            "event InferenceRequested(bytes32 indexed taskId, address indexed requester, uint256 modelId)"
+        ], signer);
+        
+        const tx = await router.requestInferenceV2(2, prompt, { value: ethers.parseEther("0.1") });
+        const receipt = await tx.wait();
+        
+        // ROBUST LOG EXTRACTION: Use the Contract Interface to parse the logs
+        let taskId = null;
+        for (const log of receipt.logs) {
             try {
-                const router = new ethers.Contract(ROUTER_ADDR, [
-                    "function requestInferenceV2(uint256 m, string p) external payable returns (bytes32)",
-                    "event InferenceRequested(bytes32 indexed taskId, address indexed requester, uint256 modelId)"
-                ], signer);
-                
-                const tx = await router.requestInferenceV2(2, prompt, { value: ethers.parseEther("0.1") });
-                const receipt = await tx.wait();
-                
-                // RESILIENT LOG EXTRACTION: Calculate hash and find matching log
-                const eventHash = ethers.id("InferenceRequested(bytes32,address,uint256)");
-                const log = receipt.logs.find(x => x.topics[0] === eventHash);
-                const taskId = log ? log.topics[1] : receipt.logs[0]?.topics[1];
-
-                if(!taskId) throw new Error("ID extraction failed");
-
-                const newTask = { prompt, taskId, ready: false, url: null };
-                userTasks.push(newTask);
-                localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
-                renderLog();
-                pollTask(userTasks.length - 1);
-                status.innerText = "Task Anchored. GPU cluster processing...";
-            } catch (e) { 
-                status.innerText = "Inference Failed. Check LCAI balance or logs.";
-                status.style.color = "#ff4444";
-                console.error(e);
+                // This will safely attempt to decode the log using the ABI provided above
+                const parsedLog = router.interface.parseLog(log);
+                if (parsedLog && parsedLog.name === "InferenceRequested") {
+                    taskId = parsedLog.args.taskId; // Automatically maps the correct argument!
+                    break;
+                }
+            } catch (err) {
+                // Ignore errors from logs that don't match (like the 0.1 LCAI Transfer event)
+                continue;
             }
-        };
+        }
+
+        if(!taskId) throw new Error("TaskID extraction failed - Event not found in receipt");
+
+        const newTask = { prompt, taskId, ready: false, url: null };
+        userTasks.push(newTask);
+        localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
+        renderLog();
+        pollTask(userTasks.length - 1);
+        status.innerText = "Task Anchored. GPU cluster processing...";
+    } catch (e) { 
+        status.innerText = "Inference Failed. Check LCAI balance or logs.";
+        status.style.color = "#ff4444";
+        console.error("Inference Error:", e);
+    }
+};
 
         async function pollTask(index) {
             const task = userTasks[index];
@@ -230,3 +242,4 @@
     </script>
 </body>
 </html>
+
