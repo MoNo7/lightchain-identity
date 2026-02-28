@@ -64,7 +64,7 @@
 
     <script>
         const ID_ADDR = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-       const ART_ADDR = "0x652A27B0c1Cd08269e74B204941fdBC4f8840d92";
+       const ART_ADDR = "0x5BF404CEC7D19d5F51e75A703231fdAf2d861853";
 const ABI = [
     "function generateArt(string p) payable",
     "function latestArt(address a) view returns (string)",
@@ -115,19 +115,27 @@ const ABI = [
 document.getElementById('genBtn').onclick = async () => {
     const prompt = document.getElementById('promptInput').value;
     const out = document.getElementById('output');
+    if (!prompt) return;
+
     try {
-        out.innerHTML = '<div style="color:var(--warning);">Anchoring request to Lightchain...</div>';
-        // Explicitly pass 0.25 LCAI
+        out.innerHTML = '<div class="pulsing">Anchoring to Lightchain Cluster...</div>';
+        
+        // We add a manual gasLimit to ensure the Router doesn't run out of gas mid-call
         const tx = await contract.generateArt(prompt, { 
             value: ethers.parseEther("0.25"),
-            gasLimit: 500000 // Higher gas limit to prevent simulation failure
+            gasLimit: 600000 
         });
+        
+        addLog(`Task Broadcast: ${tx.hash.substring(0,10)}...`);
         await tx.wait();
-        out.innerHTML = '<div style="color:var(--primary);">Request Accepted. Awaiting Cluster Node response...</div>';
+        
+        out.innerHTML = '<div style="color:var(--primary);">Request Accepted! Awaiting AI Cluster Worker (30-60s)...</div>';
+        addLog("AIVM Task ID locked. Waiting for callback.");
     } catch (e) {
-        // This will now catch the specific reason if MetaMask provides it
-        console.error(e);
-        out.innerHTML = `<div style="color:var(--danger);">Inference Error: ${e.reason || "Router Rejection (Identity/Fee)"}</div>`;
+        console.error("Full Error Object:", e);
+        // This will help us see if it's a 'Fee' issue or an 'Identity' issue
+        out.innerHTML = `<div style="color:var(--danger);">Inference Error: ${e.reason || "Router Logic Revert"}</div>`;
+        addLog("Error: Transaction reverted by Router.");
     }
 };
 
@@ -145,5 +153,6 @@ document.getElementById('genBtn').onclick = async () => {
     </script>
 </body>
 </html>
+
 
 
