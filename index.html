@@ -14,7 +14,8 @@
         .primary-btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; margin-top: 8px; }
         .display-area { flex: 1; background: #020617; border-radius: 16px; border: 1px solid #334155; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
         input { width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 10px; border-radius: 8px; margin-bottom: 8px; box-sizing: border-box; }
-        #logFeed { font-size: 0.75rem; color: #94a3b8; font-family: monospace; background: #020617; padding: 10px; border-radius: 8px; height: 120px; overflow-y: auto; border: 1px solid #334155; }
+        .rev-text { color: var(--success); font-weight: 800; font-size: 1.4rem; margin: 5px 0; }
+        #logFeed { font-size: 0.75rem; color: #94a3b8; font-family: 'Courier New', monospace; background: #020617; padding: 10px; border-radius: 8px; height: 100px; overflow-y: auto; border: 1px solid #334155; }
     </style>
 </head>
 <body>
@@ -26,9 +27,9 @@
     <div class="content">
         <div class="sidebar">
             <div class="card">
-                <div id="walletBox" style="display:none; margin-bottom:10px;">
+                <div id="walletBox" style="display:none; margin-bottom: 10px;">
                     <div id="addrDisplay" style="font-size:0.7rem; opacity:0.6;">0x...</div>
-                    <div style="font-weight:bold; color:var(--success);"><span id="balDisplay">0.00</span> LCAI</div>
+                    <div style="font-weight:bold; color:var(--success); font-size:1.1rem;"><span id="balDisplay">0.00</span> LCAI</div>
                 </div>
                 <button id="connectBtn" class="primary-btn">Connect Wallet</button>
                 <div id="logFeed">> Initializing cluster logs...</div>
@@ -38,14 +39,15 @@
                 <h4 style="margin:0 0 5px 0;">Identity SBT</h4>
                 <div id="nftDisplay" style="text-align:center; margin-bottom:10px;"></div>
                 <div id="zkStatus" style="font-size:0.8rem; text-align:center; color:var(--warning);">Checking SBT...</div>
+                <button id="zkVerifyBtn" class="primary-btn" style="background:#1e40af; font-size:0.8rem; display:none;" onclick="mintSBT()">Mint zkPass SBT</button>
             </div>
 
             <div id="adminCard" class="card" style="display:none; border-top: 3px solid var(--admin);">
                 <h4 style="margin:0 0 10px 0; color:var(--admin);">Owner Revenue</h4>
-                <div style="color:var(--success); font-weight:800; font-size:1.4rem;"><span id="revDisplay">0.00</span> LCAI</div>
+                <div class="rev-text"><span id="revDisplay">0.00</span> LCAI</div>
                 
-                <div style="border-top:1px solid #334155; margin-top:15px; padding-top:15px;">
-                    <h4 style="margin:0 0 8px 0; font-size:0.85rem;">Query & Manage Identity</h4>
+                <div style="border-top:1px solid #334155; margin:15px 0; padding-top:15px;">
+                    <h4 style="margin:0 0 5px 0; font-size:0.85rem;">Query & Manage Identity</h4>
                     <input type="text" id="targetAddr" placeholder="Check/Verify Address">
                     <button onclick="checkStatus()" class="primary-btn" style="background:#475569; margin-top:0;">Query Status</button>
                     <div id="queryResult" style="font-size:0.75rem; margin:8px 0; text-align:center; font-weight:bold;"></div>
@@ -64,19 +66,31 @@
                 <button id="genBtn" class="primary-btn" disabled>Anchor Art Request (0.25 LCAI)</button>
             </div>
             <div class="display-area" id="output">
-                <span style="color:#475569;">AIVM Inference Engine Ready</span>
+                <div style="text-align:center; color:#475569;">AIVM Terminal Active</div>
             </div>
         </div>
     </div>
 
     <script>
         const ART_ADDR = "0x6C6F8E8a159650Fa68154C18Fd638A05B32b2D6B";
-        const ZK_ADDR = "0x0FCC0b48E4ECF3807376fe5C075bAdFc3b238c50"; 
+        const ZK_ADDR = "0x5c89f3f295b28d0510d1f8224571a5bf77323bca"; 
         
-        const ABI = ["function generateArt(string p) payable","function owner() view returns (address)","function totalRevenue() view returns (uint256)","function setVerification(address u, bool s)","function withdrawRevenue()","function manualVerified(address) view returns (bool)"];
-        const ZK_ABI = ["function tokenURI(uint256) view returns (string)", "function hasSBT(address) view returns (bool)"];
+        const ABI = [
+            "function generateArt(string p) payable",
+            "function owner() view returns (address)",
+            "function totalRevenue() view returns (uint256)",
+            "function setVerification(address u, bool s)",
+            "function withdrawRevenue()",
+            "function manualVerified(address) view returns (bool)"
+        ];
+        // Updated ZK ABI to include minting
+        const ZK_ABI = [
+            "function tokenURI(uint256) view returns (string)", 
+            "function hasSBT(address) view returns (bool)",
+            "function mintIdentity() external"
+        ];
 
-        let signer, contract, provider;
+        let signer, contract, zkContract, provider;
 
         function log(msg) {
             const f = document.getElementById('logFeed');
@@ -89,8 +103,20 @@
             if(!ethers.isAddress(addr)) return alert("Invalid Address");
             const status = await contract.manualVerified(addr);
             const res = document.getElementById('queryResult');
-            res.innerText = status ? "VERIFIED ✓" : "NOT VERIFIED ✗";
+            res.innerText = status ? "STATUS: VERIFIED ✓" : "STATUS: NOT VERIFIED ✗";
             res.style.color = status ? "#22c55e" : "#ef4444";
+        }
+
+        async function mintSBT() {
+            try {
+                log("Requesting ZK Mint...");
+                const tx = await zkContract.mintIdentity();
+                await tx.wait();
+                log("SBT Minted Successfully!");
+                location.reload();
+            } catch (e) {
+                log("Mint failed: " + (e.reason || "Check Balance"));
+            }
         }
 
         async function init() {
@@ -100,10 +126,11 @@
             const addr = await signer.getAddress();
             
             contract = new ethers.Contract(ART_ADDR, ABI, signer);
-            const zkContract = new ethers.Contract(ZK_ADDR, ZK_ABI, signer);
+            zkContract = new ethers.Contract(ZK_ADDR, ZK_ABI, signer);
 
-            const [owner, rev, bal, hasSBT] = await Promise.all([
-                contract.owner(), contract.totalRevenue(), provider.getBalance(addr), zkContract.hasSBT(addr)
+            const [owner, rev, bal, isVer, hasSBT] = await Promise.all([
+                contract.owner(), contract.totalRevenue(), provider.getBalance(addr),
+                contract.manualVerified(addr), zkContract.hasSBT(addr)
             ]);
 
             document.getElementById('addrDisplay').innerText = addr;
@@ -117,14 +144,19 @@
 
             if(hasSBT) {
                 try {
+                    // Try to fetch Token #1, #2 etc until found or logic fails
                     const uri = await zkContract.tokenURI(1); 
                     const json = JSON.parse(atob(uri.split(',')[1]));
                     document.getElementById('nftDisplay').innerHTML = `<img src="${json.image}" style="width:180px; border-radius:8px; border:1px solid #334155;">`;
-                    document.getElementById('zkStatus').innerText = "SBT IDENTIFIED ✓";
+                    document.getElementById('zkStatus').innerText = "ZK IDENTITY VERIFIED ✓";
                     document.getElementById('zkStatus').style.color = "#22c55e";
-                } catch(e) { log("NFT check failed."); }
+                    document.getElementById('zkVerifyBtn').style.display = 'none';
+                } catch(e) { 
+                    document.getElementById('zkStatus').innerText = "SBT OWNED (PENDING SYNC)";
+                }
             } else {
                 document.getElementById('zkStatus').innerText = "NO IDENTITY FOUND";
+                document.getElementById('zkVerifyBtn').style.display = 'block';
             }
 
             if(owner.toLowerCase() === addr.toLowerCase()) {
