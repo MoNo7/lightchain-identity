@@ -15,7 +15,7 @@
         .display-area { flex: 1; background: #020617; border-radius: 16px; border: 1px solid #334155; display: flex; align-items: center; justify-content: center; overflow: hidden; }
         input { width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 10px; border-radius: 8px; margin-bottom: 8px; box-sizing: border-box; }
         #logFeed { font-size: 0.75rem; color: #94a3b8; font-family: monospace; background: #020617; padding: 10px; border-radius: 8px; height: 100px; overflow-y: auto; }
-        #output img { max-width: 100%; max-height: 100%; border-radius: 8px; }
+        img { max-width: 100%; border-radius: 10px; }
     </style>
 </head>
 <body>
@@ -30,147 +30,80 @@
                 <button id="connectBtn" class="primary-btn">Connect Wallet</button>
                 <div id="logFeed">> System Ready...</div>
             </div>
-
             <div id="zkCard" class="card" style="display:none; border-left: 4px solid var(--primary);">
-                <h4 style="margin:0;">Identity SBT</h4>
-                <div id="nftDisplay" style="text-align:center; margin:10px 0;"></div>
-                <div id="zkStatus" style="font-size:0.8rem; text-align:center; color:var(--warning);">Checking...</div>
+                <h4 style="margin:0 0 5px 0;">Identity SBT</h4>
+                <div id="nftDisplay"></div>
+                <div id="zkStatus" style="font-size:0.8rem; text-align:center; color:var(--warning); margin-top:10px;">Checking...</div>
                 <button id="zkVerifyBtn" class="primary-btn" style="background:#1e40af; font-size:0.8rem; display:none;" onclick="mintSBT()">Mint ZK Identity</button>
             </div>
-
             <div id="adminCard" class="card" style="display:none; border-top: 3px solid var(--admin);">
-                <h4 style="margin:0 0 10px 0; color:var(--admin);">Owner Console</h4>
+                <h4 style="margin:0 0 5px 0; color:var(--admin);">Owner Console</h4>
                 <div style="font-size:1.4rem; color:var(--success); font-weight:800;"><span id="revDisplay">0.00</span> LCAI</div>
                 <div style="margin-top:15px; border-top:1px solid #334155; padding-top:15px;">
                     <input type="text" id="targetAddr" placeholder="User Address">
-                    <button onclick="checkUserStatus()" class="primary-btn" style="background:#475569;">Query Status</button>
+                    <button onclick="checkStatus()" class="primary-btn" style="background:#475569;">Query Status</button>
                     <div id="queryResult" style="text-align:center; margin:10px 0; font-weight:bold;"></div>
-                    <div style="display:flex; gap:5px;">
-                        <button onclick="manageUser(true)" class="primary-btn" style="background:var(--success); flex:1;">Verify</button>
-                        <button onclick="manageUser(false)" class="primary-btn" style="background:var(--danger); flex:1;">Revoke</button>
-                    </div>
+                    <div style="display:flex; gap:5px;"><button onclick="manageUser(true)" class="primary-btn" style="background:var(--success); flex:1;">Verify</button><button onclick="manageUser(false)" class="primary-btn" style="background:var(--danger); flex:1;">Revoke</button></div>
                 </div>
                 <button onclick="payout()" class="primary-btn" style="background:var(--admin); margin-top:15px;">Withdraw Revenue</button>
             </div>
         </div>
-
         <div class="main-area" style="flex:1; display:flex; flex-direction:column; gap:20px;">
-            <div class="card">
-                <input type="text" id="promptInput" placeholder="Enter High Fidelity Art Prompt...">
-                <button id="genBtn" class="primary-btn" disabled>Generate Art (0.25 LCAI)</button>
-            </div>
-            <div id="output" class="display-area">
-                <span style="color:#475569;">Awaiting Request...</span>
-            </div>
+            <div class="card"><input type="text" id="promptInput" placeholder="Enter Art Prompt..."><button id="genBtn" class="primary-btn" disabled>Generate Art (0.25 LCAI)</button></div>
+            <div class="display-area" id="output"><span style="color:#475569;">Awaiting Request...</span></div>
         </div>
     </div>
-
     <script>
-        // UPDATE THESE FROM YOUR IDE SCREENSHOT
-        const ART_ADDR = "0x804Bd9217b0B683b97000591C88d2A9dFa800dcC"; 
-        const ZK_ADDR = "0x12a568357e951588B1f90DAffe23441E86961580";
+        // Update these with your new deployed addresses
+        const ART_ADDR = "0x91b5EC03Aa25A96c332fcAAC7AE8b041933E750F";
+        const ZK_ADDR = "0x36cdf783dBa2101cdda20F5309568AE57A250f58";
 
-        const ABI = [
-            "function generateArt(string p) payable",
-            "function owner() view returns (address)",
-            "function totalRevenue() view returns (uint256)",
-            "function manualVerified(address) view returns (bool)",
-            "function setVerification(address u, bool s)",
-            "function withdrawRevenue()"
-        ];
-        const ZK_ABI = ["function tokenURI(uint256) view returns (string)", "function hasSBT(address) view returns (bool)", "function mintIdentity() external"];
-
+        const ABI = ["function generateArt(string p) payable","function owner() view returns (address)","function totalRevenue() view returns (uint256)","function setVerification(address u, bool s)","function withdrawRevenue()","function manualVerified(address) view returns (bool)"];
+        const ZK_ABI = ["function tokenURI(uint256) view returns (string)", "function hasSBT(address) view returns (bool)","function mintIdentity() external"];
         let signer, contract, zkContract, provider;
-
         function log(msg) { const f = document.getElementById('logFeed'); f.innerHTML += `<div>> ${msg}</div>`; f.scrollTop = f.scrollHeight; }
 
         async function init() {
-            try {
-                provider = new ethers.BrowserProvider(window.ethereum);
-                await provider.send("eth_requestAccounts", []);
-                signer = await provider.getSigner();
-                const addr = await signer.getAddress();
-                
-                contract = new ethers.Contract(ART_ADDR, ABI, signer);
-                zkContract = new ethers.Contract(ZK_ADDR, ZK_ABI, signer);
-
-                const [owner, rev, bal, hasSBT] = await Promise.all([
-                    contract.owner(), contract.totalRevenue(), provider.getBalance(addr), zkContract.hasSBT(addr)
-                ]);
-
-                document.getElementById('addrDisplay').innerText = addr;
-                document.getElementById('balDisplay').innerText = parseFloat(ethers.formatEther(bal)).toFixed(4);
-                document.getElementById('connectBtn').style.display = 'none';
-                document.getElementById('walletBox').style.display = 'block';
-                document.getElementById('zkCard').style.display = 'block';
-                document.getElementById('statusText').innerText = "Cluster Active";
-                document.getElementById('statusText').style.color = "#22c55e";
-
-                // ART GENERATION LOGIC
-                const genBtn = document.getElementById('genBtn');
-                genBtn.disabled = false;
-                genBtn.onclick = async () => {
+            provider = new ethers.BrowserProvider(window.ethereum); await provider.send("eth_requestAccounts", []);
+            signer = await provider.getSigner(); const addr = await signer.getAddress();
+            contract = new ethers.Contract(ART_ADDR, ABI, signer); zkContract = new ethers.Contract(ZK_ADDR, ZK_ABI, signer);
+            const [owner, rev, bal, hasSBT] = await Promise.all([contract.owner(), contract.totalRevenue(), provider.getBalance(addr), zkContract.hasSBT(addr)]);
+            document.getElementById('addrDisplay').innerText = addr; document.getElementById('balDisplay').innerText = parseFloat(ethers.formatEther(bal)).toFixed(4);
+            document.getElementById('walletBox').style.display = 'block'; document.getElementById('connectBtn').style.display = 'none';
+            document.getElementById('zkCard').style.display = 'block'; document.getElementById('statusText').innerText = "Cluster Active"; document.getElementById('statusText').style.color = "#22c55e";
+            
+            document.getElementById('genBtn').disabled = false;
+            document.getElementById('genBtn').onclick = async () => {
+                try {
                     const prompt = document.getElementById('promptInput').value;
-                    if(!prompt) return alert("Enter prompt");
-                    try {
-                        log("Anchoring AIVM Request...");
-                        const tx = await contract.generateArt(prompt, { value: ethers.parseEther("0.25") });
-                        await tx.wait();
-                        document.getElementById('output').innerHTML = '<span style="color:var(--primary)">Request Confirmed. Waiting for AIVM Cluster...</span>';
-                        log("Task Sent ✓");
-                    } catch(e) { log("Error: " + (e.reason || "Check Verification")); }
-                };
+                    log("Anchoring AIVM Request...");
+                    const tx = await contract.generateArt(prompt, { value: ethers.parseEther("0.25") });
+                    await tx.wait();
+                    log("Request Confirmed ✓");
+                    document.getElementById('output').innerHTML = "<span>Request sent to AIVM Router...</span>";
+                } catch(e) { log("Error: " + (e.reason || e.message)); }
+            };
 
-                if(hasSBT) {
-                    const uri = await zkContract.tokenURI(1);
-                    const json = JSON.parse(atob(uri.split(',')[1]));
-                    document.getElementById('nftDisplay').innerHTML = `<img src="${json.image}" style="width:200px; border-radius:10px;">`;
-                    document.getElementById('zkStatus').innerText = "VERIFIED IDENTITY ✓";
-                    document.getElementById('zkStatus').style.color = "#22c55e";
-                } else {
-                    document.getElementById('zkVerifyBtn').style.display = 'block';
-                }
-
-                if(owner.toLowerCase() === addr.toLowerCase()) {
-                    document.getElementById('adminCard').style.display = 'block';
-                    document.getElementById('revDisplay').innerText = ethers.formatEther(rev);
-                    log("Owner Admin Active");
-                }
-            } catch(e) { console.error(e); log("Connection Failed"); }
+            if(hasSBT) {
+                const uri = await zkContract.tokenURI(1); const json = JSON.parse(atob(uri.split(',')[1]));
+                document.getElementById('nftDisplay').innerHTML = `<img src="${json.image}">`;
+                document.getElementById('zkStatus').innerText = "VERIFIED IDENTITY ✓";
+            } else { document.getElementById('zkVerifyBtn').style.display = 'block'; }
+            if(owner.toLowerCase() === addr.toLowerCase()) {
+                document.getElementById('adminCard').style.display = 'block';
+                document.getElementById('revDisplay').innerText = ethers.formatEther(rev);
+            }
         }
-
-        async function checkUserStatus() {
-            const user = document.getElementById('targetAddr').value;
-            const isVer = await contract.manualVerified(user);
-            const res = document.getElementById('queryResult');
-            res.innerText = isVer ? "ACCESS: GRANTED" : "ACCESS: DENIED";
-            res.style.color = isVer ? "#22c55e" : "#ef4444";
+        async function checkStatus() {
+            const addr = document.getElementById('targetAddr').value;
+            const status = await contract.manualVerified(addr);
+            document.getElementById('queryResult').innerText = status ? "ACCESS: GRANTED" : "ACCESS: DENIED";
+            document.getElementById('queryResult').style.color = status ? "#22c55e" : "#ef4444";
         }
-
-        async function manageUser(s) {
-            const user = document.getElementById('targetAddr').value;
-            const tx = await contract.setVerification(user, s);
-            log("Updating Permissions...");
-            await tx.wait();
-            location.reload();
-        }
-
-        async function payout() {
-            const tx = await contract.withdrawRevenue();
-            log("Transferring Revenue...");
-            await tx.wait();
-            location.reload();
-        }
-
-        async function mintSBT() {
-            const tx = await zkContract.mintIdentity();
-            log("Minting Identity SBT...");
-            await tx.wait();
-            location.reload();
-        }
-
+        async function mintSBT() { const tx = await zkContract.mintIdentity(); await tx.wait(); location.reload(); }
+        async function manageUser(s) { const user = document.getElementById('targetAddr').value; const tx = await contract.setVerification(user, s); await tx.wait(); location.reload(); }
+        async function payout() { const tx = await contract.withdrawRevenue(); await tx.wait(); location.reload(); }
         document.getElementById('connectBtn').onclick = init;
     </script>
 </body>
 </html>
-
