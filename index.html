@@ -6,7 +6,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
         :root { --primary: #007bff; --admin: #6f42c1; --bg: #f0f2f5; --text: #1c1e21; --success: #28a745; --danger: #dc3545; --warning: #f39c12; }
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100 vh; overflow: hidden; }
         #topNav { height: 60px; background: #fff; border-bottom: 1px solid #e1e4e8; display: flex; align-items: center; justify-content: space-between; padding: 0 25px; flex-shrink: 0; }
         .token-display { background: #f8f9fa; padding: 8px 15px; border-radius: 20px; border: 1px solid #e1e4e8; font-weight: 700; color: var(--success); }
         .content-wrapper { display: flex; flex: 1; overflow: hidden; }
@@ -40,11 +40,8 @@
             </div>
 
             <div id="adminMenu" class="card" style="display:none; border-top: 4px solid var(--admin);">
-                <h4 style="margin: 0 0 10px 0; color: var(--admin);">Identity & Recovery</h4>
-                <div id="verifiedNotice">
-                    <p style="font-size: 0.75rem; color: var(--success); font-weight: bold;">✓ Verification Active</p>
-                    <button id="recoverArtBtn" class="admin-btn" style="background: var(--success);">Recover On-Chain Art</button>
-                </div>
+                <h4 style="margin: 0 0 10px 0; color: var(--admin);">Recovery & Tools</h4>
+                <button id="recoverArtBtn" class="admin-btn">Recover On-Chain Art</button>
                 <div id="zkStatus" style="font-size: 0.7rem; margin-top: 5px; font-family: monospace;"></div>
             </div>
 
@@ -70,13 +67,13 @@
 
     <script>
         const ID_ADDR = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-const ART_ADDR = "0x03cDa2574434B57Efa98C8c8619d0C5f84FAF9F1"; 
-const ABI = [
-    "function generateArt(string _prompt) payable",
-    "function latestArt(address) view returns (string)",
-    "function isZkVerified(address) view returns (bool)",
-    "event ArtCompleted(address indexed user, string imageUrl, bytes32 taskId)"
-];
+        const ART_ADDR = "YOUR_NEW_CONTRACT_ADDRESS"; 
+        
+        const ABI = [
+            "function generateArt(string _prompt) payable",
+            "function latestArt(address) view returns (string)",
+            "event ArtCompleted(address indexed user, string imageUrl, bytes32 taskId)"
+        ];
         const ID_ABI = ["function getIdentity(address) view returns (string, string, bool)"];
 
         let signer, contract, idContract, provider;
@@ -88,36 +85,33 @@ const ABI = [
             document.getElementById('txFeed').prepend(entry);
         }
 
-async function connectWallet() {
-    if (!window.ethereum) return;
-    provider = new ethers.BrowserProvider(window.ethereum);
-    // FORCE POPUP
-    await provider.send("eth_requestAccounts", []);
-    signer = await provider.getSigner();
-    const addr = await signer.getAddress();
-    
-    contract = new ethers.Contract(ART_ADDR, ABI, signer);
+        async function connectWallet() {
+            if (!window.ethereum) return alert("Please install MetaMask!");
+            
+            try {
+                provider = new ethers.BrowserProvider(window.ethereum);
+                // MANDATORY: Explicitly request accounts to trigger popup
+                await provider.send("eth_requestAccounts", []);
+                
+                signer = await provider.getSigner();
+                const addr = await signer.getAddress();
+                
+                contract = new ethers.Contract(ART_ADDR, ABI, signer);
                 idContract = new ethers.Contract(ID_ADDR, ID_ABI, signer);
 
-                const [id, bal, zkVer] = await Promise.all([
+                const [id, bal] = await Promise.all([
                     idContract.getIdentity(addr),
-                    provider.getBalance(addr),
-                    contract.isZkVerified(addr)
+                    provider.getBalance(addr)
                 ]);
-    
 
-
-    log("Wallet Active: " + addr.substring(0,10));
                 document.getElementById('tokenBalance').innerText = parseFloat(ethers.formatEther(bal)).toFixed(4);
                 document.getElementById('userNameDisplay').innerText = id[0] || "User: " + addr.substring(0,6);
                 
-                const isVerified = id[2] || zkVer;
                 const tag = document.getElementById('verifyTag');
-                tag.innerText = isVerified ? "MI-MO VERIFIED" : "ID UNVERIFIED";
-                tag.style.background = isVerified ? "#d4edda" : "#f8d7da";
-                tag.style.color = isVerified ? "#155724" : "#721c24";
+                tag.innerText = id[2] ? "MI-MO VERIFIED" : "ID UNVERIFIED";
+                tag.style.background = id[2] ? "#d4edda" : "#f8d7da";
+                tag.style.color = id[2] ? "#155724" : "#721c24";
 
-                // UI Activation
                 document.getElementById('connectBtn').style.display = 'none';
                 document.getElementById('userProfile').style.display = 'block';
                 document.getElementById('adminMenu').style.display = 'block';
@@ -125,48 +119,51 @@ async function connectWallet() {
 
                 log("Connected: " + addr.substring(0,10));
 
-contract.on("ArtCompleted", (user, url) => {
-        if(user.toLowerCase() === addr.toLowerCase()) {
-            document.getElementById('displayArea').innerHTML = `<img src="${url}" style="width:100%">`;
-            log("Art inference complete!");
-        }
-    });
-            } catch (err) { log("Connect failed"); }
+                contract.on("ArtCompleted", (user, imageUrl) => {
+                    if (user.toLowerCase() === addr.toLowerCase()) {
+                        document.getElementById('displayArea').innerHTML = `<img src="${imageUrl}" style="max-width:100%; border-radius:8px;">`;
+                        log("Art Generated Successfully!");
+                    }
+                });
+
+            } catch (err) {
+                console.error(err);
+                alert("Connection failed. Ensure MetaMask is unlocked.");
+            }
         }
 
         document.getElementById('generateBtn').onclick = async () => {
             const p = document.getElementById('promptInput').value;
             const display = document.getElementById('displayArea');
-            if (!p) return alert("Enter prompt");
+            if (!p) return alert("Please enter a prompt!");
+
             try {
-                display.innerHTML = '<span class="pulsing">Requesting Art (0.25 LCAI)...</span>';
-                const tx = await contract.generateArt(p, { value: ethers.parseUnits("0.25", "ether") });
+                display.innerHTML = '<span class="pulsing">Requesting AIVM Inference (0.25 LCAI)...</span>';
+                const tx = await contract.generateArt(p, { value: ethers.parseEther("0.25") });
+                log("Inference Request Sent");
                 await tx.wait();
-                display.innerHTML = '<span class="pulsing">Waiting for AIVM Cluster...</span>';
-            } catch (e) {
-                display.innerHTML = `<span>Error: ${e.reason || "Check Cluster Logs"}</span>`;
+                display.innerHTML = '<span class="pulsing">Request confirmed. Awaiting AI callback...</span>';
+            } catch (e) { 
+                display.innerHTML = `<span>Error: ${e.reason || "Check Balance / Verification"}</span>`; 
             }
         };
 
-        // ART RECOVERY BUTTON
         document.getElementById('recoverArtBtn').onclick = async () => {
             const addr = await signer.getAddress();
             const display = document.getElementById('displayArea');
-            display.innerHTML = '<span class="pulsing">Recovering from blockchain...</span>';
+            display.innerHTML = '<span class="pulsing">Fetching from blockchain state...</span>';
             try {
                 const url = await contract.latestArt(addr);
                 if (url) {
                     display.innerHTML = `<img src="${url}" style="max-width:100%; border-radius:8px;">`;
-                    log("Art Recovered Successfully");
+                    log("Art recovered successfully.");
                 } else {
-                    display.innerHTML = "<span>No previous art found.</span>";
+                    display.innerHTML = "<span>No previous art found for this wallet.</span>";
                 }
-            } catch (e) { log("Recovery failed"); }
+            } catch (e) { log("Recovery failed."); }
         };
 
         document.getElementById('connectBtn').onclick = connectWallet;
     </script>
 </body>
 </html>
-
-
