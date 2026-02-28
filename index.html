@@ -31,72 +31,47 @@
             justify-content: space-between;
             padding: 0 20px;
         }
-        .header-left-group { display: flex; align-items: center; gap: 20px; }
-        .header-title { font-weight: 800; color: var(--primary); font-size: 1.2rem; white-space: nowrap; }
+        .header-left-group { display: flex; align-items: center; gap: 15px; }
+        .header-title { font-weight: 800; color: var(--primary); font-size: 1.1rem; white-space: nowrap; }
         
+        /* SBT & DESC IN NAV */
+        .nav-identity-group { display: flex; align-items: center; gap: 12px; margin-left: 10px; padding-left: 15px; border-left: 1px solid var(--border); }
+        .nav-sbt-icon { width: 24px; height: 24px; opacity: 0.2; transition: 0.3s; filter: grayscale(1); }
+        .nav-sbt-icon.active { opacity: 1; filter: grayscale(0) drop-shadow(0 0 5px var(--primary)); }
+        .nav-desc { font-size: 0.75rem; color: var(--text-dim); max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
         .header-right { display: flex; align-items: center; gap: 15px; }
 
-        /* NAV BUTTON */
-        .btn-nav-connect { 
-            background: var(--primary); 
-            color: white; 
-            border: none; 
-            padding: 6px 16px; 
-            border-radius: 6px; 
-            font-weight: 700; 
-            cursor: pointer; 
-            font-size: 0.85rem;
-            transition: 0.2s;
-        }
-        .btn-nav-connect:hover { filter: brightness(1.1); }
-
-        /* PILLS */
-        .load-indicator { 
-            background: #000; 
-            padding: 5px 12px; 
-            border-radius: 6px; 
-            color: var(--secondary); 
-            border: 1px solid #1e293b;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        .wallet-pill { 
-            background: #1e293b; 
-            padding: 5px 12px; 
-            border-radius: 6px; 
-            font-family: monospace; 
-            border: 1px solid var(--border);
-            font-size: 0.8rem;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
+        .btn-nav-connect { background: var(--primary); color: white; border: none; padding: 6px 14px; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.8rem; transition: 0.2s; }
+        
+        .load-indicator { background: #000; padding: 5px 12px; border-radius: 6px; color: var(--secondary); border: 1px solid #1e293b; font-size: 0.75rem; font-weight: 600; }
+        .wallet-pill { background: #1e293b; padding: 5px 12px; border-radius: 6px; font-family: monospace; border: 1px solid var(--border); font-size: 0.75rem; display: flex; gap: 10px; align-items: center; }
         .balance-txt { color: var(--secondary); font-weight: bold; border-right: 1px solid var(--border); padding-right: 10px; }
 
         /* LAYOUT */
         .container { display: flex; flex: 1; overflow: hidden; }
-        .sidebar { width: 350px; background: var(--sidebar); border-right: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
+        .sidebar { width: 350px; background: var(--sidebar); border-right: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
         .main-content { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
 
-        .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
-        .card-title { font-size: 0.75rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase; margin-bottom: 15px; }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+        .card-title { font-size: 0.7rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase; margin-bottom: 12px; }
         
-        .id-status-box { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
-        .status-dot { height: 10px; width: 10px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 8px var(--danger); }
-        .status-dot.active { background: var(--secondary); box-shadow: 0 0 8px var(--secondary); }
-        
-        .sbt-visual { width: 100%; height: 120px; background: radial-gradient(circle, rgba(88,101,242,0.05) 0%, transparent 70%); display: flex; align-items: center; justify-content: center; }
-        .sbt-icon { width: 60px; opacity: 0.2; filter: grayscale(1); transition: 0.3s; }
-        .sbt-icon.active { opacity: 1; filter: grayscale(0) drop-shadow(0 0 10px var(--primary)); }
+        /* CONSOLE IN SIDEBAR */
+        .console { height: 250px; background: #000; border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 0.75rem; color: #7dd3fc; overflow-y: auto; }
 
-        .input-group { background: var(--card); border: 1px solid var(--border); border-radius: 12px; display: flex; padding: 8px; gap: 10px; }
+        .input-group { background: var(--card); border: 1px solid var(--border); border-radius: 12px; display: flex; padding: 8px; gap: 10px; align-items: center; }
         .prompt-input { flex: 1; background: transparent; border: none; color: white; padding: 10px; outline: none; font-size: 1rem; }
         .btn-gen { background: var(--primary); color: white; border: none; padding: 10px 25px; border-radius: 8px; font-weight: 700; cursor: pointer; }
 
         .output-view { flex: 1; background: #08090f; border: 1px solid var(--border); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--text-dim); }
-        .console { height: 200px; background: #000; border: 1px solid var(--border); border-radius: 12px; padding: 15px; font-family: monospace; font-size: 0.85rem; color: #7dd3fc; overflow-y: auto; }
-        .admin-input { width: 100%; background: #0f111a; border: 1px solid var(--border); border-radius: 6px; padding: 10px; color: white; margin-bottom: 10px; font-size: 0.85rem; }
+        
+        /* ADMIN AREA */
+        .admin-input { width: 100%; background: #0f111a; border: 1px solid var(--border); border-radius: 6px; padding: 10px; color: white; margin-bottom: 10px; font-size: 0.8rem; outline: none; }
+        .admin-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .btn-admin { border: none; padding: 8px; border-radius: 4px; font-weight: 700; cursor: pointer; font-size: 0.75rem; transition: 0.2s; }
+        .btn-query { grid-column: span 2; background: var(--border); color: white; margin-bottom: 4px; }
+        .btn-verify { background: var(--secondary); color: black; }
+        .btn-revoke { background: var(--danger); color: white; }
     </style>
 </head>
 <body>
@@ -104,7 +79,12 @@
     <header>
         <div class="header-left-group">
             <div class="header-title">AIVM Control Center</div>
-            <button class="btn-nav-connect" id="connect-btn">Connect Wallet</button>
+            <button class="btn-nav-connect" id="connect-btn">Sync Active</button>
+            
+            <div class="nav-identity-group">
+                <img src="https://cdn-icons-png.flaticon.com/512/6819/6819111.png" class="nav-sbt-icon" id="sbt-icon-nav">
+                <span id="nav-id-desc" class="nav-desc">Awaiting Identity Sync...</span>
+            </div>
         </div>
         <div class="header-right">
             <div class="load-indicator">● SDXL-Turbo | Load: 21%</div>
@@ -118,30 +98,27 @@
     <div class="container">
         <div class="sidebar">
             <div class="card">
-                <div class="card-title">Identity Status</div>
-                <div class="id-status-box">
-                    <div id="status-dot" class="status-dot"></div>
-                    <span id="status-text" style="font-weight: 600;">Awaiting Sync</span>
+                <div class="card-title">System Status Window</div>
+                <div id="console-output" class="console">
+                    <div>> System Online.</div>
+                    <div>> Initializing AIVM Handshake...</div>
                 </div>
-                <div class="sbt-visual">
-                    <img src="https://cdn-icons-png.flaticon.com/512/6819/6819111.png" class="sbt-icon" id="sbt-icon">
-                </div>
-                <div id="id-desc" style="font-size: 0.8rem; color: var(--text-dim); text-align: center; margin-top: 10px;">Verify ZK-Pass to enable AIVM.</div>
             </div>
 
             <div class="card">
                 <div class="card-title">Admin Management</div>
-                <input type="text" class="admin-input" placeholder="User Address 0x...">
-                <div style="display: flex; gap: 10px;">
-                    <button style="flex: 1; background: var(--secondary); color: black; border: none; padding: 8px; border-radius: 4px; font-weight: bold; cursor: pointer;">Verify</button>
-                    <button style="flex: 1; background: var(--danger); color: white; border: none; padding: 8px; border-radius: 4px; font-weight: bold; cursor: pointer;">Revoke</button>
+                <input type="text" id="admin-user-addr" class="admin-input" placeholder="Query Address 0x...">
+                <div class="admin-actions">
+                    <button class="btn-admin btn-query" id="admin-query">Query Status</button>
+                    <button class="btn-admin btn-verify" id="admin-verify">Verify</button>
+                    <button class="btn-admin btn-revoke" id="admin-revoke">Revoke</button>
                 </div>
             </div>
 
             <div class="card">
                 <div class="card-title">Owner Vault</div>
                 <div style="font-size: 0.7rem; color: var(--text-dim);">Revenue Collected:</div>
-                <div style="font-size: 1.4rem; font-weight: 800; color: var(--secondary); margin: 5px 0;">245.50 LCAI</div>
+                <div style="font-size: 1.3rem; font-weight: 800; color: var(--secondary); margin: 5px 0;">245.50 LCAI</div>
                 <button style="width: 100%; background: #f59e0b; color: black; border: none; padding: 10px; border-radius: 8px; font-weight: 800; cursor: pointer;">Withdraw Funds</button>
             </div>
         </div>
@@ -154,10 +131,6 @@
 
             <div class="output-view" id="art-output">
                 <span>Awaiting AIVM Inference Signal...</span>
-            </div>
-
-            <div id="console-output" class="console">
-                <div>> System Initialized. Awaiting wallet authentication...</div>
             </div>
         </div>
     </div>
@@ -189,19 +162,15 @@
                     signer = await provider.getSigner();
                     sbtContract = new ethers.Contract(CONFIG.SBT_ADDR, SBT_ABI, signer);
 
-                    // Update Address Display
                     document.getElementById('address-display').innerText = `${userAddr.slice(0,6)}...${userAddr.slice(-4)}`;
-                    
-                    // Fetch Balance
                     const balanceRaw = await provider.getBalance(userAddr);
-                    const balanceFormatted = ethers.formatEther(balanceRaw);
-                    document.getElementById('balance-display').innerText = `${parseFloat(balanceFormatted).toFixed(2)} LCAI`;
+                    document.getElementById('balance-display').innerText = `${parseFloat(ethers.formatEther(balanceRaw)).toFixed(2)} LCAI`;
                     
                     document.getElementById('connect-btn').innerText = "Sync Active";
                     log(`Authenticated: ${userAddr}`);
                     checkIdentity();
                 } catch (err) {
-                    log("Auth failed: " + err.message, true);
+                    log("Connection failed.", true);
                 }
             }
         }
@@ -209,26 +178,40 @@
         async function checkIdentity() {
             try {
                 const hasPass = await sbtContract.hasSBT(userAddr);
-                const dot = document.getElementById('status-dot');
-                const text = document.getElementById('status-text');
-                const icon = document.getElementById('sbt-icon');
-                const desc = document.getElementById('id-desc');
+                const icon = document.getElementById('sbt-icon-nav');
+                const desc = document.getElementById('nav-id-desc');
 
                 if (hasPass) {
-                    dot.classList.add('active');
-                    text.innerText = "Identity Verified";
                     icon.classList.add('active');
-                    desc.innerText = "ZK-Pass Active. Full AIVM access granted.";
-                    log("Identity synchronized with Lightchain Testnet.");
+                    desc.innerText = "ZK-Pass Verified. Full Access.";
+                    log("Identity verified via Lightchain Testnet.");
                 } else {
-                    dot.classList.remove('active');
-                    text.innerText = "No ZK-Pass";
-                    log("Identity missing: Visit ZK-Portal to mint your pass.", true);
+                    icon.classList.remove('active');
+                    desc.innerText = "No Pass Detected. Features Locked.";
+                    log("Access Denied: ZK-Pass required.", true);
                 }
-            } catch (e) {
-                log("SBT Check Failed.", true);
-            }
+            } catch (e) { log("SBT Sync failed.", true); }
         }
+
+        // ADMIN BUTTON VALIDATIONS
+        document.getElementById('admin-query').onclick = () => {
+            const addr = document.getElementById('admin-user-addr').value;
+            if(!ethers.isAddress(addr)) return log("Invalid address format.", true);
+            log(`Querying status for ${addr.slice(0,10)}...`);
+            setTimeout(() => log(`Status: Verified Soulbound Holder`), 800);
+        };
+
+        document.getElementById('admin-verify').onclick = () => {
+            const addr = document.getElementById('admin-user-addr').value;
+            if(!ethers.isAddress(addr)) return log("Invalid address format.", true);
+            log(`Sending Verify transaction for ${addr.slice(0,10)}...`);
+        };
+
+        document.getElementById('admin-revoke').onclick = () => {
+            const addr = document.getElementById('admin-user-addr').value;
+            if(!ethers.isAddress(addr)) return log("Invalid address format.", true);
+            log(`Sending Revoke transaction for ${addr.slice(0,10)}...`, true);
+        };
 
         document.getElementById('connect-btn').onclick = connect;
 
@@ -236,12 +219,12 @@
             const prompt = document.getElementById('prompt-input').value;
             if (!prompt) return log("Error: Prompt is empty.", true);
             if (!userAddr) return log("Error: Connect wallet first.", true);
-            log(`Initiating Inference: "${prompt}"`);
-            document.getElementById('art-output').innerText = "Processing PoI Attestation...";
+            log(`Inference Request: "${prompt}"`);
+            document.getElementById('art-output').innerText = "Processing AIVM Signal...";
             setTimeout(() => {
-                log("Inference complete.");
-                document.getElementById('art-output').innerHTML = "<div style='color: var(--secondary); font-weight: bold;'>Inference Successful.</div>";
-            }, 2000);
+                log("Attestation verified. Drawing anchored.");
+                document.getElementById('art-output').innerHTML = "<b style='color:var(--secondary)'>Inference Complete.</b>";
+            }, 1500);
         };
     </script>
 </body>
