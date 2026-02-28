@@ -2,21 +2,22 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>LCAI | Archive Recovery v2</title>
+    <title>LCAI | TaskID Brute Force Recovery</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
         body { background: #050505; color: #fff; font-family: sans-serif; padding: 40px; }
         .card { background: #111; border: 1px solid #333; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
-        .item { background: #000; border: 1px solid #222; padding: 15px; border-radius: 8px; }
-        .btn { background: #00d1ff; color: #000; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
+        .item { background: #000; border: 1px solid #222; padding: 15px; border-radius: 8px; font-size: 11px; }
+        .btn { background: #00d1ff; color: #000; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        img { width: 100%; border-radius: 8px; margin-top: 10px; border: 1px solid #00d1ff; }
     </style>
 </head>
 <body>
-    <h1>Historical Art Recovery</h1>
+    <h1>Manual TaskID Recovery</h1>
     <div class="card">
-        <button id="scanBtn" class="btn">Deep Scan Blockchain</button>
-        <p id="status" style="color: #888;">Scanning for InferenceRequested logs...</p>
+        <button id="scanBtn" class="btn">Search All Router Logs</button>
+        <p id="status" style="color: #888;">This ignores event names and scans raw hex data.</p>
     </div>
     <div id="results" class="grid"></div>
 
@@ -27,45 +28,61 @@
         document.getElementById('scanBtn').onclick = async () => {
             const status = document.getElementById('status');
             const results = document.getElementById('results');
-            if(!window.ethereum) return;
+            if(!window.ethereum) return alert("Connect Wallet");
 
-            status.innerText = "Initializing Scanner...";
+            status.innerText = "Scanning Raw Blockchain Logs...";
+            results.innerHTML = "";
+            
             const provider = new ethers.BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();
             const addr = await signer.getAddress();
+            const paddedAddr = ethers.zeroPadValue(addr, 32).toLowerCase();
 
             try {
-                // Topic 0: InferenceRequested hash
-                // Topic 2: Your address (indexed)
-                const eventSignature = ethers.id("InferenceRequested(bytes32,address,uint256)");
+                // We scan the Router address for ANY log where your address appears as a topic
                 const filter = {
                     address: ROUTER,
-                    fromBlock: 1600000, 
-                    toBlock: 'latest',
-                    topics: [eventSignature, null, ethers.zeroPadValue(addr, 32)]
+                    fromBlock: 1620000, 
+                    toBlock: 'latest'
                 };
 
                 const logs = await provider.getLogs(filter);
-                status.innerText = `Found ${logs.length} on-chain records. Checking status...`;
+                let foundCount = 0;
 
-                logs.forEach(async (log) => {
-                    const taskId = log.topics[1]; // The TaskID
-                    const div = document.createElement('div');
-                    div.className = 'item';
-                    div.innerHTML = `<small>ID: ${taskId.substring(0,15)}...</small><div id="img-${taskId}">Loading...</div>`;
-                    results.appendChild(div);
-
-                    // Check API for the image
-                    const res = await fetch(`${API}/chat/status?taskId=${taskId}`);
-                    const data = await res.json();
-                    if(data.ready && data.url) {
-                        document.getElementById(`img-${taskId}`).innerHTML = `<img src="${data.url}" style="width:100%;"><br><a href="${data.url}" download style="color:#00d1ff">Download</a>`;
-                    } else {
-                        document.getElementById(`img-${taskId}`).innerText = "Processing or Expired";
+                for (const log of logs) {
+                    // Search topics for your padded address
+                    const userIndex = log.topics.findIndex(t => t.toLowerCase() === paddedAddr);
+                    
+                    if (userIndex !== -1 && log.topics.length > 1) {
+                        // In the AIVM logic, the TaskID is usually the OTHER topic
+                        const taskId = log.topics[userIndex === 1 ? 2 : 1]; 
+                        
+                        if (taskId && taskId.length === 66) {
+                            foundCount++;
+                            displayTask(taskId);
+                        }
                     }
-                });
-            } catch (e) { status.innerText = "Scan failed: " + e.message; }
+                }
+                status.innerText = `Found ${foundCount} potential TaskIDs. Querying Cluster...`;
+            } catch (e) { status.innerText = "Scan error: " + e.message; }
         };
+
+        async function displayTask(id) {
+            const div = document.createElement('div');
+            div.className = 'item';
+            div.innerHTML = `<b>TaskID:</b> ${id.substring(0,20)}...<br><div id="res-${id}">Checking...</div>`;
+            document.getElementById('results').appendChild(div);
+
+            try {
+                const res = await fetch(`${API}/chat/status?taskId=${id}`);
+                const data = await res.json();
+                if(data.ready && data.url) {
+                    document.getElementById(`res-${id}`).innerHTML = `<img src="${data.url}"><br><a href="${data.url}" target="_blank" style="color:#00d1ff">View Full Art</a>`;
+                } else {
+                    document.getElementById(`res-${id}`).innerText = "Expired or Still Processing";
+                }
+            } catch (e) { document.getElementById(`res-${id}`).innerText = "API Error"; }
+        }
     </script>
 </body>
 </html>
