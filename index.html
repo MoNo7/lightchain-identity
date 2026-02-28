@@ -120,54 +120,87 @@
             }
         }
 
-        document.getElementById('generateArtBtn').onclick = async () => {
-            const prompt = document.getElementById('artPrompt').value;
-            const status = document.getElementById('viewerStatus');
-            if(!prompt) return;
-            status.innerText = "Anchoring Task...";
-            try {
-                const router = new ethers.Contract(ROUTER_ADDR, [
-                    "function requestInferenceV2(uint256 m, string p) external payable",
-                    "event InferenceRequested(bytes32 indexed taskId, address indexed requester, uint256 modelId)"
-                ], signer);
-                
-                const tx = await router.requestInferenceV2(2, prompt, { value: ethers.parseEther("0.1") });
-                const receipt = await tx.wait();
-                
-                // PRECISION LOG SCRAPER: Search for specific InferenceRequested event signature
-                const eventHash = ethers.id("InferenceRequested(bytes32,address,uint256)");
-                let taskId = receipt.logs.find(l => l.topics[0] === eventHash)?.topics[1];
-                
-                if(!taskId) throw "Task ID failed to anchor.";
+       document.getElementById('generateArtBtn').onclick = async () => {
+    const prompt = document.getElementById('artPrompt').value;
+    const status = document.getElementById('viewerStatus');
+    if(!prompt) return;
 
-                // SAVE TO ACTIVITY LOG IMMEDIATELY
-                const idx = userTasks.push({ prompt, taskId, ready: false, url: null }) - 1;
-                localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
-                renderLog();
-                
-                pollTask(idx);
-                status.innerText = "Anchored. Cluster is processing...";
-            } catch (e) { 
-                status.innerText = "Inference Failed."; 
-                console.error("Task Error:", e); 
+    status.innerText = "Step 1: Signing Transaction...";
+    try {
+        const router = new ethers.Contract(ROUTER_ADDR, [
+            "function requestInferenceV2(uint256 m, string p) external payable",
+            "event InferenceRequested(bytes32 indexed taskId, address indexed requester, uint256 modelId)"
+        ], signer);
+
+        // 1. Send the transaction
+        const tx = await router.requestInferenceV2(2, prompt, { value: ethers.parseEther("0.1") });
+        status.innerText = "Step 2: Waiting for Confirmation...";
+        
+        // 2. Wait for the block to mine
+        const receipt = await tx.wait();
+        console.log("Full Transaction Receipt:", receipt);
+
+        // 3. FIND THE TASK ID: Precision filtering for the InferenceRequested event
+        const eventHash = ethers.id("InferenceRequested(bytes32,address,uint256)");
+        let taskId = null;
+
+        for (const log of receipt.logs) {
+            if (log.topics[0] === eventHash) {
+                taskId = log.topics[1]; // The TaskID is the first indexed parameter
+                console.log("Found Valid Task ID:", taskId);
+                break;
             }
-        };
-
-        async function pollTask(i) {
-            const t = userTasks[i];
-            try {
-                const res = await fetch(`${CHAT_API}/chat/status?taskId=${t.taskId}`);
-                const data = await res.json();
-                if (data.ready && data.url) {
-                    t.ready = true; t.url = data.url;
-                    localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
-                    renderLog();
-                    if(document.getElementById('artView').offsetParent) viewArt(i);
-                } else {
-                    setTimeout(() => pollTask(i), 5000);
-                }
-            } catch (e) { setTimeout(() => pollTask(i), 5000); }
         }
+
+        if(!taskId) throw new Error("Transaction succeeded, but TaskID was not found in logs.");
+
+        // 4. PERSIST IMMEDIATELY: Save to Activity Log before starting the poll
+        const newTask = { 
+            prompt, 
+            taskId, 
+            ready: false, 
+            url: null, 
+            txHash: receipt.hash,
+            timestamp: new Date().toLocaleTimeString() 
+        };
+        
+        const index = userTasks.push(newTask) - 1;
+        localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
+        
+        renderLog(); // Sidebar updates immediately
+        pollTask(index); // Begin background retrieval
+        status.innerText = "Step 3: Anchored! GPU Cluster is generating...";
+
+    } catch (e) { 
+        status.innerText = "Inference Failed. Check Console."; 
+        console.error("DEBUG - Transaction Failure:", e); 
+    }
+};
+
+async function pollTask(i) {
+    const t = userTasks[i];
+    try {
+        // Retrieve result from the GPU Cluster by TaskID
+        const res = await fetch(`${CHAT_API}/chat/status?taskId=${t.taskId}`);
+        const data = await res.json();
+        
+        if (data.ready && data.url) {
+            t.ready = true; 
+            t.url = data.url;
+            localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
+            renderLog(); // Update sidebar to 'READY'
+            
+            // If the user is currently looking at this tab, show the art
+            if(document.getElementById('artView').offsetParent) viewArt(i);
+        } else {
+            // Check again in 5 seconds
+            setTimeout(() => pollTask(i), 5000);
+        }
+    } catch (e) { 
+        console.warn("Polling error for ID:", t.taskId, e);
+        setTimeout(() => pollTask(i), 5000); 
+    }
+}
 
         function renderLog() {
             const list = document.getElementById('logItems');
@@ -217,3 +250,4 @@
     </script>
 </body>
 </html>
+
