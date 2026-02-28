@@ -15,7 +15,7 @@
         .display-area { flex: 1; background: #020617; border-radius: 16px; border: 1px solid #334155; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
         input { width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 10px; border-radius: 8px; margin-bottom: 8px; box-sizing: border-box; }
         .rev-text { color: var(--success); font-weight: 800; font-size: 1.4rem; margin: 5px 0; }
-        #logFeed { font-size: 0.75rem; color: #94a3b8; font-family: 'Courier New', monospace; background: #020617; padding: 10px; border-radius: 8px; height: 100px; overflow-y: auto; border: 1px solid #334155; }
+        #logFeed { font-size: 0.75rem; color: #94a3b8; font-family: 'Courier New', monospace; background: #020617; padding: 10px; border-radius: 8px; height: 110px; overflow-y: auto; border: 1px solid #334155; }
     </style>
 </head>
 <body>
@@ -32,18 +32,18 @@
                     <div style="font-weight:bold; color:var(--success); font-size:1.1rem;"><span id="balDisplay">0.00</span> LCAI</div>
                 </div>
                 <button id="connectBtn" class="primary-btn">Connect Wallet</button>
-                <div id="logFeed">> Initializing cluster logs...</div>
+                <div id="logFeed">> System Initializing...</div>
             </div>
 
             <div id="zkCard" class="card" style="display:none; border-left: 4px solid var(--primary);">
                 <h4 style="margin:0 0 5px 0;">Identity SBT</h4>
                 <div id="nftDisplay" style="text-align:center; margin-bottom:10px;"></div>
-                <div id="zkStatus" style="font-size:0.8rem; text-align:center; color:var(--warning);">Checking SBT...</div>
+                <div id="zkStatus" style="font-size:0.8rem; text-align:center; color:var(--warning);">Checking Identity...</div>
                 <button id="zkVerifyBtn" class="primary-btn" style="background:#1e40af; font-size:0.8rem; display:none;" onclick="mintSBT()">Mint zkPass SBT</button>
             </div>
 
             <div id="adminCard" class="card" style="display:none; border-top: 3px solid var(--admin);">
-                <h4 style="margin:0 0 10px 0; color:var(--admin);">Owner Revenue</h4>
+                <h4 style="margin:0 0 5px 0; color:var(--admin);">Owner Revenue</h4>
                 <div class="rev-text"><span id="revDisplay">0.00</span> LCAI</div>
                 
                 <div style="border-top:1px solid #334155; margin:15px 0; padding-top:15px;">
@@ -72,23 +72,12 @@
     </div>
 
     <script>
-const ART_ADDR = "0xDBD624BB9B2664EC321E04EC4B0755845F197C5D"; 
-const ZK_ADDR = "0x5c89f3f295b28d0510d1f8224571a5bf77323bca";
+        // Use the addresses exactly as shown in your IDE Deployed Contracts list
+        const ART_ADDR = "0x4Bd48eC73B35b08B598D11ff798ceCAed6e9Cd22";
+        const ZK_ADDR = "0x2AFF7974f45f3f2CA9fa47Fa99103D4BF4d21984"; 
         
-        const ABI = [
-            "function generateArt(string p) payable",
-            "function owner() view returns (address)",
-            "function totalRevenue() view returns (uint256)",
-            "function setVerification(address u, bool s)",
-            "function withdrawRevenue()",
-            "function manualVerified(address) view returns (bool)"
-        ];
-        // Updated ZK ABI to include minting
-        const ZK_ABI = [
-            "function tokenURI(uint256) view returns (string)", 
-            "function hasSBT(address) view returns (bool)",
-            "function mintIdentity() external"
-        ];
+        const ABI = ["function generateArt(string p) payable", "function owner() view returns (address)", "function totalRevenue() view returns (uint256)", "function setVerification(address u, bool s)", "function withdrawRevenue()", "function manualVerified(address) view returns (bool)"];
+        const ZK_ABI = ["function tokenURI(uint256) view returns (string)", "function hasSBT(address) view returns (bool)", "function mintIdentity() external"];
 
         let signer, contract, zkContract, provider;
 
@@ -98,87 +87,80 @@ const ZK_ADDR = "0x5c89f3f295b28d0510d1f8224571a5bf77323bca";
             f.scrollTop = f.scrollHeight;
         }
 
+        async function init() {
+            if(!window.ethereum) return alert("Install MetaMask");
+            try {
+                log("Connecting Wallet...");
+                provider = new ethers.BrowserProvider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                signer = await provider.getSigner();
+                const addr = await signer.getAddress();
+                
+                document.getElementById('addrDisplay').innerText = addr;
+                document.getElementById('walletBox').style.display = 'block';
+                document.getElementById('connectBtn').style.display = 'none';
+                document.getElementById('statusText').innerText = "Connected";
+                document.getElementById('statusText').style.color = "#22c55e";
+
+                // Load Balances
+                const bal = await provider.getBalance(addr);
+                document.getElementById('balDisplay').innerText = parseFloat(ethers.formatEther(bal)).toFixed(4);
+
+                // Safe Contract Initialization
+                try {
+                    contract = new ethers.Contract(ART_ADDR, ABI, signer);
+                    zkContract = new ethers.Contract(ZK_ADDR, ZK_ABI, signer);
+                    
+                    const [adm, rev, hasSBT] = await Promise.all([
+                        contract.owner().catch(() => null),
+                        contract.totalRevenue().catch(() => 0n),
+                        zkContract.hasSBT(addr).catch(() => false)
+                    ]);
+
+                    document.getElementById('zkCard').style.display = 'block';
+                    document.getElementById('genBtn').disabled = false;
+
+                    if(adm && adm.toLowerCase() === addr.toLowerCase()) {
+                        document.getElementById('adminCard').style.display = 'block';
+                        document.getElementById('revDisplay').innerText = ethers.formatEther(rev);
+                        log("Admin Dashboard Active");
+                    }
+
+                    if(hasSBT) {
+                        const uri = await zkContract.tokenURI(1).catch(() => null);
+                        if(uri) {
+                            const json = JSON.parse(atob(uri.split(',')[1]));
+                            document.getElementById('nftDisplay').innerHTML = `<img src="${json.image}" style="width:180px; border-radius:8px;">`;
+                            document.getElementById('zkStatus').innerText = "ZK IDENTITY VERIFIED ✓";
+                            document.getElementById('zkStatus').style.color = "#22c55e";
+                        }
+                    } else {
+                        document.getElementById('zkVerifyBtn').style.display = 'block';
+                        document.getElementById('zkStatus').innerText = "NO IDENTITY FOUND";
+                    }
+
+                    log("Cluster Ready.");
+                } catch(err) {
+                    log("Warning: Contract mismatch detected.");
+                    console.error(err);
+                }
+            } catch (e) { log("Connection Failed."); }
+        }
+
         async function checkStatus() {
             const addr = document.getElementById('targetAddr').value;
-            if(!ethers.isAddress(addr)) return alert("Invalid Address");
             const status = await contract.manualVerified(addr);
-            const res = document.getElementById('queryResult');
-            res.innerText = status ? "STATUS: VERIFIED ✓" : "STATUS: NOT VERIFIED ✗";
-            res.style.color = status ? "#22c55e" : "#ef4444";
+            document.getElementById('queryResult').innerText = status ? "STATUS: VERIFIED" : "STATUS: NOT VERIFIED";
+            document.getElementById('queryResult').style.color = status ? "#22c55e" : "#ef4444";
         }
 
         async function mintSBT() {
             try {
-                log("Requesting ZK Mint...");
                 const tx = await zkContract.mintIdentity();
+                log("Minting SBT...");
                 await tx.wait();
-                log("SBT Minted Successfully!");
                 location.reload();
-            } catch (e) {
-                log("Mint failed: " + (e.reason || "Check Balance"));
-            }
-        }
-
-        async function init() {
-            provider = new ethers.BrowserProvider(window.ethereum);
-            await provider.send("eth_requestAccounts", []);
-            signer = await provider.getSigner();
-            const addr = await signer.getAddress();
-            
-            contract = new ethers.Contract(ART_ADDR, ABI, signer);
-            zkContract = new ethers.Contract(ZK_ADDR, ZK_ABI, signer);
-
-            const [owner, rev, bal, isVer, hasSBT] = await Promise.all([
-                contract.owner(), contract.totalRevenue(), provider.getBalance(addr),
-                contract.manualVerified(addr), zkContract.hasSBT(addr)
-            ]);
-
-            document.getElementById('addrDisplay').innerText = addr;
-            document.getElementById('balDisplay').innerText = parseFloat(ethers.formatEther(bal)).toFixed(4);
-            document.getElementById('connectBtn').style.display = 'none';
-            document.getElementById('walletBox').style.display = 'block';
-            document.getElementById('zkCard').style.display = 'block';
-            document.getElementById('genBtn').disabled = false;
-            document.getElementById('statusText').innerText = "Connected";
-            document.getElementById('statusText').style.color = "#22c55e";
-
-            if(hasSBT) {
-                try {
-                    // Try to fetch Token #1, #2 etc until found or logic fails
-                    const uri = await zkContract.tokenURI(1); 
-                    const json = JSON.parse(atob(uri.split(',')[1]));
-                    document.getElementById('nftDisplay').innerHTML = `<img src="${json.image}" style="width:180px; border-radius:8px; border:1px solid #334155;">`;
-                    document.getElementById('zkStatus').innerText = "ZK IDENTITY VERIFIED ✓";
-                    document.getElementById('zkStatus').style.color = "#22c55e";
-                    document.getElementById('zkVerifyBtn').style.display = 'none';
-                } catch(e) { 
-                    document.getElementById('zkStatus').innerText = "SBT OWNED (PENDING SYNC)";
-                }
-            } else {
-                document.getElementById('zkStatus').innerText = "NO IDENTITY FOUND";
-                document.getElementById('zkVerifyBtn').style.display = 'block';
-            }
-
-            if(owner.toLowerCase() === addr.toLowerCase()) {
-                document.getElementById('adminCard').style.display = 'block';
-                document.getElementById('revDisplay').innerText = ethers.formatEther(rev);
-                log("Admin session authenticated.");
-            }
-        }
-
-        async function manageUser(status) {
-            const user = document.getElementById('targetAddr').value;
-            const tx = await contract.setVerification(user, status);
-            log("Updating permissions...");
-            await tx.wait();
-            location.reload();
-        }
-
-        async function payout() {
-            const tx = await contract.withdrawRevenue();
-            log("Processing payout...");
-            await tx.wait();
-            location.reload();
+            } catch (e) { log("Mint Failed."); }
         }
 
         document.getElementById('connectBtn').onclick = init;
