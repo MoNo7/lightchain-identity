@@ -2,89 +2,70 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>LCAI | Archive Recovery (Brute Force)</title>
+    <title>LCAI | Archive Recovery v2</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        body { background: #050505; color: #e0e0e0; font-family: 'Inter', sans-serif; padding: 40px; }
-        .card { background: #141417; border: 1px solid #222; padding: 25px; border-radius: 16px; margin-bottom: 20px; }
-        .btn { background: #00d1ff; color: #000; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        .task-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
-        .task-item { background: #000; border: 1px solid #333; padding: 15px; border-radius: 12px; }
-        .task-item img { width: 100%; border-radius: 8px; margin-top: 10px; border: 1px solid #00d1ff; }
-        .error { color: #ff4444; font-size: 12px; }
+        body { background: #050505; color: #fff; font-family: sans-serif; padding: 40px; }
+        .card { background: #111; border: 1px solid #333; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
+        .item { background: #000; border: 1px solid #222; padding: 15px; border-radius: 8px; }
+        .btn { background: #00d1ff; color: #000; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div style="max-width: 1000px; margin: 0 auto;">
-        <h1>Deep Recovery Tool</h1>
-        <div class="card">
-            <button id="scanBtn" class="btn">Deep Scan My Wallet</button>
-            <p id="status" style="margin-top:15px; color:#888;">This will scan the last 50,000 blocks for your AIVM tasks.</p>
-        </div>
-        <div id="results" class="task-grid"></div>
+    <h1>Historical Art Recovery</h1>
+    <div class="card">
+        <button id="scanBtn" class="btn">Deep Scan Blockchain</button>
+        <p id="status" style="color: #888;">Scanning for InferenceRequested logs...</p>
     </div>
+    <div id="results" class="grid"></div>
 
     <script>
         const ROUTER = "0x0269683E61b210d56b3D692603336fEB27B8a83a";
         const API = "https://chat2.lightchain.ai/api/v1";
 
         document.getElementById('scanBtn').onclick = async () => {
-            const results = document.getElementById('results');
             const status = document.getElementById('status');
-            if (!window.ethereum) return alert("No Wallet Found");
+            const results = document.getElementById('results');
+            if(!window.ethereum) return;
 
-            results.innerHTML = "";
-            status.innerText = "Scanning Blockchain... (This takes 10-20 seconds)";
-            
+            status.innerText = "Initializing Scanner...";
             const provider = new ethers.BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();
             const addr = await signer.getAddress();
 
             try {
-                // Look for ANY transaction where you sent money to the Router
+                // Topic 0: InferenceRequested hash
+                // Topic 2: Your address (indexed)
+                const eventSignature = ethers.id("InferenceRequested(bytes32,address,uint256)");
                 const filter = {
                     address: ROUTER,
-                    fromBlock: 1550000 // Deep scan to ensure we catch everything
+                    fromBlock: 1600000, 
+                    toBlock: 'latest',
+                    topics: [eventSignature, null, ethers.zeroPadValue(addr, 32)]
                 };
 
                 const logs = await provider.getLogs(filter);
-                const uniqueIds = new Set();
+                status.innerText = `Found ${logs.length} on-chain records. Checking status...`;
 
-                for (const log of logs) {
-                    // In AIVM V2, the taskId is almost always the first indexed parameter (topic 1)
-                    if (log.topics.length > 1) {
-                        const taskId = log.topics[1];
-                        if (!uniqueIds.has(taskId)) {
-                            uniqueIds.add(taskId);
-                            createTaskUI(taskId);
-                        }
+                logs.forEach(async (log) => {
+                    const taskId = log.topics[1]; // The TaskID
+                    const div = document.createElement('div');
+                    div.className = 'item';
+                    div.innerHTML = `<small>ID: ${taskId.substring(0,15)}...</small><div id="img-${taskId}">Loading...</div>`;
+                    results.appendChild(div);
+
+                    // Check API for the image
+                    const res = await fetch(`${API}/chat/status?taskId=${taskId}`);
+                    const data = await res.json();
+                    if(data.ready && data.url) {
+                        document.getElementById(`img-${taskId}`).innerHTML = `<img src="${data.url}" style="width:100%;"><br><a href="${data.url}" download style="color:#00d1ff">Download</a>`;
+                    } else {
+                        document.getElementById(`img-${taskId}`).innerText = "Processing or Expired";
                     }
-                }
-                status.innerText = `Found ${uniqueIds.size} unique Task IDs. Checking GPU Cluster for images...`;
-            } catch (e) {
-                status.innerText = "Scan Failed: " + e.message;
-            }
+                });
+            } catch (e) { status.innerText = "Scan failed: " + e.message; }
         };
-
-        async function createTaskUI(id) {
-            const div = document.createElement('div');
-            div.className = "task-item";
-            div.id = `box-${id}`;
-            div.innerHTML = `<small>ID: ${id.substring(0,20)}...</small><br><div id="img-${id}" class="loader">Fetching...</div>`;
-            document.getElementById('results').appendChild(div);
-
-            try {
-                const res = await fetch(`${API}/chat/status?taskId=${id}`);
-                const data = await res.json();
-                if (data.ready && data.url) {
-                    document.getElementById(`img-${id}`).innerHTML = `<img src="${data.url}"><br><a href="${data.url}" download style="color:#00d1ff; font-size:11px;">Download Art</a>`;
-                } else {
-                    document.getElementById(`img-${id}`).innerText = "Expired or Not Ready";
-                }
-            } catch (e) {
-                document.getElementById(`img-${id}`).innerText = "API Offline";
-            }
-        }
     </script>
 </body>
 </html>
