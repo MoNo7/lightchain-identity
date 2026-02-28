@@ -51,7 +51,7 @@
 
         <div id="gateView" class="card">
             <h2>Identity Required</h2>
-            <p id="gateStatus" style="color:#888; margin-bottom:20px;">Connect wallet to verify your ZK-Identity.</p>
+            <p id="gateStatus" style="color:#888; margin-bottom:20px;">Connect wallet to verify ZK-Identity.</p>
         </div>
 
         <div id="artView" class="card gated">
@@ -94,12 +94,14 @@
                 await checkIdentity(addr);
                 updateHealth();
                 
-                // FORCE RECOVERY of all past TaskIDs from the blockchain
+                // --- STEP 1: DEEP RECOVERY ---
+                // Scan the blockchain for any past successful task anchors
                 await recoverPastTasks(addr);
                 
+                // --- STEP 2: RENDER & POLL ---
                 renderLog();
                 userTasks.forEach((t, i) => { if(!t.ready) pollTask(i); });
-            } catch (e) { console.error("Connect failed:", e); }
+            } catch (e) { console.error("Connection failed:", e); }
         }
 
         async function checkIdentity(addr) {
@@ -119,51 +121,66 @@
                     <div style="background:#000; border:1px solid #333; padding:20px; border-radius:12px;">
                         <p>Status: <b style="color:#00ff88">ACTIVE</b></p>
                         <p>Role: <b style="color:var(--primary)">${isAdmin ? 'Protocol Admin' : 'Verified User'}</b></p>
-                        <button class="btn" style="margin-top:15px; font-size:12px;" onclick="localStorage.clear(); location.reload();">Reset All Data</button>
+                        <button class="btn" style="margin-top:15px; font-size:12px;" onclick="localStorage.clear(); location.reload();">Reset Portal Cache</button>
                     </div>`;
             }
         }
 
-       document.getElementById('generateArtBtn').onclick = async () => {
-    const prompt = document.getElementById('artPrompt').value;
-    const status = document.getElementById('viewerStatus');
-    
-    try {
-        const router = new ethers.Contract(ROUTER_ADDR, [
-            "function requestInferenceV2(uint256 m, string p) external payable",
-            "event InferenceRequested(bytes32 indexed taskId, address indexed requester, uint256 modelId)"
-        ], signer);
+        document.getElementById('generateArtBtn').onclick = async () => {
+            const prompt = document.getElementById('artPrompt').value;
+            const status = document.getElementById('viewerStatus');
+            if(!prompt) return;
+            status.innerText = "Anchoring Task...";
+            try {
+                const router = new ethers.Contract(ROUTER_ADDR, [
+                    "function requestInferenceV2(uint256 m, string p) external payable",
+                    "event InferenceRequested(bytes32 indexed taskId, address indexed requester, uint256 modelId)"
+                ], signer);
+                
+                const tx = await router.requestInferenceV2(2, prompt, { value: ethers.parseEther("0.1") });
+                
+                // --- ANIMATION: Populates the log immediately while tx is pending ---
+                const tempIdx = userTasks.push({ prompt, taskId: "Pending...", ready: false, url: null, txHash: tx.hash }) - 1;
+                renderLog();
+                status.innerText = "Transaction Sent. Waiting for confirmation...";
 
-        // 1. BROADCAST: The moment the user signs in MetaMask
-        const tx = await router.requestInferenceV2(2, prompt, { value: ethers.parseEther("0.1") });
-        
-        // 2. IMMEDIATE LOGGING: Do not wait for tx.wait() to finish
-        const tempIdx = userTasks.push({ 
-            prompt, 
-            taskId: "Pending...", 
-            ready: false, 
-            txHash: tx.hash 
-        }) - 1;
-        
-        renderLog(); // This makes the item appear in the sidebar instantly
-        status.innerText = "Transaction Broadcasted...";
+                const receipt = await tx.wait();
+                const eventHash = ethers.id("InferenceRequested(bytes32,address,uint256)");
+                let actualId = receipt.logs.find(l => l.topics[0] === eventHash)?.topics[1];
+                
+                if(actualId) {
+                    userTasks[tempIdx].taskId = actualId;
+                    localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
+                    renderLog();
+                    pollTask(tempIdx);
+                    status.innerText = "Anchored. Cluster is generating art...";
+                }
+            } catch (e) { 
+                status.innerText = "Inference Failed."; 
+                console.error(e); 
+            }
+        };
 
-        // 3. ANCHORING: Now wait for the block confirmation
-        const receipt = await tx.wait();
-        const eventHash = ethers.id("InferenceRequested(bytes32,address,uint256)");
-        let actualTaskId = receipt.logs.find(l => l.topics[0] === eventHash)?.topics[1];
-
-        if(actualTaskId) {
-            userTasks[tempIdx].taskId = actualTaskId;
-            localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
-            pollTask(tempIdx);
-            status.innerText = "Task Anchored. Generating...";
+        async function recoverPastTasks(addr) {
+            console.log("Scanning blockchain history for TaskIDs...");
+            const eventHash = ethers.id("InferenceRequested(bytes32,address,uint256)");
+            const filter = { 
+                address: ROUTER_ADDR, 
+                topics: [eventHash, null, ethers.zeroPadValue(addr, 32)],
+                fromBlock: 1600000 
+            };
+            try {
+                const logs = await provider.getLogs(filter);
+                logs.forEach(log => {
+                    const taskId = log.topics[1];
+                    if (!userTasks.find(t => t.taskId === taskId)) {
+                        userTasks.push({ prompt: "Recovered Art", taskId, ready: false, url: null });
+                    }
+                });
+                localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
+                console.log(`Successfully recovered ${logs.length} past tasks.`);
+            } catch (e) { console.warn("Log recovery failed", e); }
         }
-    } catch (e) {
-        status.innerText = "Inference Failed.";
-        console.error(e);
-    }
-};
 
         async function pollTask(i) {
             const t = userTasks[i];
@@ -179,26 +196,6 @@
                     setTimeout(() => pollTask(i), 5000);
                 }
             } catch (e) { setTimeout(() => pollTask(i), 5000); }
-        }
-
-        async function recoverPastTasks(addr) {
-            const eventHash = ethers.id("InferenceRequested(bytes32,address,uint256)");
-            // Filter for events where YOU were the requester
-            const filter = { 
-                address: ROUTER_ADDR, 
-                topics: [eventHash, null, ethers.zeroPadValue(addr, 32)],
-                fromBlock: 1600000 // Scans a wide range to ensure we find everything
-            };
-            try {
-                const logs = await provider.getLogs(filter);
-                logs.forEach(log => {
-                    const taskId = log.topics[1];
-                    if (!userTasks.find(t => t.taskId === taskId)) {
-                        userTasks.push({ prompt: "Recovered Art", taskId, ready: false, url: null });
-                    }
-                });
-                localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
-            } catch (e) { console.warn("Log recovery failed", e); }
         }
 
         function renderLog() {
@@ -225,11 +222,11 @@
                 dl.classList.remove('gated');
                 dl.onclick = () => {
                     const a = document.createElement('a'); a.href = t.url;
-                    a.download = `LCAI-Art-${i}.png`; a.click();
+                    a.download = `LCAI-Art.png`; a.click();
                 };
             } else {
                 status.style.display = "block";
-                status.innerText = `Processing ID: ${t.taskId.substring(0,12)}...`;
+                status.innerText = `ID: ${t.taskId.substring(0,12)}... Still Processing`;
                 content.innerHTML = "";
                 dl.classList.add('gated');
             }
@@ -252,4 +249,3 @@
     </script>
 </body>
 </html>
-
