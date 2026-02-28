@@ -83,27 +83,25 @@
 
         let provider, signer, userTasks = JSON.parse(localStorage.getItem('lcai_art_tasks') || '[]');
 
-async function connect() {
-    if (!window.ethereum) return alert("Install MetaMask");
-    try {
-        provider = new ethers.BrowserProvider(window.ethereum);
-        signer = await provider.getSigner();
-        const addr = await signer.getAddress();
-        document.getElementById('connectBtn').innerText = addr.substring(0,6)+"..."+addr.slice(-4);
-        
-        // --- NEW: RECOVERY LOGIC ---
-        // If the log is empty, try to find past TaskIDs from the chain
-        if (userTasks.length === 0) {
-            console.log("Activity log empty. Scanning for past anchors...");
-            await recoverPastTasks(addr);
-        }
+        async function connect() {
+            if (!window.ethereum) return alert("Install MetaMask");
+            try {
+                provider = new ethers.BrowserProvider(window.ethereum);
+                signer = await provider.getSigner();
+                const addr = await signer.getAddress();
+                document.getElementById('connectBtn').innerText = addr.substring(0,6)+"..."+addr.slice(-4);
+                
+                checkIdentity(addr);
+                updateHealth();
+                renderLog();
 
-        checkIdentity(addr);
-        updateHealth();
-        renderLog();
-        userTasks.forEach((t, i) => { if(!t.ready) pollTask(i); });
-    } catch (e) { console.error("Connection error:", e); }
-}
+                // RECOVERY: Scan for previous successful TaskIDs not in current log
+                if (userTasks.length === 0) await recoverPastTasks(addr);
+                
+                // Start polling for any item marked as not ready
+                userTasks.forEach((t, i) => { if(!t.ready) pollTask(i); });
+            } catch (e) { console.error(e); }
+        }
 
         async function checkIdentity(addr) {
             const sbt = new ethers.Contract(SBT_ADDR, ["function hasSBT(address) view returns (bool)"], provider);
@@ -122,10 +120,8 @@ async function connect() {
                     <div style="background:#000; border:1px solid #333; padding:20px; border-radius:12px;">
                         <p>Status: <b style="color:#00ff88">ACTIVE</b></p>
                         <p>Role: <b style="color:var(--primary)">${isAdmin ? 'Protocol Admin' : 'Verified User'}</b></p>
-                        <button class="btn" style="margin-top:15px; font-size:12px;" onclick="localStorage.clear(); location.reload();">Clear Session Cache</button>
+                        <button class="btn" style="margin-top:15px; font-size:12px;" onclick="localStorage.clear(); location.reload();">Clear Cache</button>
                     </div>`;
-            } else {
-                document.getElementById('gateStatus').innerText = "ZK-Identity not found. Please verify status.";
             }
         }
 
@@ -133,7 +129,7 @@ async function connect() {
             const prompt = document.getElementById('artPrompt').value;
             const status = document.getElementById('viewerStatus');
             if(!prompt) return;
-            status.innerText = "Step 1: Signing Transaction...";
+            status.innerText = "Anchoring Task...";
             try {
                 const router = new ethers.Contract(ROUTER_ADDR, [
                     "function requestInferenceV2(uint256 m, string p) external payable",
@@ -141,30 +137,24 @@ async function connect() {
                 ], signer);
                 
                 const tx = await router.requestInferenceV2(2, prompt, { value: ethers.parseEther("0.1") });
-                status.innerText = "Step 2: Waiting for Confirmation...";
                 const receipt = await tx.wait();
                 
-                // PRECISION LOG SCRAPER
+                // PRECISION LOG SCRAPER: Calculates the hash to find the specific TaskID log
                 const eventHash = ethers.id("InferenceRequested(bytes32,address,uint256)");
-                let taskId = null;
-                for (const log of receipt.logs) {
-                    if (log.topics[0] === eventHash) {
-                        taskId = log.topics[1];
-                        break;
-                    }
-                }
+                let taskId = receipt.logs.find(l => l.topics[0] === eventHash)?.topics[1];
                 
-                if(!taskId) throw new Error("Task ID not found in logs.");
+                if(!taskId) throw "Task ID failed to anchor.";
 
-                // SAVE TO LOG IMMEDIATELY
+                // SAVE TO ACTIVITY LOG IMMEDIATELY
                 const idx = userTasks.push({ prompt, taskId, ready: false, url: null }) - 1;
                 localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
                 renderLog();
+                
                 pollTask(idx);
-                status.innerText = "Step 3: Anchored! Processing...";
+                status.innerText = "Task Anchored. Cluster is processing...";
             } catch (e) { 
                 status.innerText = "Inference Failed. Check Console."; 
-                console.error("Task Error:", e); 
+                console.error(e); 
             }
         };
 
@@ -177,6 +167,7 @@ async function connect() {
                     t.ready = true; t.url = data.url;
                     localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
                     renderLog();
+                    // If viewing this specific task, update the main viewer
                     if(document.getElementById('artView').offsetParent) viewArt(i);
                 } else {
                     setTimeout(() => pollTask(i), 5000);
@@ -184,30 +175,42 @@ async function connect() {
             } catch (e) { setTimeout(() => pollTask(i), 5000); }
         }
 
-async function recoverPastTasks(addr) {
-    const eventHash = ethers.id("InferenceRequested(bytes32,address,uint256)");
-    // Filter for events where YOU (the addr) were the requester
-    const filter = {
-        address: ROUTER_ADDR,
-        topics: [eventHash, null, ethers.zeroPadValue(addr, 32)]
-    };
-    
-    try {
-        const logs = await provider.getLogs({...filter, fromBlock: 1620000});
-        logs.forEach(log => {
-            const taskId = log.topics[1];
-            if (!userTasks.find(t => t.taskId === taskId)) {
-                userTasks.push({ prompt: "Recovered Task", taskId, ready: false, url: null });
-            }
-        });
-        localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
-    } catch (e) { console.warn("Recovery failed", e); }
-}
+        async function recoverPastTasks(addr) {
+            const eventHash = ethers.id("InferenceRequested(bytes32,address,uint256)");
+            const filter = { address: ROUTER_ADDR, topics: [eventHash, null, ethers.zeroPadValue(addr, 32)] };
+            try {
+                const logs = await provider.getLogs({...filter, fromBlock: 1620000});
+                logs.forEach(log => {
+                    const taskId = log.topics[1];
+                    if (!userTasks.find(t => t.taskId === taskId)) {
+                        userTasks.push({ prompt: "Recovered Task", taskId, ready: false, url: null });
+                    }
+                });
+                localStorage.setItem('lcai_art_tasks', JSON.stringify(userTasks));
+                renderLog();
+            } catch (e) { console.warn("Recovery failed", e); }
+        }
+
+        function renderLog() {
+            const list = document.getElementById('logItems');
+            list.innerHTML = '';
+            userTasks.forEach((t, i) => {
+                const div = document.createElement('div');
+                div.className = `log-entry ${t.ready ? 'ready' : ''}`;
+                div.innerHTML = `<b>#${i+1}</b> ${t.prompt.substring(0,15)}...<br><small>${t.ready ? '✓ READY' : '⟳ QUEUED'}</small>`;
+                div.onclick = () => viewArt(i);
+                list.prepend(div);
+            });
+        }
+
         function viewArt(i) {
             const t = userTasks[i];
             const content = document.getElementById('viewerContent');
             const dl = document.getElementById('downloadBtn');
+            const status = document.getElementById('viewerStatus');
+            
             if(t.ready) {
+                status.style.display = "none";
                 content.innerHTML = `<img id="resImg" src="${t.url}" style="width:100%; border-radius:8px; box-shadow:var(--glow);">`;
                 dl.classList.remove('gated');
                 dl.onclick = () => {
@@ -215,7 +218,9 @@ async function recoverPastTasks(addr) {
                     a.download = `LCAI-Art-${i}.png`; a.click();
                 };
             } else {
-                content.innerHTML = `<span style="color:#555;">ID: ${t.taskId.substring(0,12)}... (Processing)</span>`;
+                status.style.display = "block";
+                status.innerText = `Processing ID: ${t.taskId.substring(0,12)}...`;
+                content.innerHTML = "";
                 dl.classList.add('gated');
             }
         }
