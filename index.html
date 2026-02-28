@@ -12,81 +12,69 @@
         .sidebar { width: 360px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
         .card { background: var(--card); border-radius: 12px; padding: 18px; border: 1px solid #334155; }
         .primary-btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; margin-top: 8px; }
-        .display-area { flex: 1; background: #020617; border-radius: 16px; border: 1px solid #334155; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .display-area { flex: 1; background: #020617; border-radius: 16px; border: 1px solid #334155; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
         input { width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 10px; border-radius: 8px; margin-bottom: 8px; box-sizing: border-box; }
-        .rev-text { color: var(--success); font-weight: 800; font-size: 1.4rem; margin: 5px 0; }
-        #logFeed { font-size: 0.75rem; color: #94a3b8; font-family: 'Courier New', monospace; background: #020617; padding: 10px; border-radius: 8px; height: 120px; overflow-y: auto; border: 1px solid #334155; }
-        .pulsing { animation: pulse 1.5s infinite; color: var(--warning); }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        #logFeed { font-size: 0.75rem; color: #94a3b8; font-family: monospace; background: #020617; padding: 10px; border-radius: 8px; height: 120px; overflow-y: auto; border: 1px solid #334155; }
     </style>
 </head>
 <body>
     <div id="topNav">
-        <h2 style="margin:0; color:var(--primary);">AIVM Admin Studio <span style="font-size:0.7rem; color:#64748b;">v3.0</span></h2>
+        <h2 style="margin:0; color:var(--primary);">AIVM Admin Studio</h2>
         <div id="statusText" style="font-weight:bold; color:var(--danger);">Disconnected</div>
     </div>
 
     <div class="content">
         <div class="sidebar">
             <div class="card">
-                <div id="walletBox" style="display:none; margin-bottom: 10px;">
+                <div id="walletBox" style="display:none; margin-bottom:10px;">
                     <div id="addrDisplay" style="font-size:0.7rem; opacity:0.6;">0x...</div>
-                    <div style="font-weight:bold; color:var(--success); font-size:1.1rem;"><span id="balDisplay">0.00</span> LCAI</div>
+                    <div style="font-weight:bold; color:var(--success);"><span id="balDisplay">0.00</span> LCAI</div>
                 </div>
                 <button id="connectBtn" class="primary-btn">Connect Wallet</button>
                 <div id="logFeed">> Initializing cluster logs...</div>
             </div>
 
             <div id="zkCard" class="card" style="display:none; border-left: 4px solid var(--primary);">
-                <h4 style="margin:0 0 5px 0;">ZK Identity</h4>
-                <div id="zkStatus" style="font-size:0.8rem; color:var(--warning); margin-bottom:10px;">Status: Unverified</div>
-                <button id="zkVerifyBtn" class="primary-btn" style="background:#1e40af; font-size:0.8rem;">Verify with zkPass</button>
+                <h4 style="margin:0 0 5px 0;">Identity SBT</h4>
+                <div id="nftDisplay" style="text-align:center; margin-bottom:10px;"></div>
+                <div id="zkStatus" style="font-size:0.8rem; text-align:center; color:var(--warning);">Checking SBT...</div>
             </div>
 
             <div id="adminCard" class="card" style="display:none; border-top: 3px solid var(--admin);">
                 <h4 style="margin:0 0 10px 0; color:var(--admin);">Owner Revenue</h4>
-                <div style="font-size:0.7rem; opacity:0.7;">Total LCAI Collected:</div>
-                <div class="rev-text"><span id="revDisplay">0.00</span></div>
+                <div style="color:var(--success); font-weight:800; font-size:1.4rem;"><span id="revDisplay">0.00</span> LCAI</div>
                 
-                <div style="border-top:1px solid #334155; margin:15px 0; padding-top:15px;">
-                    <h4 style="margin:0 0 10px 0; font-size:0.85rem;">User Permissions</h4>
-                    <input type="text" id="targetAddr" placeholder="User Wallet Address">
+                <div style="border-top:1px solid #334155; margin-top:15px; padding-top:15px;">
+                    <h4 style="margin:0 0 8px 0; font-size:0.85rem;">Query & Manage Identity</h4>
+                    <input type="text" id="targetAddr" placeholder="Check/Verify Address">
+                    <button onclick="checkStatus()" class="primary-btn" style="background:#475569; margin-top:0;">Query Status</button>
+                    <div id="queryResult" style="font-size:0.75rem; margin:8px 0; text-align:center; font-weight:bold;"></div>
                     <div style="display:flex; gap:5px;">
                         <button onclick="manageUser(true)" class="primary-btn" style="background:var(--success); flex:1; margin:0;">Verify</button>
                         <button onclick="manageUser(false)" class="primary-btn" style="background:var(--danger); flex:1; margin:0;">Revoke</button>
                     </div>
                 </div>
-                <button onclick="payout()" class="primary-btn" style="background:var(--admin); margin-top:15px;">Withdraw to Admin Wallet</button>
+                <button onclick="payout()" class="primary-btn" style="background:var(--admin); margin-top:15px;">Withdraw Revenue</button>
             </div>
         </div>
 
         <div class="main-area" style="flex:1; display:flex; flex-direction:column; gap:20px;">
             <div class="card">
-                <input type="text" id="promptInput" placeholder="Enter AI Art Prompt (e.g. 'Space panda drinking coffee')">
+                <input type="text" id="promptInput" placeholder="Enter AI Art Prompt...">
                 <button id="genBtn" class="primary-btn" disabled>Anchor Art Request (0.25 LCAI)</button>
             </div>
             <div class="display-area" id="output">
-                <div style="text-align:center; color:#475569;">
-                    <p>AIVM Inference Engine Ready</p>
-                    <p style="font-size:0.8rem;">Connect and admin-verify to start generating</p>
-                </div>
+                <span style="color:#475569;">AIVM Inference Engine Ready</span>
             </div>
         </div>
     </div>
 
     <script>
-
         const ART_ADDR = "0x6C6F8E8a159650Fa68154C18Fd638A05B32b2D6B";
+        const ZK_ADDR = "0x0FCC0b48E4ECF3807376fe5C075bAdFc3b238c50"; 
         
-        const ABI = [
-            "function generateArt(string p) payable",
-            "function owner() view returns (address)",
-            "function totalRevenue() view returns (uint256)",
-            "function setVerification(address u, bool s)",
-            "function withdrawRevenue()",
-            "function manualVerified(address) view returns (bool)",
-            "function latestArt(address) view returns (string)"
-        ];
+        const ABI = ["function generateArt(string p) payable","function owner() view returns (address)","function totalRevenue() view returns (uint256)","function setVerification(address u, bool s)","function withdrawRevenue()","function manualVerified(address) view returns (bool)"];
+        const ZK_ABI = ["function tokenURI(uint256) view returns (string)", "function hasSBT(address) view returns (bool)"];
 
         let signer, contract, provider;
 
@@ -96,82 +84,70 @@
             f.scrollTop = f.scrollHeight;
         }
 
+        async function checkStatus() {
+            const addr = document.getElementById('targetAddr').value;
+            if(!ethers.isAddress(addr)) return alert("Invalid Address");
+            const status = await contract.manualVerified(addr);
+            const res = document.getElementById('queryResult');
+            res.innerText = status ? "VERIFIED ✓" : "NOT VERIFIED ✗";
+            res.style.color = status ? "#22c55e" : "#ef4444";
+        }
+
         async function init() {
-            if(!window.ethereum) return alert("Install MetaMask");
-            try {
-                provider = new ethers.BrowserProvider(window.ethereum);
-                await provider.send("eth_requestAccounts", []);
-                signer = await provider.getSigner();
-                const addr = await signer.getAddress();
-                
-                contract = new ethers.Contract(ART_ADDR, ABI, signer);
-                const [admin, rev, bal, isVer] = await Promise.all([
-                    contract.owner(),
-                    contract.totalRevenue(),
-                    provider.getBalance(addr),
-                    contract.manualVerified(addr)
-                ]);
+            provider = new ethers.BrowserProvider(window.ethereum);
+            await provider.send("eth_requestAccounts", []);
+            signer = await provider.getSigner();
+            const addr = await signer.getAddress();
+            
+            contract = new ethers.Contract(ART_ADDR, ABI, signer);
+            const zkContract = new ethers.Contract(ZK_ADDR, ZK_ABI, signer);
 
-                document.getElementById('addrDisplay').innerText = addr;
-                document.getElementById('balDisplay').innerText = parseFloat(ethers.formatEther(bal)).toFixed(4);
-                document.getElementById('connectBtn').style.display = 'none';
-                document.getElementById('walletBox').style.display = 'block';
-                document.getElementById('zkCard').style.display = 'block';
-                document.getElementById('genBtn').disabled = false;
-                document.getElementById('statusText').innerText = "Connected";
-                document.getElementById('statusText').style.color = "#22c55e";
+            const [owner, rev, bal, hasSBT] = await Promise.all([
+                contract.owner(), contract.totalRevenue(), provider.getBalance(addr), zkContract.hasSBT(addr)
+            ]);
 
-                if(isVer) {
-                    document.getElementById('zkStatus').innerText = "Status: Admin Verified ✓";
+            document.getElementById('addrDisplay').innerText = addr;
+            document.getElementById('balDisplay').innerText = parseFloat(ethers.formatEther(bal)).toFixed(4);
+            document.getElementById('connectBtn').style.display = 'none';
+            document.getElementById('walletBox').style.display = 'block';
+            document.getElementById('zkCard').style.display = 'block';
+            document.getElementById('genBtn').disabled = false;
+            document.getElementById('statusText').innerText = "Connected";
+            document.getElementById('statusText').style.color = "#22c55e";
+
+            if(hasSBT) {
+                try {
+                    const uri = await zkContract.tokenURI(1); 
+                    const json = JSON.parse(atob(uri.split(',')[1]));
+                    document.getElementById('nftDisplay').innerHTML = `<img src="${json.image}" style="width:180px; border-radius:8px; border:1px solid #334155;">`;
+                    document.getElementById('zkStatus').innerText = "SBT IDENTIFIED ✓";
                     document.getElementById('zkStatus').style.color = "#22c55e";
-                }
+                } catch(e) { log("NFT check failed."); }
+            } else {
+                document.getElementById('zkStatus').innerText = "NO IDENTITY FOUND";
+            }
 
-                if(admin.toLowerCase() === addr.toLowerCase()) {
-                    document.getElementById('adminCard').style.display = 'block';
-                    document.getElementById('revDisplay').innerText = ethers.formatEther(rev);
-                    log("Admin session authenticated.");
-                }
-                log("Handshake complete: " + addr.substring(0,10));
-            } catch (e) { log("Connection failed."); }
+            if(owner.toLowerCase() === addr.toLowerCase()) {
+                document.getElementById('adminCard').style.display = 'block';
+                document.getElementById('revDisplay').innerText = ethers.formatEther(rev);
+                log("Admin session authenticated.");
+            }
         }
 
         async function manageUser(status) {
             const user = document.getElementById('targetAddr').value;
-            if(!ethers.isAddress(user)) return alert("Invalid Address");
-            try {
-                log("Updating identity on-chain...");
-                const tx = await contract.setVerification(user, status);
-                await tx.wait();
-                alert("Permission Updated Successfully");
-                location.reload();
-            } catch (e) { log("Admin action rejected."); }
+            const tx = await contract.setVerification(user, status);
+            log("Updating permissions...");
+            await tx.wait();
+            location.reload();
         }
 
         async function payout() {
-            try {
-                log("Withdrawing revenue...");
-                const tx = await contract.withdrawRevenue();
-                await tx.wait();
-                alert("Revenue withdrawn to wallet!");
-                location.reload();
-            } catch (e) { log("Withdrawal failed."); }
+            const tx = await contract.withdrawRevenue();
+            log("Processing payout...");
+            await tx.wait();
+            location.reload();
         }
-
-        document.getElementById('genBtn').onclick = async () => {
-            const p = document.getElementById('promptInput').value;
-            const out = document.getElementById('output');
-            if(!p) return;
-            try {
-                out.innerHTML = '<div class="pulsing">Requesting AIVM Inference...</div>';
-                const tx = await contract.generateArt(p, { value: ethers.parseEther("0.25") });
-                log("Task broadcasted: " + tx.hash.substring(0,12));
-                await tx.wait();
-                out.innerHTML = '<div style="color:var(--primary); text-align:center;">Request Anchored!<br>Awaiting AI Response...</div>';
-            } catch (e) { 
-                out.innerHTML = '<div style="color:var(--danger);">Error: Admin Verification Required</div>';
-                log("Inference rejected: Not verified."); 
-            }
-        };
 
         document.getElementById('connectBtn').onclick = init;
     </script>
