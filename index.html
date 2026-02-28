@@ -63,20 +63,6 @@
         let signer, contract, zkContract, provider;
         function log(msg) { const f = document.getElementById('logFeed'); f.innerHTML += `<div>> ${msg}</div>`; f.scrollTop = f.scrollHeight; }
 
-if(hasSBT) {
-                    const uri = await zkCon.tokenURI(1);
-                    const json = JSON.parse(atob(uri.split(',')[1]));
-                    
-                    // Display the image and the DID description below it
-                    document.getElementById('nftDisplay').innerHTML = `
-                        <img src="${json.image}" style="width:100%; border-radius:8px; margin-bottom:10px;">
-                        <div style="font-size:0.7rem; color:#94a3b8; text-align:center;">
-                            ${json.description}
-                        </div>
-                    `;
-                    document.getElementById('zkStatus').innerText = "✅ IDENTITY SYNCED";
-                    document.getElementById('genBtn').disabled = false;
-                }
         
 async function init() {
             try {
@@ -102,11 +88,20 @@ async function init() {
                 log("Model: Stable Diffusion XL (Active)");
                 log("Cluster Status: Idle / Ready");
 
-                if (hasSBT) {
-                    const uri = await zkContract.tokenURI(1);
+
+                if(hasSBT) {
+                    const uri = await zkCon.tokenURI(1);
                     const json = JSON.parse(atob(uri.split(',')[1]));
-                    document.getElementById('nftDisplay').innerHTML = `<img src="${json.image}" style="width:100%; border-radius:12px;">`;
-                    document.getElementById('zkStatus').innerText = "ZK IDENTITY VERIFIED ✓";
+                    
+                    // Display the image and the DID description below it
+                    document.getElementById('nftDisplay').innerHTML = `
+                        <img src="${json.image}" style="width:100%; border-radius:8px; margin-bottom:10px;">
+                        <div style="font-size:0.7rem; color:#94a3b8; text-align:center;">
+                            ${json.description}
+                        </div>
+                    `;
+                    document.getElementById('zkStatus').innerText = "✅ IDENTITY SYNCED";
+                    document.getElementById('genBtn').disabled = false;
                 } else {
                     document.getElementById('zkVerifyBtn').style.display = 'block';
                 }
@@ -138,6 +133,7 @@ async function init() {
     </script>
 </body>
 </html>
+
 
 
 
