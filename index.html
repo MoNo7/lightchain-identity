@@ -2,64 +2,61 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Lightchain AI | Art Portal</title>
+    <title>Lightchain AI | Cluster Portal</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        :root { --primary: #007bff; --admin: #6f42c1; --bg: #f0f2f5; --text: #1c1e21; --success: #28a745; --danger: #dc3545; --warning: #f39c12; }
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100 vh; overflow: hidden; }
-        #topNav { height: 60px; background: #fff; border-bottom: 1px solid #e1e4e8; display: flex; align-items: center; justify-content: space-between; padding: 0 25px; flex-shrink: 0; }
-        .token-display { background: #f8f9fa; padding: 8px 15px; border-radius: 20px; border: 1px solid #e1e4e8; font-weight: 700; color: var(--success); }
-        .content-wrapper { display: flex; flex: 1; overflow: hidden; }
-        #leftSidebar { width: 340px; background: #fff; padding: 20px; overflow-y: auto; border-right: 1px solid #e1e4e8; }
-        .main-area { flex: 1; padding: 30px; display: flex; flex-direction: column; align-items: center; background: #f8f9fa; overflow-y: auto; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #e1e4e8; width: 100%; box-sizing: border-box; }
-        .primary-btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; margin-top: 10px; }
-        .admin-btn { background: var(--admin); color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; width: 100%; font-size: 0.85rem; margin-top: 5px; }
-        .result-window { margin-top: 20px; padding: 15px; background: #1a1a1a; color: #0f0; border-radius: 8px; min-height: 250px; display: flex; align-items: center; justify-content: center; text-align: center; flex-direction: column; border: 2px solid #333; }
-        input[type="text"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 8px; box-sizing: border-box; }
-        .status-pill { font-size: 0.7rem; font-weight: bold; padding: 4px 8px; border-radius: 10px; display: inline-block; margin-top: 5px; }
-        .log-entry { font-size: 0.7rem; color: #666; border-bottom: 1px solid #eee; padding: 4px 0; }
-        .pulsing { animation: pulse 1.5s infinite; color: var(--warning); }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        :root { --primary: #007bff; --admin: #6f42c1; --bg: #0f172a; --card: #1e293b; --text: #f1f5f9; --success: #22c55e; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        #topNav { height: 70px; background: #1e293b; border-bottom: 1px solid #334155; display: flex; align-items: center; justify-content: space-between; padding: 0 30px; }
+        .cluster-status { font-size: 0.75rem; padding: 5px 12px; border-radius: 20px; border: 1px solid #334155; display: flex; align-items: center; gap: 8px; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #64748b; }
+        .status-online { background: var(--success); box-shadow: 0 0 8px var(--success); }
+        .content { display: flex; flex: 1; padding: 20px; gap: 20px; overflow: hidden; }
+        .sidebar { width: 350px; display: flex; flex-direction: column; gap: 20px; }
+        .card { background: var(--card); border-radius: 16px; padding: 24px; border: 1px solid #334155; }
+        .primary-btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 10px; cursor: pointer; width: 100%; font-weight: 600; font-size: 1rem; }
+        .primary-btn:disabled { background: #334155; cursor: not-allowed; }
+        .display-area { flex: 1; background: #020617; border-radius: 16px; border: 1px solid #334155; display: flex; align-items: center; justify-content: center; position: relative; }
+        input { width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 12px; border-radius: 8px; margin-bottom: 15px; }
+        #logFeed { font-size: 0.7rem; color: #94a3b8; font-family: monospace; overflow-y: auto; max-height: 150px; }
     </style>
 </head>
 <body>
     <div id="topNav">
-        <h1 style="font-size: 1.1rem; color: var(--admin); margin: 0;">Lightchain AIVM Studio</h1>
-        <div class="token-display"><span id="tokenBalance">0.0000</span> LCAI</div>
+        <h2 style="margin:0; color:var(--primary);">AIVM Studio <span style="font-size:0.8rem; color:#64748b;">v2.6</span></h2>
+        <div class="cluster-status">
+            <div id="statusDot" class="status-dot"></div>
+            <span id="statusText">Cluster Offline</span>
+        </div>
     </div>
 
-    <div class="content-wrapper">
-        <div id="leftSidebar">
-            <div class="card" style="text-align: center;">
-                <div id="userProfile" style="display:none;">
-                    <div id="userNameDisplay" style="font-weight:800; color: var(--primary);">Loading...</div>
-                    <div id="verifyTag" class="status-pill"></div>
-                </div>
-                <button id="connectBtn" class="primary-btn">Connect Wallet</button>
-            </div>
-
-            <div id="adminMenu" class="card" style="display:none; border-top: 4px solid var(--admin);">
-                <h4 style="margin: 0 0 10px 0; color: var(--admin);">Recovery & Tools</h4>
-                <button id="recoverArtBtn" class="admin-btn">Recover On-Chain Art</button>
-                <div id="zkStatus" style="font-size: 0.7rem; margin-top: 5px; font-family: monospace;"></div>
-            </div>
-
+    <div class="content">
+        <div class="sidebar">
             <div class="card">
-                <h4 style="margin:0;">Cluster Logs</h4>
-                <div id="txFeed" style="max-height: 200px; overflow-y:auto;"></div>
+                <div id="walletInfo" style="display:none;">
+                    <div style="font-size: 0.8rem; color: #94a3b8;">Connected Wallet</div>
+                    <div id="userAddr" style="font-weight:700; margin-bottom: 10px;">0x...</div>
+                    <div style="font-size: 1.2rem; font-weight: 800; color: var(--success);"><span id="userBal">0.00</span> LCAI</div>
+                </div>
+                <button id="connectBtn" class="primary-btn">Connect to Lightchain</button>
+            </div>
+
+            <div class="card" id="adminCard" style="opacity: 0.5;">
+                <h4 style="margin:0 0 10px 0;">Cluster Recovery</h4>
+                <button id="recoverBtn" class="primary-btn" style="background:#475569; font-size:0.8rem;" disabled>Fetch Last On-Chain Art</button>
+                <div id="logFeed" style="margin-top:15px;">> Awaiting connection...</div>
             </div>
         </div>
 
-        <div class="main-area">
-            <div id="artUI" style="display:none; width: 100%; max-width: 600px;">
-                <div class="card" style="border-top: 4px solid var(--success);">
-                    <h2 style="margin-top: 0;">AI Image Generator</h2>
-                    <input type="text" id="promptInput" placeholder="Describe your image (e.g. Space Panda)...">
-                    <button id="generateBtn" class="primary-btn" style="background: var(--success);">Generate Art (0.25 LCAI)</button>
-                    <div id="displayArea" class="result-window">
-                        <span style="color: #666;">AI Art will be rendered here.</span>
-                    </div>
+        <div class="main-area" style="flex:1; display:flex; flex-direction:column; gap:20px;">
+            <div class="card" style="flex:0;">
+                <input type="text" id="promptInput" placeholder="Enter Art Prompt (e.g. 'Cyberpunk Samurai in neon rain')">
+                <button id="genBtn" class="primary-btn" style="background:var(--success);" disabled>Generate Art (0.25 LCAI)</button>
+            </div>
+            <div class="display-area" id="output">
+                <div style="color:#475569; text-align:center;">
+                    <p>AIVM Output Terminal</p>
+                    <p style="font-size:0.8rem;">Initialize wallet to begin inference</p>
                 </div>
             </div>
         </div>
@@ -67,103 +64,80 @@
 
     <script>
         const ID_ADDR = "0xe0087e581f11b9de0d61697a0cb0cdffca8f1f34";
-        const ART_ADDR = "YOUR_NEW_CONTRACT_ADDRESS"; 
-        
+       const ART_ADDR = "0x4721a74a7281d2e953e46217c54C3CEE3CF59aA6";
         const ABI = [
-            "function generateArt(string _prompt) payable",
-            "function latestArt(address) view returns (string)",
-            "event ArtCompleted(address indexed user, string imageUrl, bytes32 taskId)"
+            "function generateArt(string p) payable",
+            "function latestArt(address a) view returns (string)",
+            "event ArtCompleted(address indexed u, string url)"
         ];
-        const ID_ABI = ["function getIdentity(address) view returns (string, string, bool)"];
 
-        let signer, contract, idContract, provider;
+        let signer, contract, provider;
 
-        function log(msg) {
-            const entry = document.createElement('div');
-            entry.className = 'log-entry';
-            entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}`;
-            document.getElementById('txFeed').prepend(entry);
+        function addLog(msg) {
+            const f = document.getElementById('logFeed');
+            f.innerHTML += `<div>> ${msg}</div>`;
+            f.scrollTop = f.scrollHeight;
         }
 
-        async function connectWallet() {
-            if (!window.ethereum) return alert("Please install MetaMask!");
-            
+        async function init() {
             try {
                 provider = new ethers.BrowserProvider(window.ethereum);
-                // MANDATORY: Explicitly request accounts to trigger popup
-                await provider.send("eth_requestAccounts", []);
-                
+                const accounts = await provider.send("eth_requestAccounts", []);
                 signer = await provider.getSigner();
                 const addr = await signer.getAddress();
                 
                 contract = new ethers.Contract(ART_ADDR, ABI, signer);
-                idContract = new ethers.Contract(ID_ADDR, ID_ABI, signer);
+                const bal = await provider.getBalance(addr);
 
-                const [id, bal] = await Promise.all([
-                    idContract.getIdentity(addr),
-                    provider.getBalance(addr)
-                ]);
-
-                document.getElementById('tokenBalance').innerText = parseFloat(ethers.formatEther(bal)).toFixed(4);
-                document.getElementById('userNameDisplay').innerText = id[0] || "User: " + addr.substring(0,6);
-                
-                const tag = document.getElementById('verifyTag');
-                tag.innerText = id[2] ? "MI-MO VERIFIED" : "ID UNVERIFIED";
-                tag.style.background = id[2] ? "#d4edda" : "#f8d7da";
-                tag.style.color = id[2] ? "#155724" : "#721c24";
-
+                document.getElementById('userAddr').innerText = addr.substring(0,10) + "...";
+                document.getElementById('userBal').innerText = parseFloat(ethers.formatEther(bal)).toFixed(2);
+                document.getElementById('walletInfo').style.display = 'block';
                 document.getElementById('connectBtn').style.display = 'none';
-                document.getElementById('userProfile').style.display = 'block';
-                document.getElementById('adminMenu').style.display = 'block';
-                document.getElementById('artUI').style.display = 'block';
+                document.getElementById('adminCard').style.opacity = '1';
+                document.getElementById('genBtn').disabled = false;
+                document.getElementById('recoverBtn').disabled = false;
 
-                log("Connected: " + addr.substring(0,10));
+                // Set Heartbeat Status
+                document.getElementById('statusDot').classList.add('status-online');
+                document.getElementById('statusText').innerText = "Cluster Connected (SDXL-v2)";
+                addLog("Handshake complete with AIVM Router.");
 
-                contract.on("ArtCompleted", (user, imageUrl) => {
-                    if (user.toLowerCase() === addr.toLowerCase()) {
-                        document.getElementById('displayArea').innerHTML = `<img src="${imageUrl}" style="max-width:100%; border-radius:8px;">`;
-                        log("Art Generated Successfully!");
+                contract.on("ArtCompleted", (user, url) => {
+                    if(user.toLowerCase() === addr.toLowerCase()) {
+                        document.getElementById('output').innerHTML = `<img src="${url}" style="max-width:90%; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.5);">`;
+                        addLog("Inference complete. Art rendered.");
                     }
                 });
-
-            } catch (err) {
-                console.error(err);
-                alert("Connection failed. Ensure MetaMask is unlocked.");
-            }
+            } catch (e) { addLog("Connection failed. Unlock MetaMask."); }
         }
 
-        document.getElementById('generateBtn').onclick = async () => {
-            const p = document.getElementById('promptInput').value;
-            const display = document.getElementById('displayArea');
-            if (!p) return alert("Please enter a prompt!");
-
+        document.getElementById('genBtn').onclick = async () => {
+            const prompt = document.getElementById('promptInput').value;
+            if(!prompt) return;
+            const out = document.getElementById('output');
+            
             try {
-                display.innerHTML = '<span class="pulsing">Requesting AIVM Inference (0.25 LCAI)...</span>';
-                const tx = await contract.generateArt(p, { value: ethers.parseEther("0.25") });
-                log("Inference Request Sent");
+                out.innerHTML = '<div style="color:var(--warning);">Anchoring request to Lightchain...</div>';
+                const tx = await contract.generateArt(prompt, { value: ethers.parseEther("0.25") });
+                addLog(`Inference Task Hash: ${tx.hash.substring(0,12)}...`);
                 await tx.wait();
-                display.innerHTML = '<span class="pulsing">Request confirmed. Awaiting AI callback...</span>';
-            } catch (e) { 
-                display.innerHTML = `<span>Error: ${e.reason || "Check Balance / Verification"}</span>`; 
+                out.innerHTML = '<div style="color:var(--primary);">Request Accepted. Awaiting Cluster Node response...</div>';
+            } catch (e) {
+                out.innerHTML = `<div style="color:var(--danger);">Inference Error: ${e.reason || "Router Rejection"}</div>`;
             }
         };
 
-        document.getElementById('recoverArtBtn').onclick = async () => {
+        document.getElementById('recoverBtn').onclick = async () => {
             const addr = await signer.getAddress();
-            const display = document.getElementById('displayArea');
-            display.innerHTML = '<span class="pulsing">Fetching from blockchain state...</span>';
-            try {
-                const url = await contract.latestArt(addr);
-                if (url) {
-                    display.innerHTML = `<img src="${url}" style="max-width:100%; border-radius:8px;">`;
-                    log("Art recovered successfully.");
-                } else {
-                    display.innerHTML = "<span>No previous art found for this wallet.</span>";
-                }
-            } catch (e) { log("Recovery failed."); }
+            addLog("Querying blockchain state for previous assets...");
+            const url = await contract.latestArt(addr);
+            if(url) {
+                document.getElementById('output').innerHTML = `<img src="${url}" style="max-width:90%; border-radius:12px;">`;
+                addLog("Recovery successful.");
+            } else { addLog("No assets found for this identity."); }
         };
 
-        document.getElementById('connectBtn').onclick = connectWallet;
+        document.getElementById('connectBtn').onclick = init;
     </script>
 </body>
 </html>
