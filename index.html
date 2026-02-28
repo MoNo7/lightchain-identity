@@ -21,7 +21,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
         body { background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-        /* HEADER - RESTORED TO ORIGINAL */
+        /* HEADER & TOP NAV */
         header {
             height: 60px;
             background: var(--sidebar);
@@ -31,9 +31,26 @@
             justify-content: space-between;
             padding: 0 20px;
         }
-        .header-left { font-weight: 800; color: var(--primary); font-size: 1.2rem; }
+        .header-left-group { display: flex; align-items: center; gap: 20px; }
+        .header-title { font-weight: 800; color: var(--primary); font-size: 1.2rem; white-space: nowrap; }
+        
         .header-right { display: flex; align-items: center; gap: 15px; }
 
+        /* NAV BUTTON */
+        .btn-nav-connect { 
+            background: var(--primary); 
+            color: white; 
+            border: none; 
+            padding: 6px 16px; 
+            border-radius: 6px; 
+            font-weight: 700; 
+            cursor: pointer; 
+            font-size: 0.85rem;
+            transition: 0.2s;
+        }
+        .btn-nav-connect:hover { filter: brightness(1.1); }
+
+        /* PILLS */
         .load-indicator { 
             background: #000; 
             padding: 5px 12px; 
@@ -51,7 +68,11 @@
             font-family: monospace; 
             border: 1px solid var(--border);
             font-size: 0.8rem;
+            display: flex;
+            gap: 10px;
+            align-items: center;
         }
+        .balance-txt { color: var(--secondary); font-weight: bold; border-right: 1px solid var(--border); padding-right: 10px; }
 
         /* LAYOUT */
         .container { display: flex; flex: 1; overflow: hidden; }
@@ -61,46 +82,41 @@
         .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
         .card-title { font-size: 0.75rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase; margin-bottom: 15px; }
         
-        /* SIDEBAR IDENTITY CARD */
         .id-status-box { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
         .status-dot { height: 10px; width: 10px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 8px var(--danger); }
         .status-dot.active { background: var(--secondary); box-shadow: 0 0 8px var(--secondary); }
         
-        .sbt-visual { width: 100%; height: 120px; background: radial-gradient(circle, rgba(88,101,242,0.1) 0%, transparent 70%); display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
-        .sbt-icon { width: 60px; opacity: 0.3; filter: grayscale(1); transition: 0.3s; }
+        .sbt-visual { width: 100%; height: 120px; background: radial-gradient(circle, rgba(88,101,242,0.05) 0%, transparent 70%); display: flex; align-items: center; justify-content: center; }
+        .sbt-icon { width: 60px; opacity: 0.2; filter: grayscale(1); transition: 0.3s; }
         .sbt-icon.active { opacity: 1; filter: grayscale(0) drop-shadow(0 0 10px var(--primary)); }
-
-        /* BUTTONS & INPUTS */
-        .btn { width: 100%; border: none; padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s; font-size: 0.9rem; }
-        .btn-connect { background: var(--primary); color: white; margin-bottom: 10px; }
-        .btn-generate { background: var(--primary); color: white; width: auto; padding: 10px 25px; }
 
         .input-group { background: var(--card); border: 1px solid var(--border); border-radius: 12px; display: flex; padding: 8px; gap: 10px; }
         .prompt-input { flex: 1; background: transparent; border: none; color: white; padding: 10px; outline: none; font-size: 1rem; }
-        
+        .btn-gen { background: var(--primary); color: white; border: none; padding: 10px 25px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+
         .output-view { flex: 1; background: #08090f; border: 1px solid var(--border); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--text-dim); }
         .console { height: 200px; background: #000; border: 1px solid var(--border); border-radius: 12px; padding: 15px; font-family: monospace; font-size: 0.85rem; color: #7dd3fc; overflow-y: auto; }
-        
         .admin-input { width: 100%; background: #0f111a; border: 1px solid var(--border); border-radius: 6px; padding: 10px; color: white; margin-bottom: 10px; font-size: 0.85rem; }
-        .hidden { display: none; }
     </style>
 </head>
 <body>
 
     <header>
-        <div class="header-left">AIVM Control Center</div>
+        <div class="header-left-group">
+            <div class="header-title">AIVM Control Center</div>
+            <button class="btn-nav-connect" id="connect-btn">Connect Wallet</button>
+        </div>
         <div class="header-right">
             <div class="load-indicator">● SDXL-Turbo | Load: 21%</div>
-            <div class="wallet-pill" id="wallet-display">0x0000...0000</div>
+            <div class="wallet-pill" id="wallet-pill">
+                <span id="balance-display" class="balance-txt">0.00 LCAI</span>
+                <span id="address-display">0x0000...0000</span>
+            </div>
         </div>
     </header>
 
     <div class="container">
         <div class="sidebar">
-            <div class="card">
-                <button class="btn btn-connect" id="connect-btn">Connect Wallet</button>
-            </div>
-
             <div class="card">
                 <div class="card-title">Identity Status</div>
                 <div class="id-status-box">
@@ -108,17 +124,17 @@
                     <span id="status-text" style="font-weight: 600;">Awaiting Sync</span>
                 </div>
                 <div class="sbt-visual">
-                    <img src="https://cdn-icons-png.flaticon.com/512/6819/6819111.png" class="sbt-icon" id="sbt-icon" alt="SBT">
+                    <img src="https://cdn-icons-png.flaticon.com/512/6819/6819111.png" class="sbt-icon" id="sbt-icon">
                 </div>
-                <div id="id-desc" style="font-size: 0.8rem; color: var(--text-dim); text-align: center;">Verify ZK-Pass to enable AIVM.</div>
+                <div id="id-desc" style="font-size: 0.8rem; color: var(--text-dim); text-align: center; margin-top: 10px;">Verify ZK-Pass to enable AIVM.</div>
             </div>
 
             <div class="card">
                 <div class="card-title">Admin Management</div>
                 <input type="text" class="admin-input" placeholder="User Address 0x...">
                 <div style="display: flex; gap: 10px;">
-                    <button class="btn" style="background: var(--secondary); color: black; padding: 8px; font-size: 0.8rem;">Verify</button>
-                    <button class="btn" style="background: var(--danger); color: white; padding: 8px; font-size: 0.8rem;">Revoke</button>
+                    <button style="flex: 1; background: var(--secondary); color: black; border: none; padding: 8px; border-radius: 4px; font-weight: bold; cursor: pointer;">Verify</button>
+                    <button style="flex: 1; background: var(--danger); color: white; border: none; padding: 8px; border-radius: 4px; font-weight: bold; cursor: pointer;">Revoke</button>
                 </div>
             </div>
 
@@ -126,14 +142,14 @@
                 <div class="card-title">Owner Vault</div>
                 <div style="font-size: 0.7rem; color: var(--text-dim);">Revenue Collected:</div>
                 <div style="font-size: 1.4rem; font-weight: 800; color: var(--secondary); margin: 5px 0;">245.50 LCAI</div>
-                <button class="btn" style="background: #f59e0b; color: black; margin-top: 10px;">Withdraw Funds</button>
+                <button style="width: 100%; background: #f59e0b; color: black; border: none; padding: 10px; border-radius: 8px; font-weight: 800; cursor: pointer;">Withdraw Funds</button>
             </div>
         </div>
 
         <div class="main-content">
             <div class="input-group">
                 <input type="text" id="prompt-input" class="prompt-input" placeholder="Describe the art you wish to generate...">
-                <button id="generate-btn" class="btn btn-generate">Generate (0.25 LCAI)</button>
+                <button id="generate-btn" class="btn-gen">Generate (0.25 LCAI)</button>
             </div>
 
             <div class="output-view" id="art-output">
@@ -147,10 +163,9 @@
     </div>
 
     <script>
-        // Use your actual deployed address from the Lightchain IDE
         const CONFIG = {
-            SBT_ADDR: "0x3938E75C417688755601E8C6b62D7858c894A2D2", 
-            AIVM_ADDR: "0x4D36B31d4BFB957A5D816B0f420a9e755EFc6a2c"
+            SBT_ADDR: "0xAED5840a2fD349a88128dd723451c43daFB819dE", 
+            AIVM_ADDR: "0x8560106c90C4e53D6fcf53bcEFdf4Ac8Ba1300cA"
         };
 
         const SBT_ABI = ["function hasSBT(address user) view returns (bool)"];
@@ -174,15 +189,20 @@
                     signer = await provider.getSigner();
                     sbtContract = new ethers.Contract(CONFIG.SBT_ADDR, SBT_ABI, signer);
 
-                    document.getElementById('wallet-display').innerText = `${userAddr.slice(0,6)}...${userAddr.slice(-4)}`;
-                    document.getElementById('connect-btn').innerText = "Wallet Connected";
+                    // Update Address Display
+                    document.getElementById('address-display').innerText = `${userAddr.slice(0,6)}...${userAddr.slice(-4)}`;
+                    
+                    // Fetch Balance
+                    const balanceRaw = await provider.getBalance(userAddr);
+                    const balanceFormatted = ethers.formatEther(balanceRaw);
+                    document.getElementById('balance-display').innerText = `${parseFloat(balanceFormatted).toFixed(2)} LCAI`;
+                    
+                    document.getElementById('connect-btn').innerText = "Sync Active";
                     log(`Authenticated: ${userAddr}`);
                     checkIdentity();
                 } catch (err) {
                     log("Auth failed: " + err.message, true);
                 }
-            } else {
-                log("MetaMask missing.", true);
             }
         }
 
@@ -206,7 +226,7 @@
                     log("Identity missing: Visit ZK-Portal to mint your pass.", true);
                 }
             } catch (e) {
-                log("SBT Check Failed: Verify contract address.", true);
+                log("SBT Check Failed.", true);
             }
         }
 
@@ -216,26 +236,12 @@
             const prompt = document.getElementById('prompt-input').value;
             if (!prompt) return log("Error: Prompt is empty.", true);
             if (!userAddr) return log("Error: Connect wallet first.", true);
-
-            try {
-                log(`Initiating Inference: "${prompt}"`);
-                document.getElementById('art-output').innerText = "Processing PoI Attestation...";
-                
-                // Validate SBT before call
-                const isAuth = await sbtContract.hasSBT(userAddr);
-                if (!isAuth) throw new Error("Unauthorized: ZK-Pass required.");
-
-                // Actual logic for LCAI Smart Contract call would be here
-                setTimeout(() => {
-                    log("PoI Attestation Successful.");
-                    log("Inference anchored to Block 0x4D36...");
-                    document.getElementById('art-output').innerHTML = 
-                        "<div style='color: var(--secondary); font-weight: bold;'>Art Generated Successfully. Check logs for PoI.</div>";
-                }, 2000);
-
-            } catch (err) {
-                log("Generation Failed: " + err.message, true);
-            }
+            log(`Initiating Inference: "${prompt}"`);
+            document.getElementById('art-output').innerText = "Processing PoI Attestation...";
+            setTimeout(() => {
+                log("Inference complete.");
+                document.getElementById('art-output').innerHTML = "<div style='color: var(--secondary); font-weight: bold;'>Inference Successful.</div>";
+            }, 2000);
         };
     </script>
 </body>
