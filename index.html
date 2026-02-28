@@ -126,6 +126,26 @@
                 viewer.innerHTML = `<img src="${t.url}" style="width:100%; border-radius:10px;"><br><a href="${t.url}" download class="btn">Download</a>`;
             } else viewer.innerHTML = `<p>ID: ${t.taskId.slice(0,10)}... is still processing.</p>`;
         }
+
+        // Listen for the AI Router Callback
+artContract.on("ArtCompleted", async (user, imageUrl, taskId) => {
+    const myAddr = await signer.getAddress();
+    
+    // Only update if the callback belongs to the connected wallet
+    if (user.toLowerCase() === myAddr.toLowerCase()) {
+        console.log("AIVM Callback Received! TaskID:", taskId);
+        
+        const displayBox = document.getElementById('artResultWindow');
+        displayBox.innerHTML = `
+            <div style="color: var(--success); font-weight: bold; margin-bottom: 10px;">Inference Complete!</div>
+            <img src="${imageUrl}" alt="AI Generated Art" style="max-width: 100%; border-radius: 8px; border: 2px solid #e1e4e8;">
+        `;
+        
+        logToSidebar(`Task ${taskId.substring(0,8)}... Completed.`);
+    }
+});
+        
     </script>
 </body>
 </html>
+
