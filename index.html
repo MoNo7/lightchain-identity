@@ -21,7 +21,6 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
         body { background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-        /* HEADER & TOP NAV */
         header {
             height: 60px;
             background: var(--sidebar);
@@ -34,41 +33,31 @@
         .header-left-group { display: flex; align-items: center; gap: 15px; }
         .header-title { font-weight: 800; color: var(--primary); font-size: 1.1rem; white-space: nowrap; }
         
-        /* SBT & DESC IN NAV */
         .nav-identity-group { display: flex; align-items: center; gap: 12px; margin-left: 10px; padding-left: 15px; border-left: 1px solid var(--border); }
-        .nav-sbt-icon { width: 24px; height: 24px; opacity: 0.2; transition: 0.3s; filter: grayscale(1); }
-        .nav-sbt-icon.active { opacity: 1; filter: grayscale(0) drop-shadow(0 0 5px var(--primary)); }
-        .nav-desc { font-size: 0.75rem; color: var(--text-dim); max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        /* Fix for broken logo: added a background-color fallback */
+        .nav-sbt-icon { width: 24px; height: 24px; border-radius: 4px; background-color: #2d2f45; opacity: 0.5; transition: 0.3s; }
+        .nav-sbt-icon.active { opacity: 1; border: 1px solid var(--primary); box-shadow: 0 0 5px var(--primary); }
+        .nav-desc { font-size: 0.75rem; color: var(--text-dim); }
 
         .header-right { display: flex; align-items: center; gap: 15px; }
-
-        .btn-nav-connect { background: var(--primary); color: white; border: none; padding: 6px 14px; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.8rem; transition: 0.2s; }
-        
-        .load-indicator { background: #000; padding: 5px 12px; border-radius: 6px; color: var(--secondary); border: 1px solid #1e293b; font-size: 0.75rem; font-weight: 600; }
-        .wallet-pill { background: #1e293b; padding: 5px 12px; border-radius: 6px; font-family: monospace; border: 1px solid var(--border); font-size: 0.75rem; display: flex; gap: 10px; align-items: center; }
+        .btn-nav-connect { background: var(--primary); color: white; border: none; padding: 6px 14px; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.8rem; }
+        .load-indicator { background: #000; padding: 5px 12px; border-radius: 6px; color: var(--secondary); border: 1px solid #1e293b; font-size: 0.75rem; }
+        .wallet-pill { background: #1e293b; padding: 5px 12px; border-radius: 6px; font-family: monospace; border: 1px solid var(--border); font-size: 0.75rem; display: flex; gap: 10px; }
         .balance-txt { color: var(--secondary); font-weight: bold; border-right: 1px solid var(--border); padding-right: 10px; }
 
-        /* LAYOUT */
         .container { display: flex; flex: 1; overflow: hidden; }
         .sidebar { width: 350px; background: var(--sidebar); border-right: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
         .main-content { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
-
         .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
-        .card-title { font-size: 0.7rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase; margin-bottom: 12px; }
-        
-        /* CONSOLE IN SIDEBAR */
+        .card-title { font-size: 0.75rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase; margin-bottom: 12px; }
         .console { height: 250px; background: #000; border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 0.75rem; color: #7dd3fc; overflow-y: auto; }
-
-        .input-group { background: var(--card); border: 1px solid var(--border); border-radius: 12px; display: flex; padding: 8px; gap: 10px; align-items: center; }
+        .input-group { background: var(--card); border: 1px solid var(--border); border-radius: 12px; display: flex; padding: 8px; gap: 10px; }
         .prompt-input { flex: 1; background: transparent; border: none; color: white; padding: 10px; outline: none; font-size: 1rem; }
         .btn-gen { background: var(--primary); color: white; border: none; padding: 10px 25px; border-radius: 8px; font-weight: 700; cursor: pointer; }
-
         .output-view { flex: 1; background: #08090f; border: 1px solid var(--border); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--text-dim); }
-        
-        /* ADMIN AREA */
-        .admin-input { width: 100%; background: #0f111a; border: 1px solid var(--border); border-radius: 6px; padding: 10px; color: white; margin-bottom: 10px; font-size: 0.8rem; outline: none; }
+        .admin-input { width: 100%; background: #0f111a; border: 1px solid var(--border); border-radius: 6px; padding: 10px; color: white; margin-bottom: 10px; font-size: 0.8rem; }
         .admin-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .btn-admin { border: none; padding: 8px; border-radius: 4px; font-weight: 700; cursor: pointer; font-size: 0.75rem; transition: 0.2s; }
+        .btn-admin { border: none; padding: 8px; border-radius: 4px; font-weight: 700; cursor: pointer; font-size: 0.75rem; }
         .btn-query { grid-column: span 2; background: var(--border); color: white; margin-bottom: 4px; }
         .btn-verify { background: var(--secondary); color: black; }
         .btn-revoke { background: var(--danger); color: white; }
@@ -79,18 +68,17 @@
     <header>
         <div class="header-left-group">
             <div class="header-title">AIVM Control Center</div>
-            <button class="btn-nav-connect" id="connect-btn">Sync Active</button>
-            
+            <button class="btn-nav-connect" id="connect-btn">Connect Wallet</button>
             <div class="nav-identity-group">
-                <img src="https://cdn-icons-png.flaticon.com/512/6819/6819111.png" class="nav-sbt-icon" id="sbt-icon-nav">
-                <span id="nav-id-desc" class="nav-desc">Awaiting Identity Sync...</span>
+                <img src="sbt-icon.png" class="nav-sbt-icon" id="sbt-icon-nav" onerror="this.style.display='none'">
+                <span id="nav-id-desc" class="nav-desc">Disconnected</span>
             </div>
         </div>
         <div class="header-right">
             <div class="load-indicator">● SDXL-Turbo | Load: 21%</div>
             <div class="wallet-pill" id="wallet-pill">
                 <span id="balance-display" class="balance-txt">0.00 LCAI</span>
-                <span id="address-display">0x0000...0000</span>
+                <span id="address-display">0x00...00</span>
             </div>
         </div>
     </header>
@@ -99,10 +87,7 @@
         <div class="sidebar">
             <div class="card">
                 <div class="card-title">System Status Window</div>
-                <div id="console-output" class="console">
-                    <div>> System Online.</div>
-                    <div>> Initializing AIVM Handshake...</div>
-                </div>
+                <div id="console-output" class="console"></div>
             </div>
 
             <div class="card">
@@ -118,8 +103,8 @@
             <div class="card">
                 <div class="card-title">Owner Vault</div>
                 <div style="font-size: 0.7rem; color: var(--text-dim);">Revenue Collected:</div>
-                <div style="font-size: 1.3rem; font-weight: 800; color: var(--secondary); margin: 5px 0;">245.50 LCAI</div>
-                <button style="width: 100%; background: #f59e0b; color: black; border: none; padding: 10px; border-radius: 8px; font-weight: 800; cursor: pointer;">Withdraw Funds</button>
+                <div id="revenue-display" style="font-size: 1.3rem; font-weight: 800; color: var(--secondary); margin: 5px 0;">0.00 LCAI</div>
+                <button id="withdraw-btn" style="width: 100%; background: #f59e0b; color: black; border: none; padding: 10px; border-radius: 8px; font-weight: 800; cursor: pointer;">Withdraw Funds</button>
             </div>
         </div>
 
@@ -128,21 +113,26 @@
                 <input type="text" id="prompt-input" class="prompt-input" placeholder="Describe the art you wish to generate...">
                 <button id="generate-btn" class="btn-gen">Generate (0.25 LCAI)</button>
             </div>
-
-            <div class="output-view" id="art-output">
-                <span>Awaiting AIVM Inference Signal...</span>
-            </div>
+            <div class="output-view" id="art-output">Awaiting AIVM Inference Signal...</div>
         </div>
     </div>
 
     <script>
         const CONFIG = {
-            SBT_ADDR: "0xAED5840a2fD349a88128dd723451c43daFB819dE", 
-            AIVM_ADDR: "0x8560106c90C4e53D6fcf53bcEFdf4Ac8Ba1300cA"
+            SBT_ADDR: "0x3938E75C417688755601E8C6b62D7858c894A2D2", 
+            AIVM_ADDR: "0x4D36B31d4BFB957A5D816B0f420a9e755EFc6a2c"
         };
 
-        const SBT_ABI = ["function hasSBT(address user) view returns (bool)"];
-        let provider, signer, userAddr, sbtContract;
+        const ABI = [
+            "function hasSBT(address user) view returns (bool)",
+            "function mintIdentity() external",
+            "function requestInference(string memory prompt) external payable",
+            "function withdraw() external",
+            "function verifyUser(address user) external",
+            "function revokeUser(address user) external"
+        ];
+
+        let provider, signer, userAddr, sbtContract, aivmContract;
 
         function log(msg, isError = false) {
             const out = document.getElementById('console-output');
@@ -160,11 +150,13 @@
                     const accounts = await provider.send("eth_requestAccounts", []);
                     userAddr = accounts[0];
                     signer = await provider.getSigner();
-                    sbtContract = new ethers.Contract(CONFIG.SBT_ADDR, SBT_ABI, signer);
+                    
+                    sbtContract = new ethers.Contract(CONFIG.SBT_ADDR, ABI, signer);
+                    aivmContract = new ethers.Contract(CONFIG.AIVM_ADDR, ABI, signer);
 
                     document.getElementById('address-display').innerText = `${userAddr.slice(0,6)}...${userAddr.slice(-4)}`;
-                    const balanceRaw = await provider.getBalance(userAddr);
-                    document.getElementById('balance-display').innerText = `${parseFloat(ethers.formatEther(balanceRaw)).toFixed(2)} LCAI`;
+                    const balance = await provider.getBalance(userAddr);
+                    document.getElementById('balance-display').innerText = `${parseFloat(ethers.formatEther(balance)).toFixed(2)} LCAI`;
                     
                     document.getElementById('connect-btn').innerText = "Sync Active";
                     log(`Authenticated: ${userAddr}`);
@@ -180,52 +172,59 @@
                 const hasPass = await sbtContract.hasSBT(userAddr);
                 const icon = document.getElementById('sbt-icon-nav');
                 const desc = document.getElementById('nav-id-desc');
-
                 if (hasPass) {
                     icon.classList.add('active');
                     desc.innerText = "ZK-Pass Verified. Full Access.";
                     log("Identity verified via Lightchain Testnet.");
                 } else {
                     icon.classList.remove('active');
-                    desc.innerText = "No Pass Detected. Features Locked.";
-                    log("Access Denied: ZK-Pass required.", true);
+                    desc.innerText = "No Pass Detected.";
                 }
             } catch (e) { log("SBT Sync failed.", true); }
         }
 
-        // ADMIN BUTTON VALIDATIONS
-        document.getElementById('admin-query').onclick = () => {
-            const addr = document.getElementById('admin-user-addr').value;
-            if(!ethers.isAddress(addr)) return log("Invalid address format.", true);
-            log(`Querying status for ${addr.slice(0,10)}...`);
-            setTimeout(() => log(`Status: Verified Soulbound Holder`), 800);
+        document.getElementById('generate-btn').onclick = async () => {
+            const prompt = document.getElementById('prompt-input').value;
+            if (!prompt || !userAddr) return log("Invalid Request", true);
+            
+            try {
+                log(`Sending Inference Transaction...`);
+                // Actual transaction call
+                const tx = await aivmContract.requestInference(prompt, { 
+                    value: ethers.parseEther("0.25") 
+                });
+                log("Transaction Sent. Waiting for confirmation...");
+                await tx.wait();
+                log("Inference anchored. Processing AI output...");
+                document.getElementById('art-output').innerText = "Generation Successful. Rendering Image...";
+            } catch (err) {
+                log("Inference Failed: Check balance or ZK-Pass.", true);
+            }
         };
 
-        document.getElementById('admin-verify').onclick = () => {
-            const addr = document.getElementById('admin-user-addr').value;
-            if(!ethers.isAddress(addr)) return log("Invalid address format.", true);
-            log(`Sending Verify transaction for ${addr.slice(0,10)}...`);
+        document.getElementById('withdraw-btn').onclick = async () => {
+            try {
+                log("Initiating Withdrawal...");
+                const tx = await aivmContract.withdraw();
+                await tx.wait();
+                log("Funds successfully withdrawn to owner wallet.");
+            } catch (err) {
+                log("Withdrawal failed: Access Denied.", true);
+            }
         };
 
-        document.getElementById('admin-revoke').onclick = () => {
+        document.getElementById('admin-verify').onclick = async () => {
             const addr = document.getElementById('admin-user-addr').value;
-            if(!ethers.isAddress(addr)) return log("Invalid address format.", true);
-            log(`Sending Revoke transaction for ${addr.slice(0,10)}...`, true);
+            if(!ethers.isAddress(addr)) return log("Invalid Address", true);
+            try {
+                const tx = await aivmContract.verifyUser(addr);
+                await tx.wait();
+                log(`User ${addr.slice(0,10)}... Verified.`);
+            } catch (e) { log("Admin Action Denied.", true); }
         };
 
         document.getElementById('connect-btn').onclick = connect;
-
-        document.getElementById('generate-btn').onclick = async () => {
-            const prompt = document.getElementById('prompt-input').value;
-            if (!prompt) return log("Error: Prompt is empty.", true);
-            if (!userAddr) return log("Error: Connect wallet first.", true);
-            log(`Inference Request: "${prompt}"`);
-            document.getElementById('art-output').innerText = "Processing AIVM Signal...";
-            setTimeout(() => {
-                log("Attestation verified. Drawing anchored.");
-                document.getElementById('art-output').innerHTML = "<b style='color:var(--secondary)'>Inference Complete.</b>";
-            }, 1500);
-        };
+        log("System Online. Awaiting Handshake...");
     </script>
 </body>
 </html>
