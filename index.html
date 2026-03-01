@@ -186,7 +186,7 @@ async function generateArt() {
         const isActuallyVerified = await contract.manualVerified(user);
         if(!isActuallyVerified) {
             log("REVERT: ADDRESS NOT WHITELISTED", "error");
-            log("USE ADMIN PANEL TO VERIFY YOURSELF FIRST", "info");
+            log("VERIFICATION TX MAY BE PENDING", "info");
             return;
         }
 
@@ -210,10 +210,12 @@ async function runAdmin(type) {
             const res = await contract.manualVerified(target);
             log(`USER ${target.slice(0, 6)}: ${res ? "VERIFIED" : "UNVERIFIED"}`);
         } else {
+            log("SYNCING PERMISSIONS...");
             const tx = await contract.setVerification(target, type === 'verify', { gasLimit: 200000 });
             await tx.wait(); log("PERMISSION SYNCED", "success");
             roles.isVerified = (type === 'verify'); 
             updateMenu();
+            probeModels(); // Re-probe after verification
         }
     } catch (e) { log("ADMIN ACTION REVERTED", "error"); }
 }
