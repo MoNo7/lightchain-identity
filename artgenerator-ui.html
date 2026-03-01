@@ -22,7 +22,6 @@
 <body>
     <div class="main">
         <textarea id="prompt-input" class="prompt-area" rows="3" placeholder="Describe the neural vision..."></textarea>
-        
         <div class="controls">
             <select id="model-digest">
                 <option value="0x2bf0539500000000000000000000000000000000000000000000000000000000">AIVM-THETA: Standard</option>
@@ -31,7 +30,6 @@
             </select>
             <button id="gen-btn" class="btn" onclick="runInference()">GENERATE</button>
         </div>
-
         <div class="canvas">
             <div id="loader" class="loader"></div>
             <p id="status-overlay">Awaiting Neural Link...</p>
@@ -51,16 +49,13 @@
             if (!prompt) return alert("Prompt required for inference.");
 
             try {
-                // UI State: Loading
                 btn.disabled = true;
                 loader.style.display = 'block';
                 img.style.display = 'none';
                 status.innerText = "Broadcasting to Lightchain...";
                 
-                // Communicate with main index.html
                 window.parent.postMessage({type: 'AIVM_METRICS', status: 'pending'}, '*');
 
-                // Contract Handshake
                 const provider = new ethers.BrowserProvider(window.ethereum);
                 const signer = await provider.getSigner();
                 const contract = new ethers.Contract(
@@ -69,7 +64,6 @@
                     signer
                 );
 
-                // Transaction Execution (Fixed to 0.25 LCAI)
                 const tx = await contract.generateArt(prompt, digest, { 
                     value: ethers.parseEther("0.25"),
                     gasLimit: 1500000 
@@ -78,7 +72,6 @@
                 status.innerText = "Mining Neural Request...";
                 await tx.wait();
 
-                // Success: Render Image
                 status.style.display = 'none';
                 loader.style.display = 'none';
                 
