@@ -29,12 +29,12 @@
             overflow: hidden;
         }
 
-        /* TOP NAVIGATION (Release Style) */
+        /* TOP NAVIGATION (Updated Release Style) */
         header {
             width: 100%;
             background: var(--nav-bg);
             border-bottom: 1px solid var(--border);
-            padding: 8px 20px;
+            padding: 10px 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -44,67 +44,67 @@
         .header-left {
             display: flex;
             align-items: center;
-            gap: 20px;
         }
 
         .brand-title {
-            font-weight: 600;
+            font-weight: 700;
             font-size: 1.1rem;
             color: white;
-            white-space: nowrap;
+            letter-spacing: -0.5px;
         }
 
-        .cluster-status {
+        .header-right {
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 0.85rem;
-            color: var(--success);
-            background: rgba(35, 134, 54, 0.1);
-            padding: 4px 10px;
-            border-radius: 20px;
-            border: 1px solid rgba(35, 134, 54, 0.3);
+            gap: 12px;
         }
 
-        .dot {
+        /* Status Pill */
+        .pill {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.8rem;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .status-dot {
             height: 8px;
             width: 8px;
             background-color: var(--success);
             border-radius: 50%;
-            display: inline-block;
-            box-shadow: 0 0 5px var(--success);
+            box-shadow: 0 0 6px var(--success);
         }
 
-        .wallet-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            font-size: 0.85rem;
-            color: var(--text);
-        }
+        .load-text { color: var(--locked); margin-left: 4px; }
 
-        .address-pill {
+        /* Wallet Pill */
+        .wallet-pill {
+            display: none; /* Shown after connect */
             cursor: pointer;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            padding: 4px 12px;
-            border-radius: 6px;
             transition: 0.2s;
         }
 
-        .address-pill:hover {
+        .wallet-pill:hover {
             border-color: var(--accent);
-            color: white;
+            background: var(--bg);
         }
 
-        /* LAYOUT WRAPPER */
-        .app-container {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
+        .balance-text {
+            color: var(--accent);
+            font-weight: 700;
+            border-right: 1px solid var(--border);
+            padding-right: 10px;
+            margin-right: 2px;
         }
 
-        /* SIDEBAR */
+        /* LAYOUT */
+        .app-container { display: flex; flex: 1; overflow: hidden; }
+        
         #sidebar {
             width: 260px;
             background: var(--nav-bg);
@@ -131,7 +131,6 @@
         .nav-item.locked { color: var(--locked); cursor: not-allowed; opacity: 0.7; }
         .badge { font-size: 0.7rem; background: #383e47; padding: 2px 6px; border-radius: 4px; }
 
-        /* MAIN CONTENT */
         main {
             flex: 1;
             padding: 40px;
@@ -150,11 +149,10 @@
             width: 100%;
             max-width: 550px;
             text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
         .status-card.active { display: block; }
-        button {
+        button.cta {
             background: var(--success);
             color: white;
             border: none;
@@ -163,26 +161,6 @@
             font-weight: bold;
             cursor: pointer;
             margin-top: 20px;
-        }
-
-        .admin-section {
-            margin-top: 30px;
-            border-top: 1px solid var(--border);
-            padding-top: 20px;
-            width: 100%;
-            max-width: 550px;
-            display: none;
-        }
-
-        .admin-section.visible { display: block; }
-        input {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            color: white;
-            padding: 10px;
-            border-radius: 6px;
-            width: calc(100% - 22px);
-            margin-bottom: 10px;
         }
 
         #toast {
@@ -203,16 +181,21 @@
     <header>
         <div class="header-left">
             <span class="brand-title">Lightchain AI Testnet</span>
-            <div class="cluster-status">
-                <span class="dot"></span>
-                <span>AIVM Cluster: Active</span>
-            </div>
-            <div id="wallet-display" class="wallet-info" style="display: none;">
-                <span id="balance-amt" style="color: var(--accent); font-weight: bold;">0.00 LCAI</span>
-                <span id="user-addr-pill" class="address-pill" onclick="copyAddress()">0x...</span>
-            </div>
         </div>
-        <button id="btn-connect" style="margin-top:0; padding: 6px 15px;" onclick="connect()">Connect Wallet</button>
+        <div class="header-right">
+            <div class="pill">
+                <span class="status-dot"></span>
+                <span>AIVM Cluster: Active</span>
+                <span class="load-text">Load: 14%</span>
+            </div>
+            
+            <div id="wallet-pill" class="pill wallet-pill" onclick="copyAddress()">
+                <span id="balance-amt" class="balance-text">0.00 LCAI</span>
+                <span id="user-addr-short">0x...</span>
+            </div>
+
+            <button id="btn-connect" class="cta" style="margin-top:0; padding: 6px 16px; font-size: 0.85rem;" onclick="connect()">Connect Wallet</button>
+        </div>
     </header>
 
     <div class="app-container">
@@ -231,39 +214,30 @@
             <div id="state-disconnected" class="status-card active">
                 <h2>AIVM Gateway</h2>
                 <p>Welcome. Please connect your wallet to access the Lightchain AI Testnet decentralized infrastructure.</p>
-                <button onclick="connect()">Connect Wallet</button>
+                <button class="cta" onclick="connect()">Connect Wallet</button>
             </div>
 
             <div id="state-register" class="status-card">
                 <h2>Registration Required</h2>
-                <p>You are connected, but your on-chain identity is not yet registered on the network.</p>
-                <button onclick="register()">Register Identity</button>
+                <p>You are connected, but your on-chain identity is not yet registered.</p>
+                <button class="cta" onclick="register()">Register Identity</button>
             </div>
 
             <div id="state-verify" class="status-card">
                 <h2>Verifying ZK-Proofs</h2>
-                <p>Identity registered. Awaiting node verification of your ZK-proofs. Please refresh status shortly.</p>
-                <button style="background: var(--nav-bg); border: 1px solid var(--border);" onclick="checkStatus()">Refresh Status</button>
+                <p>Awaiting node verification of your ZK-proofs. Refresh status shortly.</p>
+                <button class="cta" style="background: var(--nav-bg); border: 1px solid var(--border);" onclick="checkStatus()">Refresh Status</button>
             </div>
 
             <div id="state-mint" class="status-card">
                 <h2>Proof Verified</h2>
-                <p>Verification successful. Mint your Soulbound ZK-Pass to unlock AIVM Cluster resources.</p>
-                <button onclick="mintSBT()">Mint ZK-Pass SBT</button>
+                <p>Verification successful. Mint your Soulbound ZK-Pass to unlock cluster resources.</p>
+                <button class="cta" onclick="mintSBT()">Mint ZK-Pass SBT</button>
             </div>
 
             <div id="state-unlocked" class="status-card">
-                <h2 style="color: var(--accent)">Access Granted</h2>
-                <p>✅ Your ZK-Pass is active. The AIVM Generator and Marketplace have been unlocked in the sidebar.</p>
-            </div>
-
-            <div id="admin-panel" class="admin-section">
-                <h3>Network Admin</h3>
-                <input type="text" id="admin-target" placeholder="Target 0x address">
-                <div style="display: flex; gap: 10px;">
-                    <button style="flex:1; background: var(--bg); border: 1px solid var(--border);" onclick="adminAction('verify')">Verify User</button>
-                    <button style="flex:1; background: var(--bg); border: 1px solid var(--border); color:#ff7b72" onclick="adminAction('revoke')">Revoke</button>
-                </div>
+                <h2 style="color: var(--accent)">System Active</h2>
+                <p>✅ Your ZK-Pass is active. Use the sidebar to begin generating art.</p>
             </div>
         </main>
     </div>
@@ -273,8 +247,8 @@
     <script>
         const ADDR_IDENTITY = "0x8300C9072Bc9F926703f8E26Ff0a5D963d88Ae01";
         const ADDR_SBT = "0xd71462F0002Ee9373fCe05B568583Ed13e75f600";
-
-        const ABI_ID = ["function isVerified(address) view returns (bool)","function registerIdentity() external","function verifyIdentity(address) external","function revokeIdentity(address) external","function owner() view returns (address)","function isAdmin(address) view returns (bool)"];
+        
+        const ABI_ID = ["function isVerified(address) view returns (bool)","function registerIdentity() external","function isAdmin(address) view returns (bool)"];
         const ABI_SBT = ["function balanceOf(address) view returns (uint256)","function mintIdentity() external"];
 
         let provider, signer, userAddress;
@@ -286,10 +260,9 @@
             userAddress = accounts[0];
             signer = provider.getSigner();
             
-            // Update Top Nav UI
             document.getElementById('btn-connect').style.display = 'none';
-            document.getElementById('wallet-display').style.display = 'flex';
-            document.getElementById('user-addr-pill').innerText = `${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
+            document.getElementById('wallet-pill').style.display = 'flex';
+            document.getElementById('user-addr-short').innerText = `${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
             
             updateBalance();
             checkStatus();
@@ -297,43 +270,34 @@
 
         async function updateBalance() {
             const bal = await provider.getBalance(userAddress);
-            const ethBal = ethers.utils.formatEther(bal);
-            document.getElementById('balance-amt').innerText = `${parseFloat(ethBal).toFixed(2)} LCAI`;
+            document.getElementById('balance-amt').innerText = `${parseFloat(ethers.utils.formatEther(bal)).toFixed(2)} LCAI`;
         }
 
         function copyAddress() {
             navigator.clipboard.writeText(userAddress);
-            notify("Address copied to clipboard!");
+            notify("Address copied!");
         }
 
         async function checkStatus() {
             if (!userAddress) return;
             const idContract = new ethers.Contract(ADDR_IDENTITY, ABI_ID, signer);
             const sbtContract = new ethers.Contract(ADDR_SBT, ABI_SBT, signer);
-
             try {
                 const verified = await idContract.isVerified(userAddress);
                 if (!verified) { showState('state-verify'); return; }
-
                 const sbtBal = await sbtContract.balanceOf(userAddress);
-                if (sbtBal.toNumber() === 0) {
-                    showState('state-mint');
-                } else {
-                    showState('state-unlocked');
-                    unlockNav();
-                }
-
-                if (await idContract.isAdmin(userAddress)) document.getElementById('admin-panel').classList.add('visible');
+                if (sbtBal.toNumber() === 0) showState('state-mint');
+                else { showState('state-unlocked'); unlockNav(); }
             } catch (e) { showState('state-register'); }
         }
 
         async function register() {
             try {
                 const tx = await (new ethers.Contract(ADDR_IDENTITY, ABI_ID, signer)).registerIdentity();
-                notify("Registering Identity...");
+                notify("Registering...");
                 await tx.wait();
                 checkStatus();
-            } catch (e) { notify("Transaction Failed"); }
+            } catch (e) { notify("Registration Failed"); }
         }
 
         async function mintSBT() {
@@ -359,20 +323,8 @@
         }
 
         function handleLockedNav(name) {
-            const el = event.currentTarget;
-            if (el.classList.contains('locked')) notify(`ZK-Pass required for ${name}`);
-            else notify(`Accessing ${name}...`);
-        }
-
-        async function adminAction(type) {
-            const target = document.getElementById('admin-target').value;
-            if (!target) return notify("Enter address");
-            try {
-                const contract = new ethers.Contract(ADDR_IDENTITY, ABI_ID, signer);
-                const tx = type === 'verify' ? await contract.verifyIdentity(target) : await contract.revokeIdentity(target);
-                await tx.wait();
-                notify("Success");
-            } catch (e) { notify("Admin action failed"); }
+            if (event.currentTarget.classList.contains('locked')) notify(`ZK-Pass required for ${name}`);
+            else if (name === 'AIVM Generator') window.location.href = 'artgenerator-ui.html';
         }
 
         function notify(msg) {
