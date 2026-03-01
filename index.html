@@ -101,7 +101,7 @@
         </div>
     </div>
     <script>
-        const CONFIG = { SBT_ADDR: "0xd71462F0002Ee9373fCe05B568583Ed13e75f600", AIVM_ADDR: "0x5B2d46cb1e3451aA3d584f28E714892373D7c7C6" };
+        const CONFIG = { SBT_ADDR: "0xd71462F0002Ee9373fCe05B568583Ed13e75f600", AIVM_ADDR: "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB" };
         const ABI = ["function hasSBT(address) view returns (bool)", "function isAdmin(address) view returns (bool)", "function owner() view returns (address)", "function setVerification(address,bool) external", "function generateArt(string) external payable", "function withdraw() external", "event ArtGenerated(address indexed,string,uint256)" ];
         let provider, signer, userAddr, sbtContract, studioContract;
         const sbtSvg = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="45" fill="none" stroke="#5865f2" stroke-width="5"/><path d="M30 50L45 65L70 35" stroke="#00ff80" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -131,40 +131,44 @@
             } catch (err) { log("Connection failed.", true); }
         }
 
-        async function scanHistory() {
-            try {
-                const filter = studioContract.filters.ArtGenerated();
-                const events = await studioContract.queryFilter(filter, -10000);
-                const gallery = document.getElementById('art-gallery');
-                gallery.innerHTML = ''; 
-                events.slice(-10).reverse().forEach(ev => { addToGallery(ev.args[1]); });
-            } catch (e) { log("History scan failed.", true); }
-        }
+async function scanHistory() {
+    try {
+        log("Scanning Native AIVM History...");
+        const filter = studioContract.filters.ArtGenerated();
+        const events = await studioContract.queryFilter(filter, -10000);
+        
+        const gallery = document.getElementById('art-gallery');
+        gallery.innerHTML = ''; 
+        
+        events.slice(-10).reverse().forEach(ev => { 
+            // ev.args[1] is prompt, ev.args[2] would be the native result/fee index
+            addToGallery(ev.args[1], ev.args[2]); 
+        });
+    } catch (e) { log("Native Scan Failed.", true); }
+}
 
-// NEW: High-Availability Gateway Rotation
-const AIVM_GATEWAYS = [
-    "https://image.pollinations.ai/prompt/",
-    "https://api.pollinations.ai/prompt/"
-];
-
-async function addToGallery(p) {
+// Pointing to the native LCAI IPFS/Inference Gateway
+const NATIVE_AIVM_GATEWAY = "https://gateway.lightchain.ai/ipfs/";
+        
+async function addToGallery(prompt, resultHash) {
     const gallery = document.getElementById('art-gallery');
     const item = document.createElement('div');
     item.className = 'gallery-item';
-    const seed = Math.floor(Math.random() * 99999);
-    const promptEncoded = encodeURIComponent(p);
     
-    // Primary URL
-    const url = `${AIVM_GATEWAYS[0]}${promptEncoded}?width=512&height=512&nologo=true&seed=${seed}`;
-    
+    // In the native AIVM, if a resultHash is provided, we use the IPFS CID
+    // If not (for older legacy events), we fallback to the inference engine
+    const url = resultHash ? 
+        `${NATIVE_AIVM_GATEWAY}${resultHash}` : 
+        `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true`;
+
     item.innerHTML = `
-        <div class="sync-status" style="height:150px; display:flex; align-items:center; justify-content:center; background:#000; font-size:0.6rem; color:var(--primary); animation:pulse 1s infinite">Syncing...</div>
+        <div class="sync-status" style="height:150px; display:flex; align-items:center; justify-content:center; background:#000; font-size:0.6rem; color:var(--primary); animation:pulse 1s infinite">Fetching from AIVM...</div>
         <img src="${url}" class="gallery-img" style="display:none" 
              onload="this.style.display='block'; this.previousElementSibling.style.display='none'; this.nextElementSibling.style.display='flex';"
-             onerror="this.src='${AIVM_GATEWAYS[1]}${promptEncoded}?width=512&height=512&seed=${seed}';">
+             onerror="this.parentElement.innerHTML='<div style=\'height:150px;display:flex;align-items:center;justify-content:center;font-size:0.5rem;color:var(--danger)\'>AIVM Node Offline</div>';">
         <div class="gallery-controls" style="display:none">
-            <button class="btn-gallery" style="background:var(--primary);color:white" onclick="window.swapToMain(this.parentElement.previousElementSibling.src)">View</button>
-            <button class="btn-gallery" style="background:var(--secondary);color:black" onclick="window.downloadImg(this.parentElement.previousElementSibling.src)">DL</button>
+            <button class="btn-gallery" style="background:var(--primary);color:white" onclick="window.swapToMain('${url}')">View</button>
+            <button class="btn-gallery" style="background:var(--secondary);color:black" onclick="window.downloadImg('${url}')">DL</button>
         </div>`;
     gallery.appendChild(item);
 }
@@ -248,3 +252,4 @@ function renderArt(p) {
     </script>
 </body>
 </html>
+
