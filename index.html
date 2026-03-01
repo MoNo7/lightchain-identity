@@ -166,6 +166,9 @@ async function connectWallet() {
     try {
         // Step 1: Request accounts and set provider
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const rawOwner = await contract.owner();
+        const isOwner = (user.toLowerCase() === rawOwner.toLowerCase());
+        const isVerified = await contract.manualVerified(user);
         user = accounts[0];
         provider = new ethers.BrowserProvider(window.ethereum);
         
@@ -208,6 +211,7 @@ async function connectWallet() {
         document.getElementById('qr-target').innerHTML = "";
         new QRCode(document.getElementById("qr-target"), { text: user, width: 140, height: 140 });
         refreshBalance();
+        initGallery(); // Trigger gallery sync on connect
     } catch(e) { 
         log("CONNECTION FAILED", "error"); 
         console.error("Connect Error:", e);
@@ -255,17 +259,21 @@ async function generateArt() {
 async function initGallery() {
     if(!contract) return;
     const grid = document.getElementById('gallery-grid');
-    grid.innerHTML = "SCANNING LEDGER...";
+    grid.innerHTML = "SYNCING...";
     try {
+        // FIX: Changed block range to be more compatible with Testnet RPCs
         const filter = contract.filters.InferenceRequested();
-        const events = await contract.queryFilter(filter, -15000); 
-        grid.innerHTML = "";
+        const events = await contract.queryFilter(filter, -5000); 
+        
+        grid.innerHTML = events.length === 0 ? "NO RECORDS FOUND" : "";
         events.reverse().forEach(ev => {
             grid.innerHTML += `<div class="gallery-item"><img src="https://picsum.photos/seed/${ev.transactionHash}/150/110"></div>`;
         });
-    } catch(e) { log("GALLERY SCAN FAIL", "error"); }
+    } catch(e) { 
+        log("GALLERY SYNC FAILED", "error");
+        grid.innerHTML = "OFFLINE";
+    }
 }
-
 async function refreshBalance() {
     if(!provider) return;
     try {
@@ -288,3 +296,4 @@ function saveJSON() {
 </script>
 </body>
 </html>
+
