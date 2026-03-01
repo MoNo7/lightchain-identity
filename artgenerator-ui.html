@@ -2,327 +2,81 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AIVM Generator | Lightchain AI</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        :root {
-            --bg: #0d1117;
-            --nav-bg: #161b22;
-            --card-bg: #1c2128;
-            --text: #c9d1d9;
-            --accent: #58a6ff;
-            --border: #30363d;
-            --success: #238636;
-            --locked: #484f58;
-            --warning: #d29922;
-        }
-
-        body {
-            margin: 0;
-            background-color: var(--bg);
-            color: var(--text);
-            font-family: -apple-system, system-ui, sans-serif;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        /* TOP NAVIGATION */
-header {
-    width: 100%;
-    background: var(--nav-bg);
-    border-bottom: 1px solid var(--border);
-    padding: 10px 24px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-sizing: border-box;
-}
-.header-right { display: flex; align-items: center; gap: 12px; }
-.pill {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 0.8rem;
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    padding: 6px 14px;
-    border-radius: 20px;
-    font-weight: 500;
-}
-.status-dot {
-    height: 8px; width: 8px; background-color: var(--success);
-    border-radius: 50%; box-shadow: 0 0 6px var(--success);
-}
-.balance-text {
-    color: var(--accent); font-weight: 700;
-    border-right: 1px solid var(--border);
-    padding-right: 10px; margin-right: 2px;
-}
-.wallet-pill { cursor: pointer; }
-
-        .header-left { display: flex; align-items: center; gap: 20px; }
-        .brand-title { font-weight: 600; font-size: 1.1rem; color: white; cursor: pointer; }
-        .cluster-status { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--success); background: rgba(35, 134, 54, 0.1); padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(35, 134, 54, 0.3); }
-        .dot { height: 8px; width: 8px; background-color: var(--success); border-radius: 50%; display: inline-block; box-shadow: 0 0 5px var(--success); }
-        .wallet-info { display: flex; align-items: center; gap: 15px; font-size: 0.85rem; }
-        .address-pill { cursor: pointer; background: var(--bg); border: 1px solid var(--border); padding: 4px 12px; border-radius: 6px; }
-
-        /* LAYOUT */
-        .app-container { display: flex; flex: 1; overflow: hidden; }
+        :root { --primary: #5865f2; --secondary: #00ff80; --bg: #0f1016; --card: #1a1b26; --border: #2d2f45; --text: #ffffff; --text-dim: #94a3b8; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
         
-        /* SIDEBAR */
-        #sidebar { width: 260px; background: var(--nav-bg); border-right: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; gap: 8px; }
-        .nav-item { color: var(--text); text-decoration: none; font-size: 0.9rem; padding: 10px 15px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; }
-        .nav-item.active { background: rgba(88, 166, 255, 0.1); color: var(--accent); font-weight: bold; }
-        .nav-item:hover:not(.active) { background: var(--border); }
+        /* Optimized for Iframe: No Body Scroll */
+        body { background: transparent; color: var(--text); padding: 10px; overflow-y: auto; overflow-x: hidden; }
 
-        /* GENERATOR MAIN AREA */
-        main { flex: 1; padding: 30px; overflow-y: auto; display: flex; flex-direction: column; gap: 25px; }
+        .workspace { display: flex; flex-direction: column; gap: 20px; max-width: 1200px; margin: 0 auto; }
         
-        .generator-controls {
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            padding: 20px;
-            border-radius: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
+        /* Input Area */
+        .input-group { background: var(--card); border: 1px solid var(--border); border-radius: 12px; display: flex; padding: 8px; gap: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .prompt-input { flex: 1; background: transparent; border: none; color: white; padding: 12px; outline: none; font-size: 1rem; }
+        .btn-gen { background: var(--primary); color: white; border: none; padding: 10px 25px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        .btn-gen:hover { background: #4752c4; transform: translateY(-1px); }
 
-        .input-row { display: flex; gap: 10px; }
-        input[type="text"] { flex: 1; background: var(--bg); border: 1px solid var(--border); color: white; padding: 12px; border-radius: 6px; font-size: 1rem; }
+        /* Preview Display */
+        .output-view { min-height: 512px; aspect-ratio: 16/9; background: #08090f; border: 1px solid var(--border); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--text-dim); overflow: hidden; position: relative; }
+        .mint-overlay { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.8); padding: 8px 15px; border-radius: 20px; border: 1px solid var(--secondary); font-size: 0.7rem; color: var(--secondary); display: none; align-items: center; gap: 8px; z-index: 10; }
         
-        .gen-btn { background: var(--success); color: white; border: none; padding: 0 25px; border-radius: 6px; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 140px; }
-        .gen-btn span { font-size: 0.7rem; opacity: 0.8; }
+        /* Gallery Section */
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+        .card-title { font-size: 0.7rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase; margin-bottom: 15px; letter-spacing: 1px; }
+        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
+        .gallery-item { background: #000; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; position: relative; aspect-ratio: 1; }
+        .gallery-img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
 
-        /* PREVIEW AREA */
-        .render-canvas {
-            aspect-ratio: 16 / 9;
-            background: #000;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        .status-overlay {
-            position: absolute;
-            background: rgba(13, 17, 23, 0.85);
-            width: 100%;
-            height: 100%;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
-            z-index: 10;
-        }
-
-        .loader { width: 40px; height: 40px; border: 4px solid var(--border); border-top: 4px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* HISTORY SECTION */
-        .history-section { display: flex; flex-direction: column; gap: 15px; }
-        .history-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
-        .art-thumb { 
-            background: var(--card-bg); 
-            border: 1px solid var(--border); 
-            border-radius: 8px; 
-            overflow: hidden; 
-            position: relative;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .art-thumb:hover { border-color: var(--accent); transform: translateY(-3px); }
-        .art-thumb img { width: 100%; height: 120px; object-fit: cover; }
-        .thumb-actions { padding: 8px; display: flex; gap: 5px; }
-        .thumb-btn { flex: 1; font-size: 0.7rem; padding: 5px; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 4px; cursor: pointer; }
-        .thumb-btn:hover { background: var(--border); color: white; }
-
-        #toast { position: fixed; bottom: 20px; right: 20px; background: #21262d; border: 1px solid var(--accent); padding: 12px 20px; border-radius: 8px; display: none; z-index: 1000; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .mint-spinner { width: 12px; height: 12px; border: 2px solid var(--secondary); border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-
-<header>
-    <div class="header-left">
-        <span class="brand-title" onclick="location.href='index.html'">Lightchain AI Testnet</span>
-    </div>
-    <div class="header-right">
-        <div class="pill">
-            <span class="status-dot"></span>
-            <span>AIVM Cluster: Active</span>
-            <span class="load-text">Load: 14%</span>
+    <div class="workspace">
+        <div class="input-group">
+            <input type="text" id="prompt-input" class="prompt-input" placeholder="Describe the masterpiece you want the AIVM to imagine...">
+            <button id="generate-btn" class="btn-gen" onclick="generate()">GENERATE (1.00 LCAI)</button>
         </div>
-        
-        <div id="wallet-pill" class="pill wallet-pill" onclick="copyAddress()">
-            <span id="balance-amt" class="balance-text">0.00 LCAI</span>
-            <span id="user-addr-short">0x...</span>
+
+        <div class="output-view" id="art-output">
+            <div id="mint-status" class="mint-overlay"><div class="mint-spinner"></div>AIVM Anchoring...</div>
+            Awaiting AIVM Instruction...
+        </div>
+
+        <div class="card">
+            <div class="card-title">Art History</div>
+            <div id="art-gallery" class="gallery-grid"></div>
         </div>
     </div>
-</header>
-
-    <div class="app-container">
-        <aside id="sidebar">
-            <div class="nav-item active" onclick="location.href='artgenerator-ui.html'">
-                <span>AIVM Generator</span>
-            </div>
-            <div class="nav-item" onclick="notify('Marketplace Under Construction')">
-                <span>Marketplace <span class="badge">WIP</span></span>
-            </div>
-        </aside>
-
-        <main>
-            <section class="generator-controls">
-                <div class="input-row">
-                    <input type="text" id="art-prompt" placeholder="Describe the masterpiece you want the AIVM to imagine...">
-                    <button class="gen-btn" onclick="generateArt()">
-                        GENERATE
-                        <span>Cost: 1.00 LCAI</span>
-                    </button>
-                </div>
-            </section>
-
-            <section class="render-canvas">
-                <div id="status-overlay" class="status-overlay">
-                    <div class="loader"></div>
-                    <h3 id="status-text">Mining Transaction...</h3>
-                    <p style="font-size: 0.8rem; opacity: 0.7;">Anchoring prompt to Lightchain PoI</p>
-                </div>
-                <img id="main-render" src="" style="width: 100%; height: 100%; object-fit: contain; display: none;">
-                <div id="placeholder-text" style="color: var(--locked);">Awaiting AIVM Instruction...</div>
-            </section>
-
-            <section class="history-section">
-                <h3>Art History</h3>
-                <div id="history-grid" class="history-grid">
-                    <div class="art-thumb">
-                        <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=200" alt="History">
-                        <div class="thumb-actions">
-                            <button class="thumb-btn" onclick="viewFull(this.parentElement.parentElement.querySelector('img').src)">View</button>
-                            <button class="thumb-btn">Download</button>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </main>
-    </div>
-
-    <div id="toast">Message</div>
 
     <script>
-        // Use the contract you deployed via Remix
-        const ADDR_ART = "0xBCAb6D8FB87aA3D584F28E714892373D7C7C6"; 
-        const ABI_ART = [
-            "function generateArt(string memory prompt) public payable returns (uint256)",
-            "event ArtGenerated(uint256 indexed tokenId, string prompt, string uri)"
-        ];
-
-        let provider, signer, userAddress;
-
-        async function init() {
-            if (!window.ethereum) return;
-            provider = new ethers.providers.Web3Provider(window.ethereum);
-            const accounts = await provider.listAccounts();
-            if (accounts.length > 0) {
-                userAddress = accounts[0];
-                signer = provider.getSigner();
-                document.getElementById('user-addr-pill').innerText = `${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
-                updateBalance();
-            } else {
-                location.href = 'index.html'; // Redirect if not connected
-            }
-        }
-
-        async function updateBalance() {
-            const bal = await provider.getBalance(userAddress);
-            document.getElementById('balance-amt').innerText = `${parseFloat(ethers.utils.formatEther(bal)).toFixed(2)} LCAI`;
-        }
-
-        async function generateArt() {
-            const prompt = document.getElementById('art-prompt').value;
-            if (!prompt) return notify("Enter a prompt first!");
-
-            const overlay = document.getElementById('status-overlay');
-            const statusText = document.getElementById('status-text');
-            const placeholder = document.getElementById('placeholder-text');
+        const CONFIG = { AIVM_ADDR: "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB" };
+        const ABI = ["function generateArt(string) external payable", "event ArtGenerated(address indexed,string,bytes32,uint256)"];
+        
+        async function generate() {
+            const prompt = document.getElementById('prompt-input').value;
+            if(!prompt || !window.ethereum) return;
             
             try {
-                const contract = new ethers.Contract(ADDR_ART, ABI_ART, signer);
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                const signer = await provider.getSigner();
+                const contract = new ethers.Contract(CONFIG.AIVM_ADDR, ABI, signer);
                 
-                // Show Mining Status
-                overlay.style.display = 'flex';
-                placeholder.style.display = 'none';
-                statusText.innerText = "Mining Transaction...";
-
-                // This is a placeholder call—ensure your .sol matches this function name and fee
-                const tx = await contract.generateArt(prompt, { value: ethers.utils.parseEther("1.0") });
-                
-                // Show Syncing Status
-                statusText.innerText = "Syncing with AIVM...";
+                document.getElementById('mint-status').style.display = 'flex';
+                const tx = await contract.generateArt(prompt, { value: ethers.parseEther("1.0") });
                 await tx.wait();
-
-                // Mocking the result for UI demonstration
-                setTimeout(() => {
-                    const mockImg = "https://images.unsplash.com/photo-1633167606207-d840b5070fc2?auto=format&fit=crop&q=80&w=1000";
-                    displayResult(mockImg);
-                    addToHistory(mockImg);
-                    overlay.style.display = 'none';
-                    notify("Art successfully generated!");
-                    updateBalance();
-                }, 2000);
-
+                
+                // Logic to update UI with pollination/gateway images goes here...
+                document.getElementById('art-output').innerText = "Inference Signal Anchored. Processing...";
             } catch (e) {
                 console.error(e);
-                overlay.style.display = 'none';
-                placeholder.style.display = 'block';
-                notify("Transaction Failed or Cancelled");
+                document.getElementById('mint-status').style.display = 'none';
             }
         }
-
-        function displayResult(url) {
-            const img = document.getElementById('main-render');
-            img.src = url;
-            img.style.display = 'block';
-        }
-
-        function addToHistory(url) {
-            const grid = document.getElementById('history-grid');
-            const item = document.createElement('div');
-            item.className = 'art-thumb';
-            item.innerHTML = `
-                <img src="${url}">
-                <div class="thumb-actions">
-                    <button class="thumb-btn" onclick="viewFull('${url}')">View</button>
-                    <button class="thumb-btn">Download</button>
-                </div>
-            `;
-            grid.prepend(item);
-        }
-
-        function viewFull(url) {
-            window.open(url, '_blank');
-        }
-
-        function copyAddress() {
-            navigator.clipboard.writeText(userAddress);
-            notify("Address copied!");
-        }
-
-        function notify(msg) {
-            const t = document.getElementById('toast');
-            t.innerText = msg;
-            t.style.display = 'block';
-            setTimeout(() => t.style.display = 'none', 3000);
-        }
-
-        window.onload = init;
     </script>
 </body>
 </html>
