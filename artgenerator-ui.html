@@ -53,7 +53,8 @@
 
 <script>
 const CONFIG = { AIVM_ADDR: "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB" };
-
+const modelHash = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+    
 // Universal ABI covering both potential versions of the contract
 const ABI = [
     "function generateArt(string prompt, bytes32 modelDigest) public payable",
@@ -89,6 +90,11 @@ async function generate() {
             value: ethers.parseEther("0.1"),
             gasLimit: 400000 // Fixed gas limit for testnet stability
         };
+
+        const tx = await contract.generateArt(prompt, modelHash, {
+            value: ethers.parseEther("0.1"), // The inference fee
+            gasLimit: 600000                 // Manual override
+        });
 
         try {
             // Try 2-argument version (Prompt + Model)
