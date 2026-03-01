@@ -20,8 +20,8 @@
         }
         .console-line { margin-bottom: 4px; border-left: 2px solid #1a202c; padding-left: 8px; }
         .console-line.success { border-left-color: var(--accent); color: #fff; }
+        .console-line.error { border-left-color: #ff4444; color: #ff4444; }
 
-        /* Navigation List Styling */
         .nav-menu { display: flex; flex-direction: column; gap: 5px; }
         .nav-link { 
             color: var(--text-dim); padding: 12px 15px; cursor: pointer; border-radius: 6px; 
@@ -42,7 +42,6 @@
         .view-pane { flex: 1; padding: 45px; display: none; overflow-y: auto; }
         .view-pane.active { display: block; }
 
-        /* CARDS & PANELS */
         .card { background: var(--panel); border: 1px solid var(--border); padding: 35px; border-radius: 12px; max-width: 650px; border-top: 4px solid var(--accent); }
         .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 25px; }
         .admin-box { background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 20px; border-radius: 8px; }
@@ -51,7 +50,7 @@
         .panel-input:focus { border-color: var(--accent); }
         
         .action-btn { background: var(--accent); color: white; border: none; padding: 10px; border-radius: 4px; font-size: 0.65rem; cursor: pointer; width: 100%; font-weight: bold; margin-bottom: 8px; transition: 0.2s; }
-        .action-btn:hover { filter: brightness(1.2); }
+        .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .action-btn.alt { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
         
         pre { background: var(--console-bg); padding: 20px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.75rem; color: var(--text-dim); margin: 20px 0; white-space: pre-wrap; word-break: break-all; }
@@ -62,12 +61,10 @@
 
 <nav>
     <div class="nav-logo">LCAI <span>IAM</span></div>
-    
     <div class="system-console" id="console">
         <div class="console-line">>> INITIALIZING LCAI_IAM_CORE...</div>
         <div class="console-line">>> STATUS: DISCONNECTED</div>
     </div>
-    
     <div class="nav-menu">
         <button class="nav-link active" onclick="showView('id-view', this)">ZK IDENTITY</button>
         <button class="nav-link" onclick="showView('recovery-view', this)">IDENTITY RECOVERY</button>
@@ -84,7 +81,7 @@
     <div id="id-view" class="view-pane active">
         <div class="card">
             <h2>ZK-SBT IDENTITY</h2>
-            <p style="color:var(--text-dim);">Your decentralized identity token on the Lightchain protocol.</p>
+            <p style="color:var(--text-dim);">Decentralized identity token on Lightchain.</p>
             <pre id="id-json">{ "auth": "pending_wallet_connection" }</pre>
             <button onclick="saveJSON()" class="action-btn alt" style="width: auto; padding: 10px 25px;">DOWNLOAD JSON</button>
             <br><br>
@@ -95,25 +92,22 @@
     <div id="recovery-view" class="view-pane">
         <div class="card">
             <h2>IDENTITY RECOVERY</h2>
-            <p style="color:var(--text-dim);">Administrative controls and revenue management for IAM protocols.</p>
-            
             <div class="admin-grid">
                 <div class="admin-box">
                     <h4 style="margin:0 0 12px 0; color:var(--accent);">ADMIN PANEL</h4>
                     <input type="text" class="panel-input" placeholder="User Address (0x...)" id="admin-addr">
-                    <button class="action-btn" onclick="triggerAction('QUERY STATUS')">QUERY STATUS</button>
-                    <button class="action-btn" onclick="triggerAction('VERIFY IDENTITY')">VERIFY IDENTITY</button>
-                    <button class="action-btn alt" style="border-color: #ff4444; color: #ff4444;" onclick="triggerAction('REVOKE ACCESS')">REVOKE ACCESS</button>
+                    <button class="action-btn" onclick="executeOnChain('queryStatus')">QUERY STATUS</button>
+                    <button class="action-btn" onclick="executeOnChain('verifyIdentity')">VERIFY IDENTITY</button>
+                    <button class="action-btn alt" style="border-color: #ff4444; color: #ff4444;" onclick="executeOnChain('revokeAccess')">REVOKE ACCESS</button>
                 </div>
-
                 <div class="admin-box">
                     <h4 style="margin:0 0 12px 0; color:var(--accent);">OWNER PANEL</h4>
                     <div style="background: #000; padding: 12px; border-radius: 4px; margin-bottom: 12px; border: 1px solid var(--border);">
                         <div style="font-size: 0.6rem; color: var(--text-dim); margin-bottom: 4px;">PROTOCOL REVENUE</div>
                         <div style="font-size: 1.1rem; font-weight: bold; color: #fff;" id="revenue-val">0.00 LCAI</div>
                     </div>
-                    <button class="action-btn" onclick="triggerAction('WITHDRAW REVENUE')">WITHDRAW REVENUE</button>
-                    <button class="action-btn alt" onclick="triggerAction('TRANSFER OWNERSHIP')">TRANSFER OWNERSHIP</button>
+                    <button class="action-btn" onclick="executeOnChain('withdrawRevenue')">WITHDRAW REVENUE</button>
+                    <button class="action-btn alt" onclick="executeOnChain('transferOwnership')">TRANSFER OWNERSHIP</button>
                 </div>
             </div>
         </div>
@@ -125,66 +119,115 @@
 </div>
 
 <script>
-let user = "";
+// --- ON-CHAIN CONFIGURATION ---
+const CONTRACT_CONFIG = {
+    address: "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB", // Replace with your Address
+    abi: [
+        "function verifyIdentity(address user) public",
+        "function revokeAccess(address user) public",
+        "function queryStatus(address user) public view returns (uint256)",
+        "function withdraw() public",
+        "function transferOwnership(address newOwner) public",
+        "function getRevenue() public view returns (uint256)"
+    ]
+};
 
-const log = (msg, isSuccess = false) => {
+let user = "";
+let provider, signer, contract;
+
+const log = (msg, type = 'info') => {
     const el = document.getElementById('console');
     const line = document.createElement('div');
-    line.className = `console-line ${isSuccess ? 'success' : ''}`;
+    line.className = `console-line ${type === 'success' ? 'success' : (type === 'error' ? 'error' : '')}`;
     line.innerText = `>> ${msg}`;
     el.appendChild(line);
     el.scrollTop = el.scrollHeight;
 };
 
-function triggerAction(actionName) {
-    const addr = document.getElementById('admin-addr').value;
-    if (actionName.includes('STATUS') || actionName.includes('VERIFY') || actionName.includes('REVOKE')) {
-        if (!addr) {
-            log(`ERR: TARGET ADDRESS REQUIRED FOR ${actionName}`);
-            return;
+async function executeOnChain(method) {
+    if (!user) { log("ERR: WALLET NOT CONNECTED", "error"); return; }
+    const targetAddr = document.getElementById('admin-addr').value;
+    
+    try {
+        log(`INITIATING: ${method.toUpperCase()}...`);
+        let tx;
+
+        if (method === 'queryStatus') {
+            if (!targetAddr) throw new Error("Target address required");
+            const status = await contract.queryStatus(targetAddr);
+            log(`STATUS FOR ${targetAddr.slice(0,6)}: ${status}`, "success");
+        } 
+        else if (method === 'verifyIdentity') {
+            if (!targetAddr) throw new Error("Target address required");
+            tx = await contract.verifyIdentity(targetAddr);
+            log(`TX SENT: ${tx.hash.slice(0,10)}...`);
+            await tx.wait();
+            log(`IDENTITY VERIFIED: ${targetAddr.slice(0,6)}`, "success");
         }
-        log(`${actionName}: ${addr.slice(0,10)}...`);
-    } else {
-        log(`EXECUTING: ${actionName}`);
+        else if (method === 'revokeAccess') {
+            if (!targetAddr) throw new Error("Target address required");
+            tx = await contract.revokeAccess(targetAddr);
+            log(`REVOKING...`);
+            await tx.wait();
+            log(`ACCESS REVOKED`, "success");
+        }
+        else if (method === 'withdrawRevenue') {
+            tx = await contract.withdraw();
+            log(`WITHDRAWING FUNDS...`);
+            await tx.wait();
+            log(`WITHDRAWAL COMPLETE`, "success");
+            updateRevenue();
+        }
+        else if (method === 'transferOwnership') {
+            if (!targetAddr) throw new Error("New owner address required in input");
+            tx = await contract.transferOwnership(targetAddr);
+            await tx.wait();
+            log(`OWNERSHIP TRANSFERRED TO ${targetAddr.slice(0,6)}`, "success");
+        }
+    } catch (e) {
+        log(`ERR: ${e.reason || e.message}`, "error");
     }
+}
+
+async function updateRevenue() {
+    try {
+        const rev = await contract.getRevenue();
+        document.getElementById('revenue-val').innerText = `${ethers.formatEther(rev)} LCAI`;
+    } catch (e) { console.error("Revenue fetch failed"); }
 }
 
 function showView(id, btn) {
     if (id === 'aivm-view' && !user) return;
-    document.querySelectorAll('.view-pane').forEach(v => v.classList.remove('active'));
-    document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.view-pane, .nav-link').forEach(el => el.classList.remove('active'));
     document.getElementById(id).classList.add('active');
     btn.classList.add('active');
 }
 
 async function connectWallet() {
-    if(!window.ethereum) { log("ERR: WALLET NOT FOUND"); return; }
+    if(!window.ethereum) { log("ERR: WALLET NOT FOUND", "error"); return; }
     try {
-        const provider = new ethers.BrowserProvider(window.ethereum);
+        provider = new ethers.BrowserProvider(window.ethereum);
         const acc = await provider.send("eth_requestAccounts", []);
         user = acc[0];
+        signer = await provider.getSigner();
+        contract = new ethers.Contract(CONTRACT_CONFIG.address, CONTRACT_CONFIG.abi, signer);
         
-        const btn = document.getElementById('wallet-btn');
-        btn.innerText = user.slice(0,6).toUpperCase() + "..." + user.slice(-4).toUpperCase();
-        log(`CONNECTED: ${user.slice(0,10)}...`, true);
+        document.getElementById('wallet-btn').innerText = user.slice(0,6).toUpperCase() + "..." + user.slice(-4).toUpperCase();
+        log(`CONNECTED: ${user.slice(0,10)}...`, "success");
 
-        // Identity Reveal
         const idData = { address: user, chain: "Lightchain_LCAI", type: "ZK_Soulbound", iat: Date.now() };
         document.getElementById('id-json').innerText = JSON.stringify(idData, null, 4);
         
-        // QR Reveal
         document.getElementById('qr-target').innerHTML = "";
         new QRCode(document.getElementById("qr-target"), { text: user, width: 140, height: 140 });
 
-        // State Unlock
         document.getElementById('aivm-tab').classList.remove('locked');
-        document.getElementById('revenue-val').innerText = "142.50 LCAI";
-        log("AIVM_THETA: CLUSTER_READY", true);
-    } catch(e) { log("ERR: CONNECTION FAILED"); }
+        updateRevenue();
+        log("AIVM_THETA: CLUSTER_READY", "success");
+    } catch(e) { log("ERR: CONNECTION FAILED", "error"); }
 }
 
 function saveJSON() {
-    if(!user) return;
     const b = new Blob([document.getElementById('id-json').innerText], {type:"application/json"});
     const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download="identity.json"; a.click();
 }
@@ -199,7 +242,6 @@ window.addEventListener('message', (e) => {
     if(e.data.type === 'AIVM_METRICS') {
         document.getElementById('load-num').innerText = e.data.load + "%";
         document.getElementById('status-txt').innerText = e.data.status.toUpperCase();
-        log(`AIVM_STATE: ${e.data.status.toUpperCase()}`);
     }
 });
 </script>
