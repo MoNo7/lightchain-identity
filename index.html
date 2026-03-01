@@ -160,7 +160,7 @@ async function connectWallet() {
         updateIdentity();
         initGallery();
         refreshBalance();
-        updateWalletPill(); // INITIAL PILL SYNC
+        updateWalletPill();
     } catch (e) { log("HANDSHAKE FAILED", "error"); }
 }
 
@@ -251,37 +251,55 @@ async function runOwner() {
         const tx = await contract.withdraw({ gasLimit: 200000 });
         await tx.wait(); log("VAULT WITHDRAWN", "success");
         refreshBalance();
-        updateWalletPill(); // SYNC PILL AFTER GAIN
+        updateWalletPill();
     } catch (e) { log("WITHDRAWAL FAILED", "error"); }
 }
 
 async function generateArt() {
     const prompt = document.getElementById('art-prompt').value;
     const modelHash = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+    if(!prompt) return log("PROMPT EMPTY", "error");
+
     try {
+        // Pre-check Balance
+        const userBal = await provider.getBalance(user);
+        const cost = ethers.parseEther("0.001");
+        if(userBal < cost) return log("INSUFFICIENT LCAI FOR FEE", "error");
+
         document.getElementById('status-txt').innerText = "INFERENCE";
         log("BROADCASTING INFERENCE...");
         
-        // UNIFIED CALL: TRY generateArt FIRST (Used in artgenerator-ui), FALLBACK TO requestInference
         let tx;
         try {
             tx = await contract.generateArt(prompt, modelHash, { 
-                value: ethers.parseEther("0.001"), 
-                gasLimit: 800000 
+                value: cost, 
+                gasLimit: 1200000 
             });
         } catch(err) {
+            log("METHOD 1 FAILED, TRYING FALLBACK...", "info");
             tx = await contract.requestInference(prompt, { 
-                value: ethers.parseEther("0.001"), 
-                gasLimit: 800000 
+                value: cost, 
+                gasLimit: 1200000 
             });
         }
         
+        log("TRANSACTION SENT: " + tx.hash.slice(0,10), "success");
         await tx.wait();
         log("INFERENCE SUCCESSFUL", "success");
         document.getElementById('status-txt').innerText = "IDLE";
-        updateWalletPill(); // SYNC PILL AFTER COST
+        updateWalletPill();
         initGallery();
-    } catch (e) { log("INFERENCE REJECTED", "error"); document.getElementById('status-txt').innerText = "IDLE"; }
+    } catch (e) { 
+        console.error(e);
+        // Robust Error Decoding
+        let errorMsg = "INFERENCE REJECTED";
+        if(e.message.includes("insufficient funds")) errorMsg = "INSUFFICIENT GAS";
+        if(e.message.includes("user rejected")) errorMsg = "USER CANCELLED";
+        if(e.message.includes("execution reverted")) errorMsg = "BLOCKCHAIN REVERT";
+        
+        log(errorMsg, "error"); 
+        document.getElementById('status-txt').innerText = "ERROR"; 
+    }
 }
 
 async function refreshBalance() {
