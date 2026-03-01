@@ -2,126 +2,325 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Lightchain AI | IAM & AIVM</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lightchain AI | IAM & AIVM Control Center</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.11.1/ethers.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        :root { --accent: #0070ff; --bg: #020408; --panel: #0b0e14; --border: #1e2633; }
-        body { margin: 0; background: var(--bg); color: white; font-family: 'Inter', monospace; display: flex; height: 100vh; overflow: hidden; }
-        
-        /* Left Sidebar */
-        nav { width: 260px; border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 30px; background: var(--panel); }
-        .status-window { background: rgba(0, 112, 255, 0.05); border: 1px solid var(--border); padding: 12px; border-radius: 8px; margin-bottom: 30px; font-size: 0.65rem; }
-        .status-dot { height: 6px; width: 6px; background: var(--accent); border-radius: 50%; display: inline-block; margin-right: 8px; box-shadow: 0 0 8px var(--accent); }
-        
-        .nav-logo { font-weight: 900; letter-spacing: 2px; color: var(--accent); margin-bottom: 40px; font-size: 1.1rem; }
-        .nav-item { color: #6a768a; padding: 12px; cursor: pointer; border-radius: 6px; margin-bottom: 6px; transition: 0.2s; border: none; background: none; text-align: left; font-family: inherit; font-size: 0.75rem; }
-        .nav-item:hover, .nav-item.active { color: white; background: var(--accent); }
-        .nav-item.locked { opacity: 0.2; cursor: not-allowed; }
+        :root { 
+            --accent: #0070ff; 
+            --bg: #020408; 
+            --panel: #0b0e14; 
+            --border: #1e2633; 
+            --text-main: #ffffff;
+            --text-dim: #6a768a;
+        }
 
-        /* Main Viewport */
-        .viewport { flex: 1; display: flex; flex-direction: column; }
-        header { height: 70px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: flex-end; padding: 0 40px; gap: 15px; background: rgba(11, 14, 20, 0.5); }
-        
-        /* Top Right Pills */
-        .pill { background: #000; border: 1px solid var(--border); border-radius: 50px; padding: 6px 18px; font-size: 0.7rem; color: var(--accent); }
-        .wallet-pill { background: var(--accent); color: white; border-radius: 50px; padding: 8px 22px; font-weight: 900; cursor: pointer; border: none; font-size: 0.75rem; }
+        body { 
+            margin: 0; 
+            background: var(--bg); 
+            color: var(--text-main); 
+            font-family: 'Inter', 'IBM Plex Mono', monospace; 
+            display: flex; 
+            height: 100vh; 
+            overflow: hidden; 
+        }
 
-        .view { flex: 1; padding: 50px; display: none; overflow-y: auto; }
-        .view.active { display: block; }
-        .id-card { background: var(--panel); border: 1px solid var(--border); padding: 40px; border-radius: 12px; max-width: 600px; position: relative; }
-        #qr-box { background: white; padding: 10px; display: inline-block; margin-top: 20px; cursor: pointer; border-radius: 4px; }
-        pre { background: #05070a; padding: 20px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.75rem; color: #8a96aa; overflow-x: auto; }
+        /* --- LEFT SIDEBAR (Release Layout) --- */
+        nav { 
+            width: 260px; 
+            border-right: 1px solid var(--border); 
+            display: flex; 
+            flex-direction: column; 
+            padding: 30px; 
+            background: var(--panel); 
+            z-index: 10;
+        }
+
+        .status-window { 
+            background: rgba(0, 112, 255, 0.03); 
+            border: 1px solid var(--border); 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin-bottom: 30px; 
+            font-size: 0.65rem; 
+            line-height: 1.6;
+        }
+
+        .status-dot { 
+            height: 7px; 
+            width: 7px; 
+            background: #444; 
+            border-radius: 50%; 
+            display: inline-block; 
+            margin-right: 10px; 
+            transition: 0.3s;
+        }
+
+        .status-dot.active { 
+            background: var(--accent); 
+            box-shadow: 0 0 10px var(--accent); 
+        }
+
+        .nav-logo { 
+            font-weight: 900; 
+            letter-spacing: 3px; 
+            color: var(--accent); 
+            margin-bottom: 40px; 
+            font-size: 1.2rem; 
+        }
+
+        .nav-item { 
+            color: var(--text-dim); 
+            padding: 14px; 
+            cursor: pointer; 
+            border-radius: 8px; 
+            margin-bottom: 8px; 
+            transition: 0.2s; 
+            border: none; 
+            background: none; 
+            text-align: left; 
+            font-family: inherit; 
+            font-size: 0.8rem; 
+            font-weight: 500;
+        }
+
+        .nav-item:hover, .nav-item.active { 
+            color: white; 
+            background: var(--accent); 
+        }
+
+        .nav-item.locked { 
+            opacity: 0.25; 
+            cursor: not-allowed; 
+        }
+
+        /* --- MAIN VIEWPORT --- */
+        .viewport { flex: 1; display: flex; flex-direction: column; position: relative; }
+
+        header { 
+            height: 80px; 
+            border-bottom: 1px solid var(--border); 
+            display: flex; 
+            align-items: center; 
+            justify-content: flex-end; 
+            padding: 0 40px; 
+            gap: 15px; 
+            background: rgba(2, 4, 8, 0.8);
+            backdrop-filter: blur(10px);
+        }
+
+        /* --- TOP NAV PILLS (Merged Design) --- */
+        .cluster-pill { 
+            display: flex; 
+            align-items: center; 
+            background: #000; 
+            border: 1px solid var(--border); 
+            border-radius: 50px; 
+            padding: 7px 20px; 
+            font-size: 0.7rem; 
+            color: var(--accent); 
+            font-family: monospace;
+        }
+
+        .wallet-pill { 
+            background: var(--accent); 
+            color: white; 
+            border-radius: 50px; 
+            padding: 9px 24px; 
+            font-weight: 900; 
+            cursor: pointer; 
+            border: none; 
+            font-size: 0.75rem; 
+            transition: 0.3s;
+            box-shadow: 0 4px 15px rgba(0, 112, 255, 0.2);
+        }
+
+        .wallet-pill:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0, 112, 255, 0.4); }
+
+        /* --- CONTENT VIEWS --- */
+        .view-frame { flex: 1; padding: 50px; display: none; overflow-y: auto; }
+        .view-frame.active { display: block; }
+
+        .card { 
+            background: var(--panel); 
+            border: 1px solid var(--border); 
+            padding: 40px; 
+            border-radius: 16px; 
+            max-width: 650px; 
+            border-top: 4px solid var(--accent); 
+        }
+
+        pre { 
+            background: #05070a; 
+            padding: 20px; 
+            border: 1px solid var(--border); 
+            border-radius: 8px; 
+            font-size: 0.8rem; 
+            color: var(--text-dim); 
+            overflow-x: auto; 
+            margin: 20px 0; 
+        }
+
+        /* QR Code Styling (Merged from Current) */
+        #qrcode-display { 
+            background: white; 
+            padding: 15px; 
+            display: inline-block; 
+            border-radius: 10px; 
+            margin-top: 20px; 
+            cursor: pointer; 
+            transition: 0.2s;
+        }
+        #qrcode-display:hover { transform: scale(1.02); }
+
     </style>
 </head>
 <body>
 
 <nav>
     <div class="status-window">
-        <div style="margin-bottom: 5px;"><span class="status-dot"></span> NETWORK: LIGHTCHAIN-MAIN</div>
-        <div><span class="status-dot" style="background:#444; box-shadow:none;" id="aivm-dot"></span> AIVM: <span id="aivm-stat">STANDBY</span></div>
+        <div><span class="status-dot active"></span> SYSTEM: ONLINE</div>
+        <div style="margin-top:5px;"><span id="aivm-dot" class="status-dot"></span> AIVM: <span id="aivm-text">STANDBY</span></div>
     </div>
     
     <div class="nav-logo">LCAI <span>IAM</span></div>
     
-    <button class="nav-item active" onclick="tab('id-tab')">ZK IDENTITY</button>
-    <button class="nav-item" onclick="tab('rec-tab')">RECOVERY PANEL</button>
-    <button id="gen-link" class="nav-item locked" onclick="tab('gen-tab')">AIVM GENERATOR</button>
+    <button class="nav-item active" onclick="showTab('id-view')">ZK IDENTITY</button>
+    <button class="nav-item" onclick="showTab('admin-view')">IDENTITY RECOVERY</button>
+    <button id="gen-nav" class="nav-item locked" onclick="showTab('gen-view')">AIVM GENERATOR</button>
+    
+    <div style="margin-top:auto; font-size:0.6rem; color: #333;">ENCRYPTED SESSION V1.0.4</div>
 </nav>
 
 <div class="viewport">
     <header>
-        <div class="pill">AIVM-THETA | <span id="load">0%</span> | <span id="mode">IDLE</span></div>
-        <button id="w-btn" class="wallet-pill" onclick="connect()">CONNECT WALLET</button>
+        <div class="cluster-pill">
+            <span style="opacity: 0.4; margin-right: 12px; letter-spacing: 1px;">AIVM-THETA</span>
+            <span id="load-val" style="font-weight: 800; margin-right: 12px; min-width: 65px;">LOAD: 0%</span>
+            <span id="stat-val" style="font-weight: 800; color: #fff; background: #1a1e26; padding: 2px 10px; border-radius: 4px; text-transform: uppercase;">IDLE</span>
+        </div>
+
+        <button id="connect-btn" class="wallet-pill" onclick="handleWallet()">CONNECT WALLET</button>
     </header>
 
-    <div id="id-tab" class="view active">
-        <div class="id-card">
-            <h2 style="margin-top:0;">SOULBOUND IDENTITY</h2>
-            <p style="color:#6a768a; font-size:0.9rem;">Your ZK-Identity JSON and QR Access Key.</p>
-            <pre id="json-out">{ "status": "disconnected" }</pre>
-            <button class="wallet-pill" style="font-size:0.6rem; padding:6px 15px;" onclick="dlJSON()">DOWNLOAD JSON</button>
-            <br><br>
-            <div id="qr-box" onclick="dlQR()"></div>
+    <div id="id-view" class="view-frame active">
+        <div class="card">
+            <h1 style="margin:0 0 10px 0; font-size:1.6rem;">ZK-SBT IDENTITY</h1>
+            <p style="color:var(--text-dim); margin-bottom:30px;">Decentralized Soulbound credentials generated via Lightchain IAM.</p>
+            
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:0.7rem; color:var(--accent); font-weight:bold; letter-spacing:1px;">IDENTITY DATA (JSON)</span>
+                <button onclick="exportJSON()" style="background:none; border:1px solid #333; color:var(--text-dim); cursor:pointer; font-size:0.65rem; padding:5px 12px; border-radius:4px;">EXPORT .JSON</button>
+            </div>
+            
+            <pre id="json-viewer">{ "status": "awaiting_auth" }</pre>
+
+            <div id="qrcode-display" onclick="exportQR()"></div>
+            <p style="font-size:0.65rem; color:#444; margin-top:12px;">Click QR Code to download as security token (PNG)</p>
         </div>
     </div>
 
-    <div id="rec-tab" class="view">
-        <div class="id-card">
-            <h2>RECOVERY & ADMIN</h2>
-            <button class="nav-item" style="border:1px solid var(--border); width:100%;">Trigger Admin Recovery</button>
+    <div id="admin-view" class="view-frame">
+        <div class="card" style="border-top-color: #333;">
+            <h2>ADMIN & RECOVERY</h2>
+            <p style="color:var(--text-dim);">Identity recovery protocols and contract ownership panels.</p>
+            <div style="border: 1px solid var(--border); padding: 20px; border-radius: 8px; margin-top:20px;">
+                <h4 style="margin:0 0 10px 0;">OWNER PROTOCOL</h4>
+                <button class="nav-item" style="border:1px solid var(--border); width:100%;">Trigger Recovery Seed</button>
+            </div>
         </div>
     </div>
 
-    <div id="gen-tab" class="view" style="padding:0;">
-        <iframe id="gen-frame" src="artgenerator-ui.html" style="width:100%; height:100%; border:none;"></iframe>
+    <div id="gen-view" class="view-frame" style="padding:0;">
+        <iframe id="app-iframe" src="artgenerator-ui.html" style="width:100%; height:100%; border:none;"></iframe>
     </div>
 </div>
 
 <script>
-let addr = "";
-function tab(id) {
-    if(id === 'gen-tab' && !addr) return;
-    document.querySelectorAll('.view, .nav-item').forEach(el => el.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
+let userAccount = "";
+
+function showTab(tabId) {
+    if (tabId === 'gen-view' && !userAccount) return;
+    document.querySelectorAll('.view-frame').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
     event.currentTarget.classList.add('active');
 }
 
-async function connect() {
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const accounts = await provider.send("eth_requestAccounts", []);
-    addr = accounts[0];
-    document.getElementById('w-btn').innerText = addr.slice(0,6).toUpperCase() + "..." + addr.slice(-4).toUpperCase();
+async function handleWallet() {
+    if (!window.ethereum) { alert("MetaMask not found"); return; }
     
-    // Identity Update
-    const idObj = { address: addr, schema: "LCAI-ZK-1", issued: new Date().toISOString() };
-    document.getElementById('json-out').innerText = JSON.stringify(idObj, null, 4);
-    
-    // QR Update
-    document.getElementById('qr-box').innerHTML = "";
-    new QRCode(document.getElementById("qr-box"), { text: addr, width: 120, height: 120 });
+    try {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const accounts = await provider.send("eth_requestAccounts", []);
+        userAccount = accounts[0];
 
-    // Unlock
-    document.getElementById('gen-link').classList.remove('locked');
-    document.getElementById('aivm-dot').style.background = "var(--accent)";
-    document.getElementById('aivm-dot').style.boxShadow = "0 0 8px var(--accent)";
-    document.getElementById('aivm-stat').innerText = "CONNECTED";
+        // UI Updates
+        const btn = document.getElementById('connect-btn');
+        btn.innerText = userAccount.slice(0,6).toUpperCase() + "..." + userAccount.slice(-4).toUpperCase();
+        
+        // Update JSON Identity
+        const idData = { 
+            id: userAccount, 
+            network: "Lightchain_AIVM", 
+            auth_type: "ZK_Soulbound", 
+            timestamp: new Date().toISOString() 
+        };
+        document.getElementById('json-viewer').innerText = JSON.stringify(idData, null, 4);
+
+        // Update QR (Current Logic)
+        document.getElementById('qrcode-display').innerHTML = "";
+        new QRCode(document.getElementById("qrcode-display"), { 
+            text: userAccount, 
+            width: 140, 
+            height: 140,
+            colorDark: "#000000",
+            colorLight: "#ffffff"
+        });
+
+        // Sidebar & Access Transitions
+        document.getElementById('gen-nav').classList.remove('locked');
+        document.getElementById('aivm-dot').classList.add('active');
+        document.getElementById('aivm-text').innerText = "CONNECTED";
+        document.getElementById('aivm-text').style.color = "var(--accent)";
+
+    } catch (err) {
+        console.error("Auth Failed", err);
+    }
 }
 
-function dlJSON() {
-    const blob = new Blob([document.getElementById('json-out').innerText], {type:"application/json"});
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download="identity.json"; a.click();
+function exportJSON() {
+    const data = document.getElementById('json-viewer').innerText;
+    const blob = new Blob([data], {type: "application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = "lcai_identity.json"; a.click();
 }
 
-function dlQR() {
-    const canvas = document.querySelector('#qr-box canvas');
-    const a = document.createElement('a'); a.href = canvas.toDataURL(); a.download="qr_key.png"; a.click();
+function exportQR() {
+    const canvas = document.querySelector('#qrcode-display canvas');
+    if (!canvas) return;
+    const a = document.createElement('a'); a.href = canvas.toDataURL("image/png"); a.download = "lcai_qr.png"; a.click();
 }
 
+// Receive Metrics from Generator Iframe
 window.addEventListener('message', (e) => {
-    if(e.data.type === 'AIVM_METRICS') {
-        document.getElementById('load').innerText = e.data.load + "%";
-        document.getElementById('mode').innerText = e.data.status.toUpperCase();
+    if (e.data.type === 'AIVM_METRICS') {
+        document.getElementById('load-val').innerText = `LOAD: ${e.data.load}%`;
+        const statEl = document.getElementById('stat-val');
+        statEl.innerText = e.data.status.toUpperCase();
+        
+        // Status Colors
+        if (e.data.status === 'mining') {
+            statEl.style.color = '#ffcc00';
+            statEl.style.background = 'rgba(255,204,0,0.1)';
+        } else if (e.data.status === 'error') {
+            statEl.style.color = '#ff4444';
+            statEl.style.background = 'rgba(255,68,68,0.1)';
+        } else {
+            statEl.style.color = '#fff';
+            statEl.style.background = '#1a1e26';
+        }
     }
 });
 </script>
