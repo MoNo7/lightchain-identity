@@ -34,7 +34,7 @@
         .viewport { flex: 1; display: flex; flex-direction: column; }
         header { height: 80px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; }
 
-        .tickers { display: flex; gap: 25px; font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; }
+        .tickers { display: flex; gap: 25px; font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; margin: 0 auto; }
         .ticker-item { display: flex; align-items: center; gap: 8px; color: var(--text-dim); }
         .ticker-item span { color: var(--accent); font-weight: bold; }
 
@@ -149,68 +149,55 @@ const log = (msg, isSuccess = false) => {
     el.scrollTop = el.scrollHeight;
 };
 
-// --- FIXED TICKER LOGIC (Using Cryptocompare for HTTPS compatibility) ---
+// --- TICKERS ---
 async function updateTickers() {
     try {
         const response = await fetch('https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD');
         const data = await response.json();
         if(data.USD) {
             document.getElementById('eth-price').innerText = `$${data.USD.toLocaleString()}`;
-            // LCAI logic (simulated relative to ETH for realism)
-            const lcaiSim = (data.USD * 0.00035).toFixed(3);
-            document.getElementById('lcai-price').innerText = `$${lcaiSim}`;
+            document.getElementById('lcai-price').innerText = `$${(data.USD * 0.00035).toFixed(3)}`;
         }
-    } catch (e) { 
-        console.warn("Ticker fetch failed, retrying..."); 
-    }
+    } catch (e) { console.warn("Tickers offline."); }
 }
 setInterval(updateTickers, 10000);
 updateTickers();
 
-// --- FIXED ON-CHAIN LOGIC ---
+// --- BUTTON LOGIC ---
 async function executeOnChain(method) {
-    if (!contract || !signer) { 
-        log("ERR: SYSTEM NOT READY - CONNECT WALLET FIRST"); 
-        return; 
-    }
+    if (!contract) { log("ERR: WALLET NOT CONNECTED"); return; }
     const addr = document.getElementById('admin-addr').value;
     
     try {
-        log(`ACTION: ${method.toUpperCase()}...`);
+        log(`EXEC: ${method.toUpperCase()}...`);
         if (method === 'queryStatus') {
             const status = await contract.queryStatus(addr || user);
-            log(`ON-CHAIN STATUS: ${status}`, true);
+            log(`STATUS: ${status}`, true);
         } else if (method === 'withdrawRevenue') {
             const tx = await contract.withdraw();
-            log("TX BROADCASTED. WAITING...");
             await tx.wait();
-            log("WITHDRAWAL SUCCESSFUL", true);
+            log("WITHDRAWAL SUCCESS", true);
         } else if (method === 'verifyIdentity') {
-            if(!addr) throw new Error("Target address missing");
+            if(!addr) throw new Error("Input address required");
             const tx = await contract.verifyIdentity(addr);
             await tx.wait();
-            log("IDENTITY VERIFIED", true);
+            log("VERIFIED", true);
         } else if (method === 'revokeAccess') {
-            if(!addr) throw new Error("Target address missing");
+            if(!addr) throw new Error("Input address required");
             const tx = await contract.revokeAccess(addr);
             await tx.wait();
-            log("ACCESS REVOKED", true);
+            log("REVOKED", true);
         } else if (method === 'transferOwnership') {
-            if(!addr) throw new Error("New owner address missing in input");
+            if(!addr) throw new Error("Target address required");
             const tx = await contract.transferOwnership(addr);
             await tx.wait();
             log("OWNERSHIP TRANSFERRED", true);
         }
-    } catch (e) { 
-        log(`ERR: ${e.message.slice(0,50)}`); 
-    }
+    } catch (e) { log(`ERR: ${e.message.split('(')[0]}`); }
 }
 
 async function connectWallet() {
-    if(!window.ethereum) {
-        log("ERR: NO PROVIDER FOUND");
-        return;
-    }
+    if(!window.ethereum) return;
     try {
         provider = new ethers.BrowserProvider(window.ethereum);
         const accounts = await provider.send("eth_requestAccounts", []);
@@ -219,20 +206,16 @@ async function connectWallet() {
         contract = new ethers.Contract(CONTRACT_CONFIG.address, CONTRACT_CONFIG.abi, signer);
         
         document.getElementById('wallet-btn').innerText = user.slice(0,6).toUpperCase() + "..." + user.slice(-4).toUpperCase();
-        log(`READY: ${user.slice(0,12)}`, true);
+        log(`READY: ${user.slice(0,10)}`, true);
         
-        document.getElementById('id-json').innerText = JSON.stringify({address: user, verified: true, network: "LCAI-IAM"}, null, 4);
+        document.getElementById('id-json').innerText = JSON.stringify({address: user, verified: true}, null, 4);
         document.getElementById('qr-target').innerHTML = "";
         new QRCode(document.getElementById("qr-target"), { text: user, width: 140, height: 140 });
         document.getElementById('aivm-tab').classList.remove('locked');
 
-        // Revenue refresh
         const rev = await contract.getRevenue();
         document.getElementById('revenue-val').innerText = `${ethers.formatEther(rev)} LCAI`;
-
-    } catch(e) { 
-        log("ERR: CONNECTION FAILED"); 
-    }
+    } catch(e) { log("ERR: CONNECTION FAILED"); }
 }
 
 function showView(id, btn) {
@@ -249,7 +232,6 @@ function saveJSON() {
 
 function saveQR() {
     const c = document.querySelector('#qr-target canvas');
-    if(!c) return;
     const a = document.createElement('a'); a.href = c.toDataURL(); a.download="qr.png"; a.click();
 }
 </script>
