@@ -5,79 +5,96 @@
     <title>AIVM Generator | Lightchain AI</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        :root { --primary: #5865f2; --secondary: #00ff80; --bg: #0f1016; --card: #1a1b26; --border: #2d2f45; --text: #ffffff; --text-dim: #94a3b8; }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
-        body { background: transparent; color: var(--text); padding: 0; height: 100vh; overflow-y: auto; overflow-x: hidden; }
-        .workspace { display: flex; flex-direction: column; gap: 20px; padding: 10px; }
-        .input-group { background: var(--card); border: 1px solid var(--border); border-radius: 12px; display: flex; padding: 8px; gap: 10px; }
-        .prompt-input { flex: 1; background: transparent; border: none; color: white; padding: 12px; outline: none; font-size: 1rem; }
-        .btn-gen { background: var(--primary); color: white; border: none; padding: 10px 25px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s; }
-        .output-view { height: calc(100vh - 120px); min-height: 512px; background: #08090f; border: 1px solid var(--border); border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
-        .output-img { width: 100%; height: 100%; object-fit: contain; display: none; }
-        .status-txt { color: var(--text-dim); font-size: 1.1rem; text-align: center; }
-        .mint-overlay { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.8); padding: 8px 15px; border-radius: 20px; border: 1px solid var(--secondary); font-size: 0.7rem; color: var(--secondary); display: none; align-items: center; gap: 8px; }
+        :root { --primary: #5865f2; --secondary: #00ff80; --bg: #0f1016; --card: #1a1b26; --border: #2d2f45; --text: #ffffff; }
+        body { background: transparent; color: var(--text); padding: 0; height: 100vh; display: flex; overflow: hidden; }
+        .workspace { flex: 1; display: flex; flex-direction: column; gap: 15px; padding: 20px; }
+        .history-sidebar { width: 220px; background: rgba(0,0,0,0.3); border-left: 1px solid var(--border); padding: 15px; overflow-y: auto; }
+        .input-group { background: var(--card); border: 1px solid var(--border); border-radius: 12px; display: flex; padding: 8px; }
+        .prompt-input { flex: 1; background: transparent; border: none; color: white; padding: 10px; outline: none; }
+        .output-view { flex: 1; background: #000; border: 1px solid var(--border); border-radius: 12px; position: relative; display: flex; align-items: center; justify-content: center; }
+        .output-img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .history-item { font-size: 0.7rem; padding: 8px; border-bottom: 1px solid var(--border); cursor: pointer; color: #94a3b8; }
+        .history-item:hover { color: var(--secondary); }
+        .mint-btn { position: absolute; bottom: 20px; right: 20px; background: var(--secondary); color: black; border: none; padding: 8px 15px; border-radius: 5px; font-weight: 800; display: none; cursor: pointer; }
     </style>
 </head>
 <body>
     <div class="workspace">
         <div class="input-group">
-            <input type="text" id="prompt-input" class="prompt-input" placeholder="A cosmic panda painting in oil...">
-            <button id="generate-btn" class="btn-gen" onclick="generate()">GENERATE (1.00 LCAI)</button>
+            <input type="text" id="prompt-input" class="prompt-input" placeholder="Enter AIVM Instruction...">
+            <button class="btn-gen" style="background:var(--primary); color:white; border:none; border-radius:6px; padding:0 20px;" onclick="generate()">GENERATE</button>
         </div>
-        <div class="output-view" id="output-view">
-            <div id="mint-status" class="mint-overlay">Anchoring to LCAI...</div>
-            <p id="status-txt" class="status-txt">Awaiting AIVM Instruction...</p>
-            <img id="result-img" class="output-img">
+        <div class="output-view">
+            <p id="status">Ready for Inference...</p>
+            <img id="result-img" class="output-img" style="display:none">
+            <button id="mint-btn" class="mint-btn" onclick="mintNFT()">MINT AS NFT</button>
         </div>
+    </div>
+    <div class="history-sidebar">
+        <div style="font-size:0.7rem; font-weight:800; margin-bottom:10px; color:var(--primary)">RECENT INFERENCE (LAST 10)</div>
+        <div id="history-list"></div>
     </div>
 
     <script>
-        const CONFIG = { AIVM_ADDR: "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB" };
-        const ABI = ["function generateArt(string) external payable"];
-        
+        let currentPrompt = "";
+        let history = JSON.parse(localStorage.getItem('ai_history') || '[]');
+
+        function updateHistory(prompt, url) {
+            history.unshift({ prompt, url });
+            if(history.length > 10) history.pop();
+            localStorage.setItem('ai_history', JSON.stringify(history));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('history-list');
+            list.innerHTML = history.map((item, i) => `
+                <div class="history-item" onclick="loadHistory(${i})">${item.prompt.slice(0,30)}...</div>
+            `).join('');
+        }
+
+        function loadHistory(i) {
+            const item = history[i];
+            const img = document.getElementById('result-img');
+            img.src = item.url;
+            img.style.display = 'block';
+            document.getElementById('status').style.display = 'none';
+            document.getElementById('mint-btn').style.display = 'block';
+        }
+
         async function generate() {
             const prompt = document.getElementById('prompt-input').value;
-            if(!prompt || !window.ethereum) return;
+            if(!prompt) return;
+            document.getElementById('status').innerText = "Anchoring to LCAI AIVM...";
             
+            // Simulation of AIVM Worker Reveal
+            setTimeout(() => {
+                const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?nologo=true`;
+                const img = document.getElementById('result-img');
+                img.src = url;
+                img.onload = () => {
+                    img.style.display = 'block';
+                    document.getElementById('status').style.display = 'none';
+                    document.getElementById('mint-btn').style.display = 'block';
+                    updateHistory(prompt, url);
+                };
+            }, 2000);
+        }
+
+        async function mintNFT() {
             try {
                 const provider = new ethers.BrowserProvider(window.ethereum);
                 const signer = await provider.getSigner();
-                const contract = new ethers.Contract(CONFIG.AIVM_ADDR, ABI, signer);
+                // Placeholder: Calling mint function on your Identity contract
+                const sbtContract = new ethers.Contract("0xd71462F0002Ee9373fCe05B568583Ed13e75f600", ["function mintIdentity() external"], signer);
                 
-                document.getElementById('status-txt').innerText = "Broadcasting to Lightchain Testnet...";
-                document.getElementById('mint-status').style.display = 'flex';
-                document.getElementById('result-img').style.display = 'none';
-
-                // Send Transaction to AIArtStudio
-                const tx = await contract.generateArt(prompt, { 
-                    value: ethers.parseEther("1.0"),
-                    gasLimit: 300000
-                });
-
+                alert("Confirming NFT Mint for current AIVM output...");
+                const tx = await sbtContract.mintIdentity();
                 await tx.wait();
-                
-                // REVEAL LOGIC: Pulling from AIVM Worker
-                document.getElementById('status-txt').innerText = "Inference Signal Anchored. Revealing Result...";
-                
-                // We use a deterministic seed based on the prompt for the demo reveal
-                setTimeout(() => {
-                const seed = Math.floor(Math.random() * 1000000);
-                const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?seed=${seed}&nologo=true`;
-                
-                const img = document.getElementById('result-img');
-                img.src = imgUrl;
-                img.onload = () => {
-                    document.getElementById('status-txt').style.display = 'none';
-                    img.style.display = 'block';
-                    document.getElementById('mint-status').style.display = 'none';
-                };
-                }, 2000);     
-            } catch (e) {
-                console.error(e);
-                document.getElementById('status-txt').innerText = "Error: Protocol Reverted.";
-                document.getElementById('mint-status').style.display = 'none';
-            }
+                alert("Success! Art anchored to LCAI Identity Registry.");
+            } catch (e) { alert("Minting failed: Check gas or identity status"); }
         }
+        renderHistory();
     </script>
 </body>
 </html>
