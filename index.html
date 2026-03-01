@@ -57,10 +57,20 @@
             <div class="ticker-item"><span style="color:var(--text-dim)">LCAI</span><span class="ticker-val">$0.0021</span></div>
         </div>
         <div class="header-right">
-            <div class="wallet-pill" id="wallet-pill" onclick="copyAddress()" style="display:none">
-                <span id="balance-display" class="balance-txt">0.00 LCAI</span>
-                <span id="address-display">0x00...00</span>
+         <div id="wallet-container" style="display: flex; align-items: center; gap: 12px;">
+    
+            <div id="aivm-pill" style="display: none; align-items: center; background: rgba(0, 255, 128, 0.05); border: 1px solid #00ff80; border-radius: 50px; padding: 4px 14px; font-family: 'Monospace', monospace; font-size: 0.7rem; color: #00ff80;">
+                <span id="pill-model" style="opacity: 0.8; margin-right: 8px;">SDXL-TURBO</span>
+                <span style="color: #333; margin-right: 8px;">|</span>
+                <span id="pill-load" style="font-weight: 800; margin-right: 8px;">LOAD: 0%</span>
+                <span style="color: #333; margin-right: 8px;">|</span>
+                <span id="pill-status" style="font-weight: 800; letter-spacing: 1px;">IDLE</span>
             </div>
+        
+            <button id="wallet-btn" onclick="connect()" style="background: transparent; border: 1px solid #444; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-family: monospace;">
+                CONNECT WALLET
+            </button>
+        </div>
         </div>
     </header>
 
@@ -132,10 +142,33 @@
         function notify(m) { const t = document.getElementById('toast'); t.innerText = m; t.style.display = 'block'; setTimeout(()=>t.style.display='none', 3000); }
         function copyAddress() { navigator.clipboard.writeText(userAddr); notify("Address Copied"); }
 
-        window.addEventListener("message", (event) => {
-            if (event.data.type === "LCAI_STATUS") log(event.data.message);
-            if (event.data.type === "LCAI_GEN_SUCCESS") log("AIVM Inference Finalized.");
-        });
+window.addEventListener('message', (e) => {
+    if (e.data.type === 'AIVM_METRICS') {
+        const pill = document.getElementById('aivm-pill');
+        const modelEl = document.getElementById('pill-model');
+        const loadEl = document.getElementById('pill-load');
+        const statusEl = document.getElementById('pill-status');
+
+        pill.style.display = 'flex';
+        
+        if (e.data.model) modelEl.innerText = e.data.model.toUpperCase();
+        if (e.data.load !== undefined) loadEl.innerText = `LOAD: ${e.data.load}%`;
+        if (e.data.status) {
+            statusEl.innerText = e.data.status.toUpperCase();
+            
+            // Visual feedback based on status
+            if (statusEl.innerText === 'MINING') {
+                statusEl.style.color = '#ffcc00'; // Yellow for activity
+                pill.style.boxShadow = "0 0 10px rgba(255, 204, 0, 0.2)";
+            } else if (statusEl.innerText === 'ERROR') {
+                statusEl.style.color = '#ff4444'; // Red for fail
+            } else {
+                statusEl.style.color = '#00ff80'; // Green for success/idle
+                pill.style.boxShadow = "none";
+            }
+        }
+    }
+});
 
         async function updatePrices() {
             try {
@@ -180,18 +213,23 @@
             } catch (e) { log("Connection Failed", true); }
         }
 
-        async function checkAccess() {
-            try {
-                const owner = await studioContract.owner();
-                if (userAddr.toLowerCase() === owner.toLowerCase()) {
-                    document.getElementById('recovery-owner-panel').classList.remove('hidden');
-                    const vBal = await provider.getBalance(CONFIG.AIVM_ADDR);
-                    document.getElementById('vault-balance-rec').innerText = `${parseFloat(ethers.formatEther(vBal)).toFixed(2)} LCAI`;
-                }
-                document.getElementById('zk-did').innerText = `did:lcai:eth:${userAddr}`;
-            } catch (e) { log("Access Validation Error", true); }
+async function checkAccess() {
+    const pill = document.getElementById('status-pill');
+    try {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const accounts = await provider.send("eth_accounts", []);
+        if (accounts.length > 0) {
+            pill.style.display = 'block';
+            pill.innerText = "AIVM: ACTIVE";
+            
+            // Update balance in console
+            const bal = await provider.getBalance(accounts[0]);
+            log(`Wallet: ${accounts[0].slice(0,6)}... | Bal: ${ethers.formatEther(bal).slice(0,6)} LCAI`);
         }
-
+    } catch (e) {
+        pill.innerText = "AIVM: OFFLINE";
+    }
+}
         async function withdraw() {
             try {
                 const vBal = await provider.getBalance(CONFIG.AIVM_ADDR);
@@ -253,3 +291,4 @@
     </script>
 </body>
 </html>
+
