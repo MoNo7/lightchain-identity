@@ -1,77 +1,46 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.11.1/ethers.umd.min.js"></script>
     <style>
-        body { font-family: monospace; background: transparent; color: white; margin: 0; display: flex; height: 100%; overflow: hidden; }
-        .ui-container { flex: 1; display: flex; flex-direction: column; padding: 25px; gap: 20px; }
-        .p-input { width: 100%; background: #0a0a0a; border: 1px solid #333; border-radius: 10px; padding: 18px; color: white; font-size: 1rem; box-sizing: border-box; }
-        .c-row { display: flex; gap: 12px; }
-        select { flex: 1; background: #0a0a0a; color: #00ff80; border: 1px solid #333; border-radius: 8px; padding: 12px; font-weight: bold; }
-        .g-btn { background: #00ff80; color: #000; border: none; padding: 0 40px; border-radius: 8px; font-weight: 900; cursor: pointer; }
-        .canvas { flex: 1; background: #000; border: 1px solid #222; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
-        .canvas img { max-width: 90%; max-height: 90%; display: none; }
-        .sidebar { width: 260px; border-left: 1px solid #222; padding: 20px; background: rgba(0,0,0,0.2); }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .item { aspect-ratio: 1/1; background: #111; border: 1px solid #333; border-radius: 4px; overflow: hidden; cursor: pointer; }
-        .item img { width: 100%; height: 100%; object-fit: cover; }
+        body { font-family: monospace; background: transparent; color: white; margin: 0; display: flex; height: 100vh; }
+        .main { flex: 1; display: flex; flex-direction: column; padding: 30px; gap: 20px; }
+        .prompt { width: 100%; background: #05070a; border: 1px solid #1e2633; border-radius: 8px; padding: 20px; color: white; box-sizing: border-box; }
+        .btn { background: #0070ff; color: white; border: none; padding: 12px 30px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .canvas { flex: 1; background: #000; border: 1px solid #1e2633; border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .canvas img { max-width: 90%; max-height: 90%; display: none; border-radius: 8px; box-shadow: 0 0 20px rgba(0,112,255,0.2); }
+        .sidebar { width: 250px; border-left: 1px solid #1e2633; padding: 20px; background: rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
-<div class="ui-container">
-    <textarea id="prompt" class="p-input" rows="3" placeholder="Enter generative prompt..."></textarea>
-    <div class="c-row">
-        <select id="model">
-            <option value="0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef">AIVM-THETA: SDXL</option>
-            <option value="0x8888888888888888888888888888888888888888888888888888888888888888">AIVM-DELTA: FLUX</option>
-            <option value="0x9999999999999999999999999999999999999999999999999999999999999999">AIVM-SIGMA: SD-3.5 Large</option> 
+<div class="main">
+    <textarea id="p" class="prompt" placeholder="Blue-themed inference prompt..."></textarea>
+    <div style="display:flex; gap:10px;">
+        <select id="m" style="flex:1; background:#05070a; color:#0070ff; border:1px solid #1e2633; border-radius:6px; padding:10px;">
+            <option value="0x1234...">AIVM-THETA (SDXL)</option>
         </select>
-        <button id="btn" class="g-btn" onclick="generate()">GENERATE</button>
+        <button class="btn" onclick="gen()">GENERATE</button>
     </div>
-    <div class="canvas"><p id="st">READY</p><img id="res"></div>
+    <div class="canvas"><p id="st" style="color:#333;">SYSTEM IDLE</p><img id="img"></div>
 </div>
-<div class="sidebar">
-    <div style="font-size:0.6rem; color:#00ff80; letter-spacing:2px;">ON-CHAIN REVEALS</div>
-    <div id="grid" class="grid"></div>
-</div>
-
 <script>
-const ADDR = "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB";
-const ABI = ["function generateArt(string prompt, bytes32 modelDigest) public payable", "event ArtGenerated(address indexed user, string prompt, bytes32 modelDigest, uint256 fee)"];
-
-async function generate() {
-    const p = document.getElementById('prompt').value;
-    if(!p) return;
+async function gen() {
+    const prompt = document.getElementById('p').value;
+    if(!prompt) return;
     try {
-        window.parent.postMessage({type:'AIVM_METRICS', load:30, status:'signing'}, '*');
+        window.parent.postMessage({type:'AIVM_METRICS', load:35, status:'mining'}, '*');
         const provider = new ethers.BrowserProvider(window.ethereum);
         const signer = await provider.getSigner();
-        const contract = new ethers.Contract(ADDR, ABI, signer);
-        const tx = await contract.generateArt(p, document.getElementById('model').value, { value: ethers.parseEther("0.1"), gasLimit: 1000000 });
-        window.parent.postMessage({type:'AIVM_METRICS', load:70, status:'mining'}, '*');
+        const contract = new ethers.Contract("0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB", ["function generateArt(string prompt, bytes32 modelDigest) public payable"], signer);
+        const tx = await contract.generateArt(prompt, "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", { value: ethers.parseEther("0.1"), gasLimit: 1000000 });
         await tx.wait();
         window.parent.postMessage({type:'AIVM_METRICS', load:100, status:'success'}, '*');
-        const img = document.getElementById('res');
-        img.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(p)}?nologo=true&seed=${Date.now()}`;
-        img.style.display = 'block'; document.getElementById('st').style.display = 'none';
-        setTimeout(() => { window.parent.postMessage({type:'AIVM_METRICS', load:0, status:'idle'}, '*'); initHistory(); }, 4000);
-    } catch (e) { window.parent.postMessage({type:'AIVM_METRICS', load:0, status:'error'}, '*'); }
+        const i = document.getElementById('img');
+        i.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?nologo=true&seed=${Date.now()}`;
+        i.style.display = 'block'; document.getElementById('st').style.display = 'none';
+        setTimeout(() => window.parent.postMessage({type:'AIVM_METRICS', load:0, status:'idle'}, '*'), 5000);
+    } catch(e) { window.parent.postMessage({type:'AIVM_METRICS', load:0, status:'error'}, '*'); }
 }
-
-async function initHistory() {
-    try {
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const accounts = await provider.send("eth_accounts", []);
-        if(!accounts[0]) return;
-        const contract = new ethers.Contract(ADDR, ABI, provider);
-        const events = await contract.queryFilter(contract.filters.ArtGenerated(accounts[0]), -30000);
-        document.getElementById('grid').innerHTML = events.reverse().map(e => {
-            const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(e.args.prompt)}?nologo=true&seed=${e.blockNumber}`;
-            return `<div class="item" onclick="document.getElementById('res').src='${url}'; document.getElementById('res').style.display='block';"><img src="${url}"></div>`;
-        }).join('');
-    } catch(e){}
-}
-window.addEventListener('load', () => { if(window.ethereum) initHistory(); });
 </script>
 </body>
 </html>
