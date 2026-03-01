@@ -28,10 +28,10 @@
         .action-btn { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; width: 100%; font-weight: bold; }
         .action-btn.alt { background: transparent; border: 1px solid var(--accent); color: var(--accent); margin-top: 8px; }
         pre { background: var(--console-bg); padding: 20px; border-radius: 8px; font-size: 0.75rem; color: #a0aec0; white-space: pre-wrap; border: 1px solid var(--border); line-height: 1.4; cursor: pointer; }
-        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin-top: 20px; }
-        .gallery-item { background: #000; border: 1px solid var(--border); border-radius: 6px; padding: 10px; text-align: center; }
-        .gallery-item img { width: 100%; height: 130px; object-fit: cover; border-radius: 4px; filter: blur(2px); transition: 0.3s; }
-        .gallery-item.high-res img { filter: blur(0); }
+        .status-table { width: 100%; font-size: 0.7rem; border-collapse: collapse; margin-top: 15px; }
+        .status-table td, .status-table th { border: 1px solid var(--border); padding: 8px; text-align: left; }
+        .status-online { color: #00c853; font-weight: bold; }
+        .status-offline { color: #ff4444; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -63,29 +63,37 @@
     <div id="gallery-view" class="view-pane active">
         <div class="card" style="max-width: 900px;">
             <h2>NETWORK GALLERY</h2>
-            <div class="gallery-grid" id="gallery-grid"></div>
+            <div id="gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px;"></div>
         </div>
     </div>
 
     <div id="id-view" class="view-pane">
         <div class="card">
             <h2>ZK-SBT IDENTITY CARD</h2>
-            <p style="font-size:0.65rem; color:var(--text-dim); margin-bottom:10px;">Click code to download JSON. Click QR to download Image.</p>
-            <pre id="id-json" onclick="saveJSON()">// Identity Packet Offline: Handshake Required</pre>
+            <pre id="id-json" onclick="saveJSON()">// Identity Packet Offline</pre>
             <div id="qr-target" onclick="saveQR()" style="margin-top:20px; background:white; padding:10px; display:none; border-radius:4px; cursor:pointer;"></div>
-            <p id="qr-hint" style="display:none; font-size:0.65rem; color:var(--text-dim); margin-top:8px;">Handshake Active: Click QR to Download .png</p>
         </div>
     </div>
 
     <div id="admin-view" class="view-pane">
         <div class="card">
-            <h2>ADMIN PANEL</h2>
+            <h2>ADMIN & MODEL STATUS</h2>
             <input type="text" class="panel-input" id="admin-addr" placeholder="Target Operator Address (0x...)">
-            <button class="action-btn" onclick="runAdmin('query')">QUERY STATUS</button>
+            <button class="action-btn" onclick="runAdmin('query')">QUERY USER STATUS</button>
             <div style="display:flex; gap:10px; margin-top:10px;">
                 <button class="action-btn alt" onclick="runAdmin('verify')" style="flex:1">VERIFY USER</button>
                 <button class="action-btn alt" onclick="runAdmin('revoke')" style="flex:1; border-color:#ff4444; color:#ff4444;">REVOKE USER</button>
             </div>
+            
+            <h3 style="margin-top:30px; font-size:0.9rem;">MODEL TELEMETRY</h3>
+            <table class="status-table">
+                <thead><tr><th>MODEL ID</th><th>DIGEST</th><th>STATUS</th></tr></thead>
+                <tbody id="model-status-body">
+                    <tr><td>AIVM-THETA</td><td>0x1234...cdef</td><td class="status-online">ONLINE</td></tr>
+                    <tr><td>AIVM-DELTA</td><td>0x8888...8888</td><td class="status-online">ONLINE</td></tr>
+                    <tr><td>AIVM-SIGMA</td><td>0x9999...9999</td><td class="status-offline">OFFLINE</td></tr>
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -104,9 +112,10 @@
             <h2>AIVM INFERENCE</h2>
             <select id="model-select" class="panel-input" onchange="document.getElementById('active-model').innerText=this.value">
                 <option value="AIVM-THETA" data-hash="0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef">AIVM-THETA (Standard)</option>
+                <option value="AIVM-DELTA" data-hash="0x8888888888888888888888888888888888888888888888888888888888888888">AIVM-DELTA (Flux.1)</option>
                 <option value="AIVM-SIGMA" data-hash="0x9999999999999999999999999999999999999999999999999999999999999999">AIVM-SIGMA (HD)</option>
             </select>
-            <textarea id="art-prompt" class="panel-input" placeholder="Neural prompt..." style="height:120px;"></textarea>
+            <textarea id="art-prompt" class="panel-input" placeholder="Neural landscape..." style="height:120px;"></textarea>
             <button class="action-btn" onclick="generateArt()">REQUEST INFERENCE (0.1 tLCAI)</button>
         </div>
     </div>
@@ -120,7 +129,6 @@ const CONFIG = {
         "function setVerification(address user, bool status) external",
         "function withdraw() external",
         "function manualVerified(address) public view returns (bool)",
-        "function requestInference(string prompt) external payable",
         "function generateArt(string prompt, bytes32 modelDigest) public payable",
         "event InferenceRequested(address indexed user, string prompt)"
     ]
@@ -167,7 +175,7 @@ async function updateWalletPill() {
 
 function updateMenu() {
     const menu = document.getElementById('side-menu');
-    let html = `<button class="nav-link active" onclick="showView('gallery-view', this); initGallery();">NETWORK GALLERY</button>`;
+    let html = `<button class="nav-link" onclick="showView('gallery-view', this); initGallery();">NETWORK GALLERY</button>`;
     if(user) {
         html += `<button class="nav-link" onclick="showView('id-view', this)">ZK IDENTITY</button>`;
         if(roles.isOwner) {
@@ -193,7 +201,6 @@ function updateIdentity() {
     };
     document.getElementById('id-json').innerText = JSON.stringify(idData, null, 4);
     document.getElementById('qr-target').style.display = "inline-block";
-    document.getElementById('qr-hint').style.display = "block";
     document.getElementById('qr-target').innerHTML = "";
     new QRCode(document.getElementById("qr-target"), { text: JSON.stringify(idData), width: 140, height: 140 });
 }
@@ -213,16 +220,6 @@ async function runAdmin(type) {
     } catch (e) { log("ADMIN ACTION REVERTED", "error"); }
 }
 
-async function runOwner() {
-    try {
-        log("INITIATING WITHDRAWAL...");
-        const tx = await contract.withdraw({ gasLimit: 200000 });
-        await tx.wait(); log("VAULT WITHDRAWN", "success");
-        refreshBalance();
-        updateWalletPill();
-    } catch (e) { log("WITHDRAWAL FAILED", "error"); }
-}
-
 async function generateArt() {
     const prompt = document.getElementById('art-prompt').value;
     const sel = document.getElementById('model-select');
@@ -232,21 +229,23 @@ async function generateArt() {
     if(!prompt) return log("PROMPT EMPTY", "error");
 
     try {
-        document.getElementById('status-txt').innerText = "SIMULATING...";
-        // PRE-FLIGHT CHECK
-        await contract.generateArt.staticCall(prompt, modelHash, { value: fee });
+        log("BROADCASTING INFERENCE...");
+        document.getElementById('status-txt').innerText = "PENDING";
         
-        log("SIMULATION SUCCESS. BROADCASTING...");
-        const tx = await contract.generateArt(prompt, modelHash, { value: fee, gasLimit: 2000000 });
+        // Removed staticCall bypass to force MetaMask popup
+        const tx = await contract.generateArt(prompt, modelHash, { 
+            value: fee, 
+            gasLimit: 2500000 
+        });
+        
+        log("TX SENT: " + tx.hash.slice(0,10), "success");
         await tx.wait();
         log("INFERENCE SUCCESSFUL", "success");
         document.getElementById('status-txt').innerText = "IDLE";
         initGallery();
         updateWalletPill();
     } catch (e) {
-        let errorMsg = "REVERT: INVALID_FEE_OR_MODEL";
-        if (e.message.includes("insufficient funds")) errorMsg = "INSUFFICIENT LCAI";
-        log(errorMsg, "error");
+        log("REVERT: " + (e.reason || "REJECTED"), "error");
         document.getElementById('status-txt').innerText = "ERROR";
     }
 }
@@ -259,9 +258,17 @@ async function initGallery() {
         const events = await contract.queryFilter("InferenceRequested", -5000);
         grid.innerHTML = events.length === 0 ? "EMPTY" : "";
         events.reverse().forEach(ev => {
-            grid.innerHTML += `<div class="gallery-item"><img src="https://picsum.photos/seed/${ev.transactionHash}/200/150"></div>`;
+            grid.innerHTML += `<div style="background:#000; padding:10px; border-radius:6px;"><img src="https://picsum.photos/seed/${ev.transactionHash}/200/150" style="width:100%; border-radius:4px;"></div>`;
         });
     } catch (e) { grid.innerHTML = "OFFLINE"; }
+}
+
+async function runOwner() {
+    try {
+        const tx = await contract.withdraw({ gasLimit: 200000 });
+        await tx.wait(); log("VAULT WITHDRAWN", "success");
+        refreshBalance();
+    } catch (e) { log("WITHDRAWAL FAILED", "error"); }
 }
 
 async function refreshBalance() {
@@ -278,7 +285,6 @@ function showView(id, btn) {
 }
 
 function saveJSON() {
-    if(!user) return;
     const data = document.getElementById('id-json').innerText;
     const b = new Blob([data], {type:"application/json"});
     const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download=`LCAI_ID_${user.slice(0,6)}.json`; a.click();
