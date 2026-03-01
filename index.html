@@ -119,7 +119,7 @@
 
 <script>
 const CONFIG = {
-    addr: "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB",
+    addr: "0x5B2d46cb1e3451aA3d584f28E714892373D7c7C6", // UPDATED TO CURRENT DEPLOYED ADDRESS
     abi: [
         "function owner() public view returns (address)",
         "function setVerification(address user, bool status) external",
@@ -229,7 +229,7 @@ async function runAdmin(type) {
             const res = await contract.manualVerified(target);
             log(`USER ${target.slice(0,6)}: ${res ? "VERIFIED" : "UNVERIFIED"}`);
         } else {
-            const tx = await contract.setVerification(target, type === 'verify', { gasLimit: 150000 });
+            const tx = await contract.setVerification(target, type === 'verify', { gasLimit: 200000 });
             await tx.wait(); log("PERMISSION SYNCED", "success");
             if(target.toLowerCase() === user.toLowerCase()) { roles.isVerified = (type === 'verify'); updateMenu(); }
         }
@@ -239,7 +239,7 @@ async function runAdmin(type) {
 async function runOwner() {
     try {
         log("INITIATING WITHDRAWAL...");
-        const tx = await contract.withdraw({ gasLimit: 120000 });
+        const tx = await contract.withdraw({ gasLimit: 200000 });
         await tx.wait(); log("VAULT WITHDRAWN", "success");
         refreshBalance();
     } catch (e) { log("WITHDRAWAL FAILED: CHECK BALANCE", "error"); }
@@ -251,11 +251,12 @@ async function generateArt() {
         document.getElementById('status-txt').innerText = "INFERENCE";
         const tx = await contract.requestInference(prompt, { 
             value: ethers.parseEther("0.001"),
-            gasLimit: 350000 
+            gasLimit: 800000 // HIGH GAS FOR AI INFERENCE ON TESTNET
         });
         await tx.wait();
         log("INFERENCE SUCCESSFUL", "success");
         document.getElementById('status-txt').innerText = "IDLE";
+        initGallery();
     } catch (e) { log("INFERENCE REJECTED", "error"); document.getElementById('status-txt').innerText = "IDLE"; }
 }
 
