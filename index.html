@@ -101,7 +101,6 @@
         </div>
     </div>
     <script>
-        // Ensure these match your Remix deployments!
         const CONFIG = { SBT_ADDR: "0xd71462F0002Ee9373fCe05B568583Ed13e75f600", AIVM_ADDR: "0x5B2d46cb1e3451aA3d584f28E714892373D7c7C6" };
         const ABI = ["function hasSBT(address) view returns (bool)", "function isAdmin(address) view returns (bool)", "function owner() view returns (address)", "function setVerification(address,bool) external", "function generateArt(string) external payable", "function withdraw() external", "event ArtGenerated(address indexed,string,uint256)" ];
         let provider, signer, userAddr, sbtContract, studioContract;
@@ -122,7 +121,12 @@
                 const bal = await provider.getBalance(userAddr);
                 document.getElementById('balance-display').innerText = `${parseFloat(ethers.formatEther(bal)).toFixed(2)} LCAI`;
                 document.getElementById('connect-btn').innerText = "Sync Active";
-                studioContract.on("ArtGenerated", (u, p) => { document.getElementById('mint-status').style.display = 'none'; updateVault(); renderArt(p); });
+                studioContract.on("ArtGenerated", (u, p) => { 
+                    log("AIVM Signal Received. Manifesting...");
+                    document.getElementById('mint-status').style.display = 'none';
+                    updateVault(); 
+                    renderArt(p); 
+                });
                 log(`Authenticated: ${userAddr}`); checkIdentity(); updateVault(); scanHistory(); 
             } catch (err) { log("Connection failed.", true); }
         }
@@ -137,33 +141,42 @@
             } catch (e) { log("History scan failed.", true); }
         }
 
-        async function fetchAIVisual(url) {
-            for (let i = 0; i < 5; i++) {
-                try {
-                    const response = await fetch(url);
-                    if (response.ok) return URL.createObjectURL(await response.blob());
-                } catch (e) {}
-                await new Promise(r => setTimeout(r, 4000));
-            }
-            return null;
-        }
-
-        async function addToGallery(p) {
+        // IMPROVED RENDERER: Uses Direct Image injection with recursive retry
+        function addToGallery(p) {
             const gallery = document.getElementById('art-gallery');
             const item = document.createElement('div');
             item.className = 'gallery-item';
-            item.innerHTML = `<div class="sync-text" style="height:150px; display:flex; align-items:center; justify-content:center; background:#000; font-size:0.6rem; color:var(--primary); animation:pulse 1s infinite">Syncing...</div>`;
+            const seed = Math.floor(Math.random()*99999);
+            const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(p)}?width=512&height=512&nologo=true&seed=${seed}`;
+            
+            item.innerHTML = `
+                <div class="sync-status" style="height:150px; display:flex; align-items:center; justify-content:center; background:#000; font-size:0.6rem; color:var(--primary); animation:pulse 1s infinite">Syncing...</div>
+                <img src="${url}" class="gallery-img" style="display:none" 
+                     onload="this.style.display='block'; this.previousElementSibling.style.display='none'; this.nextElementSibling.style.display='flex';"
+                     onerror="setTimeout(() => { this.src = this.src + '&retry=1'; }, 5000);">
+                <div class="gallery-controls" style="display:none">
+                    <button class="btn-gallery" style="background:var(--primary);color:white" onclick="window.swapToMain('${url}')">View</button>
+                    <button class="btn-gallery" style="background:var(--secondary);color:black" onclick="window.downloadImg('${url}')">DL</button>
+                </div>`;
             gallery.appendChild(item);
-            const blobUrl = await fetchAIVisual(`https://image.pollinations.ai/prompt/${encodeURIComponent(p)}?width=512&height=512&nologo=true&seed=${Math.floor(Math.random()*99999)}`);
-            if (blobUrl) item.innerHTML = `<img src="${blobUrl}" class="gallery-img" onclick="window.swapToMain('${blobUrl}')"><div class="gallery-controls"><button class="btn-gallery btn-view" onclick="window.swapToMain('${blobUrl}')">View</button><button class="btn-gallery" onclick="window.downloadImg('${blobUrl}')">DL</button></div>`;
-            else item.innerHTML = `<div style="height:150px; display:flex; align-items:center; justify-content:center; background:#000; color:var(--danger); font-size:0.6rem;">AIVM Timeout</div>`;
         }
 
-        async function renderArt(p) {
-            document.getElementById('art-output').innerHTML = `<div id="mint-status" class="mint-overlay" style="display:flex"><div class="mint-spinner"></div>Status: Rendering...</div><div style="color:var(--primary); font-weight:bold; animation:pulse 1.5s infinite">AIVM Inference in Progress...</div>`;
-            const blobUrl = await fetchAIVisual(`https://image.pollinations.ai/prompt/${encodeURIComponent(p)}?width=1024&height=1024&nologo=true`);
-            if (blobUrl) document.getElementById('art-output').innerHTML = `<img src="${blobUrl}" style="width:100%; height:100%; object-fit:contain;">`;
-            else document.getElementById('art-output').innerHTML = `<span style="color:var(--danger)">AIVM Render Failed</span>`;
+        function renderArt(p) {
+            const out = document.getElementById('art-output');
+            out.innerHTML = `<div id="mint-status" class="mint-overlay" style="display:flex"><div class="mint-spinner"></div>Status: Manifesting Pixels...</div><div style="color:var(--primary); font-weight:bold; animation:pulse 1.5s infinite">AIVM Inference in Progress...</div>`;
+            
+            const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(p)}?width=1024&height=1024&nologo=true&seed=${Date.now()}`;
+            const img = new Image();
+            img.src = url;
+            img.onload = () => {
+                out.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:contain;">`;
+                addToGallery(p);
+                log("AIVM manifest complete.");
+            };
+            img.onerror = () => {
+                log("Node Busy. Retrying AIVM Manifest...", false);
+                setTimeout(() => renderArt(p), 5000);
+            };
         }
 
         async function checkIdentity() {
@@ -173,19 +186,44 @@
                 if (isA || userAddr.toLowerCase() === o.toLowerCase()) {
                     document.getElementById('sbt-svg-container').innerHTML = sbtSvg;
                     document.getElementById('nav-id-desc').innerText = (userAddr.toLowerCase() === o.toLowerCase()) ? "Contract Owner Verified" : "Master Admin Verified";
+                    document.getElementById('sbt-svg-container').classList.add('active');
                 }
             } catch (e) {}
         }
 
         window.swapToMain = (url) => { document.getElementById('art-output').innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:contain;">`; };
         window.downloadImg = async (url) => { const a = document.createElement('a'); a.href = url; a.download = `AIVM_${Date.now()}.jpg`; a.click(); };
-        document.getElementById('admin-query').onclick = async () => { const a = document.getElementById('admin-user-addr').value; if (!ethers.isAddress(a)) return; log(`Querying: SBT=${await sbtContract.hasSBT(a)} | Admin=${await sbtContract.isAdmin(a)}`); };
-        document.getElementById('admin-verify').onclick = async () => { try { await (await studioContract.setVerification(document.getElementById('admin-user-addr').value, true)).wait(); log("Verified!"); } catch (e) { log("Denied", true); } };
-        document.getElementById('withdraw-btn').onclick = async () => { try { await (await studioContract.withdraw()).wait(); log("Withdrawn!"); updateVault(); } catch (e) { log("Denied", true); } };
+        
+        document.getElementById('admin-query').onclick = async () => { 
+            const a = document.getElementById('admin-user-addr').value; 
+            if (!ethers.isAddress(a)) return; 
+            log(`Querying: SBT=${await sbtContract.hasSBT(a)} | Admin=${await sbtContract.isAdmin(a)}`); 
+        };
+        
+        document.getElementById('admin-verify').onclick = async () => { 
+            try { await (await studioContract.setVerification(document.getElementById('admin-user-addr').value, true)).wait(); log("Verified!"); } 
+            catch (e) { log("Denied", true); } 
+        };
+        
+        document.getElementById('withdraw-btn').onclick = async () => { 
+            try { await (await studioContract.withdraw()).wait(); log("Withdrawn!"); updateVault(); } 
+            catch (e) { log("Denied", true); } 
+        };
+        
         document.getElementById('generate-btn').onclick = async () => {
             const p = document.getElementById('prompt-input').value;
-            try { document.getElementById('mint-status').style.display = 'flex'; await (await studioContract.generateArt(p, { value: ethers.parseEther("0.25") })).wait(); log("Success!"); } 
-            catch (e) { log("Failed", true); document.getElementById('mint-status').style.display = 'none'; }
+            if(!p) return log("Enter a prompt", true);
+            try { 
+                document.getElementById('mint-status').style.display = 'flex'; 
+                log("Anchoring Inference to Lightchain...");
+                const tx = await studioContract.generateArt(p, { value: ethers.parseEther("0.25") });
+                log("Transaction broadcast. Waiting for PoI Attestation...");
+                await tx.wait(); 
+                log("Blockchain anchoring successful.");
+            } catch (e) { 
+                log("Failed", true); 
+                document.getElementById('mint-status').style.display = 'none'; 
+            }
         };
         document.getElementById('connect-btn').onclick = connect;
         log("System Online. Awaiting Handshake...");
