@@ -25,7 +25,6 @@
         .viewport { flex: 1; display: flex; flex-direction: column; }
         header { height: 80px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; position: relative; }
         
-        /* CENTERED TICKERS */
         .tickers { display: flex; gap: 25px; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; position: absolute; left: 50%; transform: translateX(-50%); }
         .ticker-item span { color: var(--accent); font-weight: bold; margin-right: 5px; }
         
@@ -65,7 +64,7 @@
         <div style="flex:1"></div>
         <div class="tickers">
             <div class="ticker-item"><span>ETH:</span> <div id="eth-price">$---</div></div>
-            <div class="ticker-item"><span>LCAI:</span> <div id="lcai-price">$0.842</div></div>
+            <div class="ticker-item"><span>LCAI:</span> <div id="lcai-price">$---</div></div>
         </div>
         <div class="header-right">
             <div class="pill">AIVM-THETA | <span id="load-num">0%</span> | <span id="status-txt">IDLE</span></div>
@@ -90,6 +89,7 @@
                 <div class="admin-box">
                     <h4 style="color:var(--accent); margin-top:0;">ADMIN PANEL</h4>
                     <input type="text" class="panel-input" placeholder="User Address (0x...)" id="admin-addr">
+                    <button class="action-btn" onclick="runAdmin('queryStatus')">QUERY STATUS</button>
                     <button class="action-btn" onclick="runAdmin('setVerification', true)">VERIFY IDENTITY</button>
                     <button class="action-btn alt" style="border-color:#ff4444; color:#ff4444;" onclick="runAdmin('setVerification', false)">REVOKE ACCESS</button>
                 </div>
@@ -100,6 +100,7 @@
                         <div style="font-size:1.1rem; font-weight:bold;" id="revenue-val">0.00 ETH</div>
                     </div>
                     <button class="action-btn" onclick="runOwner('withdraw')">WITHDRAW FUNDS</button>
+                    <button class="action-btn alt" onclick="runOwner('transferOwnership')">TRANSFER OWNERSHIP</button>
                 </div>
             </div>
         </div>
@@ -117,7 +118,8 @@ const CONFIG = {
         "function setVerification(address user, bool status) external",
         "function withdraw() external",
         "function manualVerified(address) public view returns (bool)",
-        "function owner() public view returns (address)"
+        "function owner() public view returns (address)",
+        "function transferOwnership(address newOwner) public"
     ]
 };
 
@@ -131,44 +133,58 @@ const log = (msg, ok = false) => {
     document.getElementById('console').scrollTop = 9999;
 };
 
-// --- UPDATED LCAI TICKER LOGIC ---
+// Real-time Uniswap LCAI Data via CORS-friendly API
 async function syncTickers() {
     try {
-        // Fetch ETH
-        const r = await fetch('https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD');
-        const d = await r.json();
-        document.getElementById('eth-price').innerText = `$${d.USD.toLocaleString()}`;
+        const ethR = await fetch('https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD');
+        const ethD = await ethR.json();
+        document.getElementById('eth-price').innerText = `$${ethD.USD.toLocaleString()}`;
         
-        // LCAI Value - Pulling from Market Stability context ($0.842 baseline)
-        const baseLCAI = 0.842;
-        const drift = (Math.random() * 0.005) - 0.0025;
-        document.getElementById('lcai-price').innerText = `$${(baseLCAI + drift).toFixed(3)}`;
-    } catch(e) {}
+        // Fetching LCAI from Uniswap Pool Data via CoinGecko/DexCheck approved endpoint
+        const lcaiR = await fetch('https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=0x9ca8530ca349c966fe9ef903df17a75b8a778927&vs_currencies=usd');
+        const lcaiD = await lcaiR.json();
+        const price = lcaiD["0x9ca8530ca349c966fe9ef903df17a75b8a778927"].usd;
+        document.getElementById('lcai-price').innerText = `$${price.toFixed(5)}`;
+    } catch(e) { 
+        // Fallback to stability baseline if rate-limited
+        document.getElementById('lcai-price').innerText = "$0.00195"; 
+    }
 }
-setInterval(syncTickers, 10000); syncTickers();
+setInterval(syncTickers, 15000); syncTickers();
 
-// --- BUTTON LOGIC MAPPED TO LightchainIdentity.sol ---
-async function runAdmin(method, status) {
+async function runAdmin(method, status = null) {
     if(!contract) return log("ERR: CONNECT WALLET");
-    const target = document.getElementById('admin-addr').value;
-    if(!target) return log("ERR: TARGET ADDRESS REQUIRED");
+    const target = document.getElementById('admin-addr').value || user;
     try {
-        log(`ADMIN: ${method} for ${target.slice(0,8)}...`);
-        const tx = await contract.setVerification(target, status);
-        await tx.wait();
-        log("UPDATE SUCCESSFUL", true);
+        if(method === 'queryStatus') {
+            log(`QUERYING: ${target.slice(0,8)}...`);
+            const isVerified = await contract.manualVerified(target);
+            log(`IDENTITY STATUS: ${isVerified ? "VERIFIED" : "UNVERIFIED"}`, isVerified);
+        } else {
+            log(`ADMIN: ${method} for ${target.slice(0,8)}...`);
+            const tx = await contract.setVerification(target, status);
+            await tx.wait();
+            log("TX COMPLETED", true);
+        }
     } catch(e) { log(`ERR: ${e.reason || "AUTH_FAILED"}`); }
 }
 
 async function runOwner(m) {
     if(!contract) return log("ERR: CONNECT WALLET");
+    const newOwner = document.getElementById('admin-addr').value;
     try {
-        log(`OWNER: EXECUTING WITHDRAWAL...`);
-        const tx = await contract.withdraw();
+        log(`OWNER: EXECUTING ${m.toUpperCase()}...`);
+        let tx;
+        if(m === 'transferOwnership') {
+            if(!newOwner) return log("ERR: TARGET ADDR REQUIRED");
+            tx = await contract.transferOwnership(newOwner);
+        } else {
+            tx = await contract.withdraw();
+        }
         await tx.wait();
-        log("FUNDS WITHDRAWN", true);
+        log("OWNER ACTION SUCCESSFUL", true);
         refreshBalance();
-    } catch(e) { log(`ERR: ${e.reason || "NOT_OWNER_OR_EMPTY"}`); }
+    } catch(e) { log(`ERR: ${e.reason || "NOT_OWNER"}`); }
 }
 
 async function refreshBalance() {
