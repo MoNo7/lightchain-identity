@@ -19,7 +19,8 @@
         .nav-menu { display: none; flex-direction: column; gap: 5px; }
         .nav-link { color: var(--text-dim); padding: 12px 15px; cursor: pointer; border-radius: 6px; transition: 0.2s; border: none; background: none; text-align: left; font-size: 0.75rem; font-family: monospace; font-weight: 600; width: 100%; }
         .nav-link:hover, .nav-link.active { color: white; background: var(--accent); }
-
+        .nav-link.locked { opacity: 0.2; cursor: not-allowed; }
+   
         /* VIEWPORT */
         .viewport { flex: 1; display: flex; flex-direction: column; }
         header { height: 80px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; position: relative; }
@@ -85,8 +86,51 @@
 
     </div>
 
+    <div id="recovery-view" class="view-pane">
+        <div class="card">
+            <h2>IDENTITY RECOVERY</h2>
+            <div class="admin-grid">
+                <div class="admin-box">
+                    <h4 style="color:var(--accent); margin-top:0;">ADMIN PANEL</h4>
+                    <input type="text" class="panel-input" placeholder="User Address (0x...)" id="admin-addr">
+                    <button class="action-btn" onclick="runAdmin('queryStatus')">QUERY STATUS</button>
+                    <button class="action-btn" onclick="runAdmin('setVerification', true)">VERIFY IDENTITY</button>
+                    <button class="action-btn alt" style="border-color:#ff4444; color:#ff4444;" onclick="runAdmin('setVerification', false)">REVOKE ACCESS</button>
+                </div>
+                <div class="admin-box">
+                    <h4 style="color:var(--accent); margin-top:0;">OWNER PANEL</h4>
+                    <div style="background:#000; padding:12px; border-radius:4px; margin-bottom:12px; border:1px solid var(--border);">
+                        <div style="font-size:0.6rem; color:var(--text-dim);">VAULT BALANCE</div>
+                        <div style="font-size:1.1rem; font-weight:bold;" id="revenue-val">0.00 ETH</div>
+                    </div>
+                    <button class="action-btn" onclick="runOwner('withdraw')">WITHDRAW FUNDS</button>
+                    <button class="action-btn alt" onclick="runOwner('transferOwnership')">TRANSFER OWNERSHIP</button>
+                </div>
+            </div>
+        </div>
 <script>
-// (Keep original CONFIG and runAdmin/runOwner functions here)
+const CONFIG = {
+    addr: "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB",
+    abi: [
+        "function setVerification(address user, bool status) external",
+        "function withdraw() external",
+        "function manualVerified(address) public view returns (bool)",
+        "function owner() public view returns (address)",
+        "function transferOwnership(address newOwner) public"
+    ]
+};
+
+let user, provider, signer, contract;
+
+const log = (msg, ok = false) => {
+    const l = document.createElement('div');
+    l.className = `console-line ${ok ? 'success' : ''}`;
+    l.innerText = `>> ${msg}`;
+    document.getElementById('console').appendChild(l);
+    document.getElementById('console').scrollTop = 9999;
+};
+
+    
 
 async function syncTickers() {
     try {
@@ -104,6 +148,47 @@ async function syncTickers() {
 }
 // UPDATED REFRESH RATE TO 5 SECONDS
 setInterval(syncTickers, 5000); syncTickers();
+async function runAdmin(method, status = null) {
+    if(!contract) return log("ERR: CONNECT WALLET");
+    const target = document.getElementById('admin-addr').value || user;
+    try {
+        if(method === 'queryStatus') {
+            log(`QUERYING: ${target.slice(0,8)}...`);
+            const isVerified = await contract.manualVerified(target);
+            log(`IDENTITY STATUS: ${isVerified ? "VERIFIED" : "UNVERIFIED"}`, isVerified);
+        } else {
+            log(`ADMIN: ${method} for ${target.slice(0,8)}...`);
+            const tx = await contract.setVerification(target, status);
+            await tx.wait();
+            log("TX COMPLETED", true);
+        }
+    } catch(e) { log(`ERR: ${e.reason || "AUTH_FAILED"}`); }
+}
+
+async function runOwner(m) {
+    if(!contract) return log("ERR: CONNECT WALLET");
+    const newOwner = document.getElementById('admin-addr').value;
+    try {
+        log(`OWNER: EXECUTING ${m.toUpperCase()}...`);
+        let tx;
+        if(m === 'transferOwnership') {
+            if(!newOwner) return log("ERR: TARGET ADDR REQUIRED");
+            tx = await contract.transferOwnership(newOwner);
+        } else {
+            tx = await contract.withdraw();
+        }
+        await tx.wait();
+        log("OWNER ACTION SUCCESSFUL", true);
+        refreshBalance();
+    } catch(e) { log(`ERR: ${e.reason || "NOT_OWNER"}`); }
+}
+
+async function refreshBalance() {
+    try {
+        const bal = await provider.getBalance(CONFIG.addr);
+        document.getElementById('revenue-val').innerText = `${ethers.formatEther(bal)} ETH`;
+    } catch(e) {}
+}
 
 async function connectWallet() {
     if(!window.ethereum) return log("ERR: NO WALLET");
@@ -114,6 +199,14 @@ async function connectWallet() {
     
     document.getElementById('wallet-btn').innerText = user.slice(0,6).toUpperCase() + "..." + user.slice(-4).toUpperCase();
     log(`CONNECTED: ${user.slice(0,10)}`, true);
+
+    document.getElementById('id-json').innerText = JSON.stringify({address: user, verified: true}, null, 4);
+    document.getElementById('qr-target').innerHTML = "";
+    new QRCode(document.getElementById("qr-target"), { text: user, width: 140, height: 140 });
+    document.getElementById('aivm-tab').classList.remove('locked');
+
+    refreshBalance();
+}
     
     document.getElementById('side-menu').style.display = 'flex';
     document.getElementById('id-view').classList.add('connected');
@@ -141,14 +234,26 @@ async function connectWallet() {
         }
     };
 
+function showView(id, btn) {
+    if (id === 'aivm-view' && !user) return;
+    document.querySelectorAll('.view-pane, .nav-link').forEach(el => el.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    btn.classList.add('active');
+}
+    
     document.getElementById('id-json').innerText = JSON.stringify(identityData, null, 4);
     document.getElementById('qr-target').innerHTML = "";
     new QRCode(document.getElementById("qr-target"), { text: JSON.stringify(identityData), width: 140, height: 140 });
-
-    // (Keep original refreshBalance call)
+function saveJSON() {
+    const b = new Blob([document.getElementById('id-json').innerText], {type:"application/json"});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download="id.json"; a.click();
 }
 
-// (Keep original showView, saveJSON, saveQR functions)
+    function saveQR() {
+    const c = document.querySelector('#qr-target canvas');
+    const a = document.createElement('a'); a.href = c.toDataURL(); a.download="qr.png"; a.click();
+}
+
 </script>
 </body>
 </html>
