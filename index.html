@@ -15,7 +15,6 @@
         .console-line { margin-bottom: 4px; border-left: 2px solid #1a202c; padding-left: 8px; word-wrap: break-word; }
         .console-line.success { border-left-color: var(--accent); color: #fff; }
         
-        /* HIDDEN UNTIL CONNECT */
         .nav-menu { display: none; flex-direction: column; gap: 5px; }
         .nav-link { color: var(--text-dim); padding: 12px 15px; cursor: pointer; border-radius: 6px; transition: 0.2s; border: none; background: none; text-align: left; font-size: 0.75rem; font-family: monospace; font-weight: 600; width: 100%; }
         .nav-link:hover, .nav-link.active { color: white; background: var(--accent); }
@@ -41,7 +40,6 @@
         pre { background: var(--console-bg); padding: 20px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.75rem; color: var(--text-dim); margin: 20px 0; white-space: pre-wrap; word-break: break-all; }
         #qr-target { background: white; padding: 12px; display: inline-block; border-radius: 8px; margin-top: 20px; cursor: pointer; }
 
-        /* AIVM / GALLERY STYLES */
         textarea.panel-input { resize: vertical; min-height: 80px; font-family: 'Inter', sans-serif; }
         .art-preview { width: 100%; height: 250px; background: #000; border: 1px dashed var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-dim); font-size: 0.8rem; margin-bottom: 15px; }
         .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; margin-top: 20px; }
@@ -117,10 +115,8 @@
     <div id="aivm-view" class="view-pane">
         <div class="card">
             <h2>LCAI AIVM INFERENCE</h2>
-            <div class="art-preview" id="art-preview-box">
-                [ AIVM RENDER TARGET ]
-            </div>
-            <textarea id="art-prompt" class="panel-input" placeholder="Enter prompt for AIVM inference... (e.g. 'Cybernetic neural network glowing blue')"></textarea>
+            <div class="art-preview" id="art-preview-box">[ AIVM RENDER TARGET ]</div>
+            <textarea id="art-prompt" class="panel-input" placeholder="Enter prompt..."></textarea>
             <button class="action-btn" onclick="generateArt()">SEND INFERENCE REQUEST</button>
         </div>
     </div>
@@ -131,17 +127,13 @@
                 <h2>ON-CHAIN ART REGISTRY</h2>
                 <button class="action-btn alt" style="width: auto; padding: 5px 15px;" onclick="scanChainForArt()">REFRESH SCAN</button>
             </div>
-            <p style="font-size: 0.75rem; color: var(--text-dim);">Scanning Lightchain AI events for low-res AIVM outputs...</p>
-            <div class="gallery-grid" id="gallery-grid">
-                </div>
+            <p style="font-size: 0.75rem; color: var(--text-dim);">Scanning all historical events for AIVM outputs...</p>
+            <div class="gallery-grid" id="gallery-grid"></div>
         </div>
     </div>
-
 </div>
 
 <script>
-// NOTE: Added 'requestInference' and the 'InferenceRequested' event to the ABI to support the art generator logic.
-// Please update these specific names if your smart contract uses different ones (e.g., 'generateArt').
 const CONFIG = {
     addr: "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB",
     abi: [
@@ -162,8 +154,10 @@ const log = (msg, ok = false) => {
     l.className = `console-line ${ok ? 'success' : ''}`;
     l.innerText = `>> ${msg}`;
     const consoleBox = document.getElementById('console');
-    consoleBox.appendChild(l);
-    consoleBox.scrollTop = consoleBox.scrollHeight;
+    if(consoleBox) {
+        consoleBox.appendChild(l);
+        consoleBox.scrollTop = consoleBox.scrollHeight;
+    }
 };
 
 async function syncTickers() {
@@ -171,175 +165,115 @@ async function syncTickers() {
         const ethR = await fetch('https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD');
         const ethD = await ethR.json();
         document.getElementById('eth-price').innerText = `$${ethD.USD.toLocaleString()}`;
-        
         const lcaiR = await fetch('https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=0x9ca8530ca349c966fe9ef903df17a75b8a778927&vs_currencies=usd');
         const lcaiD = await lcaiR.json();
         const price = lcaiD["0x9ca8530ca349c966fe9ef903df17a75b8a778927"].usd;
         document.getElementById('lcai-price').innerText = `$${price.toFixed(5)}`;
-    } catch(e) { 
-        document.getElementById('lcai-price').innerText = "$0.00195"; 
-    }
+    } catch(e) { document.getElementById('lcai-price').innerText = "$0.00195"; }
 }
-setInterval(syncTickers, 5000); 
-syncTickers();
+setInterval(syncTickers, 5000); syncTickers();
 
 async function runAdmin(method, status = null) {
-    if(!contract) return log("ERR: CONNECT WALLET");
+    if(!contract) return log("ERR: NOT CONNECTED");
     const target = document.getElementById('admin-addr').value || user;
     try {
         if(method === 'queryStatus') {
             log(`QUERYING: ${target.slice(0,8)}...`);
             const isVerified = await contract.manualVerified(target);
-            log(`IDENTITY STATUS: ${isVerified ? "VERIFIED" : "UNVERIFIED"}`, isVerified);
+            log(`STATUS: ${isVerified ? "VERIFIED" : "UNVERIFIED"}`, isVerified);
         } else {
-            log(`ADMIN: ${method} for ${target.slice(0,8)}...`);
+            log(`ADMIN: ${method}...`);
             const tx = await contract.setVerification(target, status);
+            log("TX PENDING...");
             await tx.wait();
-            log("TX COMPLETED", true);
+            log("SUCCESS: IDENTITY UPDATED", true);
         }
-    } catch(e) { log(`ERR: ${e.reason || "AUTH_FAILED"}`); }
+    } catch(e) { log(`ERR: ${e.message.slice(0,40)}...`); }
 }
 
 async function runOwner(m) {
-    if(!contract) return log("ERR: CONNECT WALLET");
+    if(!contract) return log("ERR: NOT CONNECTED");
     const newOwner = document.getElementById('admin-addr').value;
     try {
-        log(`OWNER: EXECUTING ${m.toUpperCase()}...`);
-        let tx;
-        if(m === 'transferOwnership') {
-            if(!newOwner) return log("ERR: TARGET ADDR REQUIRED");
-            tx = await contract.transferOwnership(newOwner);
-        } else {
-            tx = await contract.withdraw();
-        }
+        log(`OWNER: EXECUTING ${m}...`);
+        const tx = (m === 'transferOwnership') ? await contract.transferOwnership(newOwner) : await contract.withdraw();
         await tx.wait();
-        log("OWNER ACTION SUCCESSFUL", true);
+        log("OWNER ACTION SUCCESS", true);
         refreshBalance();
-    } catch(e) { log(`ERR: ${e.reason || "NOT_OWNER"}`); }
+    } catch(e) { log(`ERR: ${e.message.slice(0,40)}...`); }
 }
 
 async function refreshBalance() {
     try {
         const bal = await provider.getBalance(CONFIG.addr);
-        document.getElementById('revenue-val').innerText = `${ethers.formatEther(bal)} ETH`;
+        document.getElementById('revenue-val').innerText = `${ethers.formatEther(bal).slice(0,6)} ETH`;
     } catch(e) {}
 }
 
-// NATIVE ART GENERATOR LOGIC
 async function generateArt() {
     if(!contract) return log("ERR: CONNECT WALLET");
     const prompt = document.getElementById('art-prompt').value;
-    if(!prompt) return log("ERR: PROMPT CANNOT BE EMPTY");
-    
-    const previewBox = document.getElementById('art-preview-box');
-    
+    if(!prompt) return log("ERR: PROMPT EMPTY");
     try {
-        log(`AIVM: INITIATING INFERENCE FOR '${prompt.slice(0,10)}...'`);
-        previewBox.innerHTML = `<span style="color:var(--accent);">[ GENERATING HASH & EXECUTING... ]</span>`;
-        
-        // Execute Smart Contract Call (Assuming 0.001 ETH fee or adjust as needed)
-        // If your contract requires payment, use { value: ethers.parseEther("0.001") } as second arg
+        log(`AIVM: SENDING '${prompt.slice(0,10)}...'`);
         const tx = await contract.requestInference(prompt);
         await tx.wait();
-        
-        log("AIVM: INFERENCE SUCCESSFUL", true);
-        
-        // Simulate pulling the resulting image from IPFS or AIVM backend after TX confirmation
-        const seed = Math.floor(Math.random() * 10000);
-        previewBox.innerHTML = `<img src="https://picsum.photos/seed/${seed}/600/250" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">`;
-        
-    } catch(e) { 
-        log(`ERR: INFERENCE FAILED - ${e.reason || "TX REJECTED"}`); 
-        previewBox.innerHTML = `[ AIVM RENDER TARGET ]`;
-    }
+        log("AIVM: SUCCESS", true);
+        document.getElementById('art-preview-box').innerHTML = `<img src="https://picsum.photos/seed/${Math.random()}/600/250" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">`;
+    } catch(e) { log("ERR: INFERENCE FAILED"); }
 }
 
-// CHAIN SCANNER LOGIC
 async function scanChainForArt() {
     if(!contract) return;
     const grid = document.getElementById('gallery-grid');
-    grid.innerHTML = `<div style="color:var(--text-dim); font-size: 0.8rem;">Querying blockchain logs...</div>`;
-    
+    grid.innerHTML = `<div style="color:var(--text-dim);">Scanning logs...</div>`;
     try {
-        log(`SCAN: QUERYING CONTRACT EVENTS...`);
-        // Fetch past events based on the InferenceRequested signature
+        log("SCANNING BLOCKCHAIN...");
         const filter = contract.filters.InferenceRequested();
-        // Look back 10,000 blocks
-        const events = await contract.queryFilter(filter, -10000); 
-        
+        const events = await contract.queryFilter(filter, 0); // Scan from block 0
         grid.innerHTML = "";
-        
-        if (events.length === 0) {
-            grid.innerHTML = `<div style="color:var(--text-dim); font-size: 0.8rem;">No recent AIVM requests found.</div>`;
-            return;
-        }
-
-        // Map events to UI elements
-        events.reverse().forEach((ev, index) => {
-            const promptStr = ev.args[1] || `AIVM Request #${index}`;
-            const requester = ev.args[0];
-            
-            // Using placeholder images synced to the transaction hash/prompt for visual consistency
-            const simImgUrl = `https://picsum.photos/seed/${ev.transactionHash}/150/120`;
-            
+        if (events.length === 0) { grid.innerHTML = "No art requests found."; return; }
+        events.reverse().forEach((ev) => {
+            const prompt = ev.args[1] || "AIVM Request";
             grid.innerHTML += `
                 <div class="gallery-item">
-                    <img src="${simImgUrl}" alt="Low res art">
-                    <div class="prompt" title="${promptStr}">${promptStr}</div>
-                    <div class="prompt" style="color:var(--accent); margin-top:4px;">${requester.slice(0,6)}...</div>
-                </div>
-            `;
+                    <img src="https://picsum.photos/seed/${ev.transactionHash}/150/120">
+                    <div class="prompt">${prompt}</div>
+                    <div class="prompt" style="color:var(--accent);">${ev.args[0].slice(0,6)}...</div>
+                </div>`;
         });
-        
-        log(`SCAN: FOUND ${events.length} LOGS`, true);
-        
-    } catch (e) {
-        log(`ERR: CHAIN SCAN FAILED`);
-        grid.innerHTML = `<div style="color:#ff4444; font-size: 0.8rem;">Failed to fetch events. Check contract ABI or network.</div>`;
-    }
+        log(`FOUND ${events.length} REQUESTS`, true);
+    } catch (e) { log("ERR: SCAN FAILED"); }
 }
 
 async function connectWallet() {
     if(!window.ethereum) return log("ERR: NO WALLET");
-    provider = new ethers.BrowserProvider(window.ethereum);
-    const accs = await provider.send("eth_requestAccounts", []);
-    user = accs[0];
-    signer = await provider.getSigner();
-    contract = new ethers.Contract(CONFIG.addr, CONFIG.abi, signer);
-    
-    document.getElementById('wallet-btn').innerText = user.slice(0,6).toUpperCase() + "..." + user.slice(-4).toUpperCase();
-    log(`CONNECTED: ${user.slice(0,10)}`, true);
-    
-    document.getElementById('side-menu').style.display = 'flex';
-    document.getElementById('id-view').classList.add('connected');
-    
-    const now = new Date();
-    const identityData = {
-        "identity": {
-            "name": `Operator_${user.slice(2, 6)}`,
-            "role": "LCAI_IAM_OPERATOR",
-            "access_tier": "Alpha_V1",
-            "created_at": now.toISOString(),
-            "unix_timestamp": Math.floor(now.getTime() / 1000)
-        },
-        "on_chain_meta": {
-            "address": user,
-            "contract_binding": CONFIG.addr,
-            "sbt_verification": "zk-SNARK_Verified",
-            "network": "Lightchain_AIVM_Mainnet"
-        },
-        "security": {
-            "protocol": "IAM_CORE_v2.1",
-            "hash_algorithm": "Keccak-256",
-            "status": "active"
-        }
-    };
+    try {
+        provider = new ethers.BrowserProvider(window.ethereum);
+        const accs = await provider.send("eth_requestAccounts", []);
+        user = accs[0];
+        signer = await provider.getSigner();
+        contract = new ethers.Contract(CONFIG.addr, CONFIG.abi, signer);
+        
+        document.getElementById('wallet-btn').innerText = user.slice(0,6).toUpperCase() + "..." + user.slice(-4).toUpperCase();
+        log(`CONNECTED: ${user.slice(0,10)}`, true);
+        
+        document.getElementById('side-menu').style.display = 'flex';
+        document.getElementById('id-view').classList.add('connected');
+        
+        const identityData = {
+            "id": `Op_${user.slice(2, 6)}`,
+            "role": "LCAI_IAM",
+            "date": new Date().toISOString(),
+            "addr": user
+        };
 
-    document.getElementById('id-json').innerText = JSON.stringify(identityData, null, 4);
-    document.getElementById('qr-target').innerHTML = "";
-    new QRCode(document.getElementById("qr-target"), { text: JSON.stringify(identityData), width: 140, height: 140 });
+        document.getElementById('id-json').innerText = JSON.stringify(identityData, null, 4);
+        document.getElementById('qr-target').innerHTML = "";
+        new QRCode(document.getElementById("qr-target"), { text: user, width: 140, height: 140 });
 
-    refreshBalance();
+        refreshBalance();
+    } catch(e) { log("ERR: CONNECT FAILED"); }
 }
 
 function showView(id, btn) {
@@ -350,16 +284,13 @@ function showView(id, btn) {
 }
 
 function saveJSON() {
-    const content = document.getElementById('id-json').innerText;
-    const b = new Blob([content], {type:"application/json"});
+    const b = new Blob([document.getElementById('id-json').innerText], {type:"application/json"});
     const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download="id.json"; a.click();
 }
 
 function saveQR() {
     const c = document.querySelector('#qr-target canvas');
-    if(c) {
-        const a = document.createElement('a'); a.href = c.toDataURL(); a.download="qr.png"; a.click();
-    }
+    if(c) { const a = document.createElement('a'); a.href = c.toDataURL(); a.download="qr.png"; a.click(); }
 }
 </script>
 </body>
