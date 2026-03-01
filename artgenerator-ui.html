@@ -70,92 +70,116 @@ async function generate() {
     const imgEl = document.getElementById('result-img');
     const btn = document.getElementById('gen-button');
 
-    if (!promptInput.value) return;
+    if (!promptInput.value.trim()) {
+        statusEl.innerText = "Please enter a prompt first.";
+        return;
+    }
 
     try {
+        // UI State: Loading
         btn.disabled = true;
         statusEl.style.display = "block";
         imgEl.style.display = "none";
-        statusEl.innerText = "Step 1: Connecting to Lightchain...";
+        statusEl.innerText = "Requesting signature... Please check MetaMask.";
 
         const provider = new ethers.BrowserProvider(window.ethereum);
         const signer = await provider.getSigner();
         const contract = new ethers.Contract(CONFIG.AIVM_ADDR, ABI, signer);
 
-        statusEl.innerText = "Step 2: Sign transaction in MetaMask...";
-
-        // TRANSACTION WITH FALLBACK LOGIC
-        let tx;
+        // Transaction config: 0.1 LCAI fee + a safe gas buffer
         const txOptions = { 
-            value: ethers.parseEther("0.1"),
-            gasLimit: 400000 // Fixed gas limit for testnet stability
+            value: ethers.parseEther("0.1"), 
+            gasLimit: 500000 
         };
 
-        const tx = await contract.generateArt(prompt, modelHash, {
-            value: ethers.parseEther("0.1"), // The inference fee
-            gasLimit: 600000                 // Manual override
-        });
-
+        let tx;
         try {
-            // Try 2-argument version (Prompt + Model)
+            // Attempt 1: New Contract Standard (Prompt + Model Digest)
             tx = await contract.generateArt(promptInput.value, modelSelect.value, txOptions);
-        } catch (e) {
-            console.warn("Retrying with 1-argument version...");
-            // Try 1-argument version (Prompt only)
+        } catch (contractErr) {
+            console.warn("2-argument call failed, falling back to 1-argument...", contractErr);
+            // Attempt 2: Older Contract Standard (Prompt only)
             tx = await contract.generateArt(promptInput.value, txOptions);
         }
 
-        statusEl.innerText = "Step 3: Anchoring on-chain... (Waiting for block)";
+        statusEl.innerText = "Transaction broadcasted! Waiting for Lightchain block confirmation...";
+        
+        // Wait for the transaction to be mined
         await tx.wait();
         
-        // REVEAL
-        statusEl.innerText = "Step 4: Decoding AIVM output...";
-        const safePrompt = encodeURIComponent(promptInput.value.trim().replace(/\s+/g, '-'));
+        statusEl.innerText = "Inference anchored. Loading visual payload...";
+
+        // Render the image securely
+        const safePrompt = encodeURIComponent(promptInput.value.trim());
         imgEl.src = `https://image.pollinations.ai/prompt/${safePrompt}?nologo=true&seed=${Date.now()}`;
+        
         imgEl.onload = () => {
             statusEl.style.display = "none";
             imgEl.style.display = "block";
         };
 
-        setTimeout(initHistory, 2000);
-    } catch (e) {
-        console.error(e);
-        statusEl.innerText = "Inference Failed: " + (e.reason || "Check Balance / MetaMask");
+        // Automatically refresh the sidebar history after a short delay
+        setTimeout(initHistory, 3000);
+
+    } catch (error) {
+        console.error("Generate Error:", error);
+        // Extract the most human-readable error message possible
+        const errorMessage = error.reason || error.message.split('(')[0] || "Transaction failed.";
+        statusEl.innerText = `Error: ${errorMessage}`;
     } finally {
+        // Restore UI state
         btn.disabled = false;
     }
 }
 
 async function initHistory() {
+    const grid = document.getElementById('history-grid');
+    
     try {
         const provider = new ethers.BrowserProvider(window.ethereum);
         const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-        if (!accounts[0]) return;
+        
+        if (!accounts || accounts.length === 0) {
+            grid.innerHTML = "<div style='color:#888; font-size:0.8rem; grid-column:span 2;'>Wallet not connected.</div>";
+            return;
+        }
 
+        const userAddress = accounts[0];
         const contract = new ethers.Contract(CONFIG.AIVM_ADDR, ABI, provider);
-        const filter = contract.filters.ArtGenerated(accounts[0]);
-        const events = await contract.queryFilter(filter, -20000); 
+        
+        // Create a filter for the 'ArtGenerated' event specific to the connected wallet
+        const filter = contract.filters.ArtGenerated(userAddress);
+        
+        // Scan the last 50,000 blocks to ensure we catch recent history without timing out the RPC
+        const events = await contract.queryFilter(filter, -50000); 
 
-        const history = events.map(e => {
-            const p = e.args.prompt || e.args[1] || "AIVM Art";
-            const d = e.args.modelDigest ? e.args.modelDigest.slice(0, 10) : "0xLCAI";
+        if (events.length === 0) {
+            grid.innerHTML = "<div style='color:#555; font-size:0.8rem; grid-column:span 2;'>No on-chain history found in recent blocks.</div>";
+            return;
+        }
+
+        // Map events to our history array with safe parsing
+        history = events.map(e => {
+            // Safely extract the prompt whether it's accessed by name or index
+            const promptVal = e.args.prompt || e.args[1] || "Unknown Prompt";
+            // Safely extract the digest, or provide a default if it doesn't exist in this event version
+            const digestVal = e.args.modelDigest ? e.args.modelDigest.slice(0, 10) : "Default";
+
             return {
-                prompt: p,
-                digest: d,
-                url: `https://image.pollinations.ai/prompt/${encodeURIComponent(p.trim().replace(/\s+/g, '-'))}?nologo=true&seed=${e.blockNumber}`
+                prompt: promptVal,
+                digest: digestVal,
+                // Tie the image seed to the block number so the history image is consistent
+                url: `https://image.pollinations.ai/prompt/${encodeURIComponent(promptVal.trim())}?nologo=true&seed=${e.blockNumber}`
             };
-        }).reverse();
+        }).reverse(); // Reverse to show newest first
 
-        const grid = document.getElementById('history-grid');
-        grid.innerHTML = history.map((item, i) => `
-            <div class="gallery-item" onclick="loadHistory('${item.prompt}', '${item.url}')">
-                <img src="${item.url}" onerror="this.src='https://placehold.co/150x150/111/00ff80?text=SCANNING'">
-                <div class="digest">${item.digest}</div>
-            </div>
-        `).join('');
-    } catch (e) { console.error("Sync Failed", e); }
+        renderHistory();
+
+    } catch (error) {
+        console.error("History Sync Error:", error);
+        grid.innerHTML = "<div style='color:red; font-size:0.8rem; grid-column:span 2;'>Sync failed. The network might be congested.</div>";
+    }
 }
-
 function loadHistory(prompt, url) {
     document.getElementById('prompt-input').value = prompt;
     const imgEl = document.getElementById('result-img');
