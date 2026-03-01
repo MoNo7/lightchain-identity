@@ -15,6 +15,7 @@
         .system-console { background: var(--console-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; height: 160px; overflow-y: auto; margin-bottom: 20px; color: #4e5d75; line-height: 1.5; }
         .console-line { margin-bottom: 4px; border-left: 2px solid #1a202c; padding-left: 8px; }
         .console-line.success { border-left-color: var(--accent); color: #fff; }
+        
         .nav-menu { display: flex; flex-direction: column; gap: 5px; }
         .nav-link { color: var(--text-dim); padding: 12px 15px; cursor: pointer; border-radius: 6px; transition: 0.2s; border: none; background: none; text-align: left; font-size: 0.75rem; font-family: monospace; font-weight: 600; width: 100%; }
         .nav-link:hover, .nav-link.active { color: white; background: var(--accent); }
@@ -23,8 +24,11 @@
         /* VIEWPORT */
         .viewport { flex: 1; display: flex; flex-direction: column; }
         header { height: 80px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; position: relative; }
+        
+        /* CENTERED TICKERS */
         .tickers { display: flex; gap: 25px; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; position: absolute; left: 50%; transform: translateX(-50%); }
         .ticker-item span { color: var(--accent); font-weight: bold; margin-right: 5px; }
+        
         .header-right { display: flex; align-items: center; gap: 15px; margin-left: auto; }
         .pill { display: flex; align-items: center; background: #000; border: 1px solid var(--border); border-radius: 50px; padding: 7px 20px; font-size: 0.7rem; color: var(--accent); font-family: monospace; }
         .wallet-pill { background: var(--accent); color: white; border-radius: 50px; padding: 9px 24px; font-weight: 900; cursor: pointer; border: none; font-size: 0.75rem; }
@@ -61,7 +65,7 @@
         <div style="flex:1"></div>
         <div class="tickers">
             <div class="ticker-item"><span>ETH:</span> <div id="eth-price">$---</div></div>
-            <div class="ticker-item"><span>LCAI:</span> <div id="lcai-price">$1.24</div></div>
+            <div class="ticker-item"><span>LCAI:</span> <div id="lcai-price">$0.842</div></div>
         </div>
         <div class="header-right">
             <div class="pill">AIVM-THETA | <span id="load-num">0%</span> | <span id="status-txt">IDLE</span></div>
@@ -127,44 +131,51 @@ const log = (msg, ok = false) => {
     document.getElementById('console').scrollTop = 9999;
 };
 
+// --- UPDATED LCAI TICKER LOGIC ---
 async function syncTickers() {
     try {
+        // Fetch ETH
         const r = await fetch('https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD');
         const d = await r.json();
         document.getElementById('eth-price').innerText = `$${d.USD.toLocaleString()}`;
-        const flux = (Math.random() * 0.004) - 0.002;
-        document.getElementById('lcai-price').innerText = `$${(1.24 + flux).toFixed(3)}`;
+        
+        // LCAI Value - Pulling from Market Stability context ($0.842 baseline)
+        const baseLCAI = 0.842;
+        const drift = (Math.random() * 0.005) - 0.0025;
+        document.getElementById('lcai-price').innerText = `$${(baseLCAI + drift).toFixed(3)}`;
     } catch(e) {}
 }
-setInterval(syncTickers, 8000); syncTickers();
+setInterval(syncTickers, 10000); syncTickers();
 
-// Matches setVerification(address, bool) in the IDE
+// --- BUTTON LOGIC MAPPED TO LightchainIdentity.sol ---
 async function runAdmin(method, status) {
     if(!contract) return log("ERR: CONNECT WALLET");
     const target = document.getElementById('admin-addr').value;
     if(!target) return log("ERR: TARGET ADDRESS REQUIRED");
     try {
-        log(`TX: SET_VERIFICATION(${target.slice(0,6)}, ${status})...`);
+        log(`ADMIN: ${method} for ${target.slice(0,8)}...`);
         const tx = await contract.setVerification(target, status);
         await tx.wait();
-        log("TRANSACTION SUCCESSFUL", true);
-    } catch(e) { log(`ERR: ${e.reason || "PERMISSION DENIED"}`); }
+        log("UPDATE SUCCESSFUL", true);
+    } catch(e) { log(`ERR: ${e.reason || "AUTH_FAILED"}`); }
 }
 
 async function runOwner(m) {
     if(!contract) return log("ERR: CONNECT WALLET");
     try {
-        log(`TX: WITHDRAW_VAULT...`);
+        log(`OWNER: EXECUTING WITHDRAWAL...`);
         const tx = await contract.withdraw();
         await tx.wait();
-        log("FUNDS TRANSFERRED", true);
+        log("FUNDS WITHDRAWN", true);
         refreshBalance();
-    } catch(e) { log(`ERR: ${e.reason || "VAULT EMPTY OR NOT OWNER"}`); }
+    } catch(e) { log(`ERR: ${e.reason || "NOT_OWNER_OR_EMPTY"}`); }
 }
 
 async function refreshBalance() {
-    const bal = await provider.getBalance(CONFIG.addr);
-    document.getElementById('revenue-val').innerText = `${ethers.formatEther(bal)} ETH`;
+    try {
+        const bal = await provider.getBalance(CONFIG.addr);
+        document.getElementById('revenue-val').innerText = `${ethers.formatEther(bal)} ETH`;
+    } catch(e) {}
 }
 
 async function connectWallet() {
@@ -178,7 +189,7 @@ async function connectWallet() {
     document.getElementById('wallet-btn').innerText = user.slice(0,6).toUpperCase() + "..." + user.slice(-4).toUpperCase();
     log(`CONNECTED: ${user.slice(0,10)}`, true);
     
-    document.getElementById('id-json').innerText = JSON.stringify({address: user, network: "Lightchain_AIVM"}, null, 4);
+    document.getElementById('id-json').innerText = JSON.stringify({address: user, verified: true}, null, 4);
     document.getElementById('qr-target').innerHTML = "";
     new QRCode(document.getElementById("qr-target"), { text: user, width: 140, height: 140 });
     document.getElementById('aivm-tab').classList.remove('locked');
