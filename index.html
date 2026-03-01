@@ -69,6 +69,7 @@
     <div id="id-view" class="view-pane">
         <div class="card">
             <h2>ZK-SBT IDENTITY CARD</h2>
+            <p style="font-size:0.65rem; color:var(--text-dim); margin-bottom:10px;">Click code to download JSON. Click QR to download Image.</p>
             <pre id="id-json" onclick="saveJSON()">// Identity Packet Offline: Handshake Required</pre>
             <div id="qr-target" onclick="saveQR()" style="margin-top:20px; background:white; padding:10px; display:none; border-radius:4px; cursor:pointer;"></div>
         </div>
@@ -88,9 +89,9 @@
             <table class="status-table">
                 <thead><tr><th>MODEL ID</th><th>DIGEST</th><th>STATUS</th></tr></thead>
                 <tbody id="model-status-body">
-                    <tr><td>AIVM-THETA</td><td>0x6f63...0000</td><td class="status-online">ONLINE</td></tr>
+                    <tr><td>AIVM-THETA</td><td>0x2bf0...0000</td><td class="status-online">ONLINE</td></tr>
                     <tr><td>AIVM-DELTA</td><td>0x4a8c...0000</td><td class="status-online">ONLINE</td></tr>
-                    <tr><td>AIVM-SIGMA</td><td>0x2bf0...0000</td><td class="status-online">ONLINE</td></tr>
+                    <tr><td>AIVM-SIGMA</td><td>0x6f63...0000</td><td class="status-online">ONLINE</td></tr>
                 </tbody>
             </table>
         </div>
@@ -110,12 +111,12 @@
         <div class="card">
             <h2>AIVM INFERENCE</h2>
             <select id="model-select" class="panel-input" onchange="document.getElementById('active-model').innerText=this.value">
-                <option value="AIVM-THETA" data-hash="0x6f63a19b3cf48600000000000000000000000000000000000000000000000000">AIVM-THETA (Standard)</option>
+                <option value="AIVM-THETA" data-hash="0x2bf0539500000000000000000000000000000000000000000000000000000000">AIVM-THETA (Standard)</option>
                 <option value="AIVM-DELTA" data-hash="0x4a8c30d500000000000000000000000000000000000000000000000000000000">AIVM-DELTA (High Speed)</option>
-                <option value="AIVM-SIGMA" data-hash="0x2bf0539500000000000000000000000000000000000000000000000000000000">AIVM-SIGMA (Neural)</option>
+                <option value="AIVM-SIGMA" data-hash="0x6f63a19b3cf48600000000000000000000000000000000000000000000000000">AIVM-SIGMA (Neural)</option>
             </select>
             <textarea id="art-prompt" class="panel-input" placeholder="Neural landscape..." style="height:120px;"></textarea>
-            <button class="action-btn" onclick="generateArt()">REQUEST INFERENCE (0.1 tLCAI)</button>
+            <button class="action-btn" onclick="generateArt()">REQUEST INFERENCE (0.25 tLCAI)</button>
         </div>
     </div>
 </div>
@@ -174,7 +175,7 @@ async function updateWalletPill() {
 
 function updateMenu() {
     const menu = document.getElementById('side-menu');
-    let html = `<button class="nav-link" onclick="showView('gallery-view', this); initGallery();">NETWORK GALLERY</button>`;
+    let html = `<button class="nav-link active" onclick="showView('gallery-view', this); initGallery();">NETWORK GALLERY</button>`;
     if(user) {
         html += `<button class="nav-link" onclick="showView('id-view', this)">ZK IDENTITY</button>`;
         if(roles.isOwner) {
@@ -223,7 +224,7 @@ async function generateArt() {
     const prompt = document.getElementById('art-prompt').value;
     const sel = document.getElementById('model-select');
     const modelHash = sel.options[sel.selectedIndex].getAttribute('data-hash');
-    const fee = ethers.parseEther("0.1");
+    const fee = ethers.parseEther("0.25");
 
     if(!prompt) return log("PROMPT EMPTY", "error");
 
@@ -243,7 +244,7 @@ async function generateArt() {
         initGallery();
         updateWalletPill();
     } catch (e) {
-        log("REVERT: " + (e.reason || "REJECTED"), "error");
+        log("REVERT: REJECTED", "error");
         document.getElementById('status-txt').innerText = "ERROR";
     }
 }
