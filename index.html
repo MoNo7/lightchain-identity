@@ -12,7 +12,7 @@
         nav { width: 280px; border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 25px; background: var(--panel); box-sizing: border-box; }
         .nav-logo { font-weight: 900; letter-spacing: 2px; color: var(--accent); margin-bottom: 25px; font-size: 1.1rem; text-align: center; }
         .system-console { background: var(--console-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; height: 160px; overflow-y: auto; margin-bottom: 20px; color: #4e5d75; line-height: 1.5; }
-        .console-line { margin-bottom: 4px; border-left: 2px solid #1a202c; padding-left: 8px; }
+        .console-line { margin-bottom: 4px; border-left: 2px solid #1a202c; padding-left: 8px; word-wrap: break-word; }
         .console-line.success { border-left-color: var(--accent); color: #fff; }
         
         /* HIDDEN UNTIL CONNECT */
@@ -32,7 +32,7 @@
         .view-pane { flex: 1; padding: 45px; display: none; overflow-y: auto; }
         .view-pane.connected { display: block !important; }
 
-        .card { background: var(--panel); border: 1px solid var(--border); padding: 35px; border-radius: 12px; max-width: 650px; border-top: 4px solid var(--accent); }
+        .card { background: var(--panel); border: 1px solid var(--border); padding: 35px; border-radius: 12px; max-width: 650px; border-top: 4px solid var(--accent); margin-bottom: 20px; }
         .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 25px; }
         .admin-box { background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 20px; border-radius: 8px; }
         .panel-input { width: 100%; background: #000; border: 1px solid #333; color: white; padding: 10px; border-radius: 4px; font-size: 0.7rem; margin-bottom: 12px; box-sizing: border-box; }
@@ -40,12 +40,21 @@
         .action-btn.alt { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
         pre { background: var(--console-bg); padding: 20px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.75rem; color: var(--text-dim); margin: 20px 0; white-space: pre-wrap; word-break: break-all; }
         #qr-target { background: white; padding: 12px; display: inline-block; border-radius: 8px; margin-top: 20px; cursor: pointer; }
+
+        /* AIVM / GALLERY STYLES */
+        textarea.panel-input { resize: vertical; min-height: 80px; font-family: 'Inter', sans-serif; }
+        .art-preview { width: 100%; height: 250px; background: #000; border: 1px dashed var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-dim); font-size: 0.8rem; margin-bottom: 15px; }
+        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; margin-top: 20px; }
+        .gallery-item { background: #000; border: 1px solid var(--border); border-radius: 6px; padding: 10px; text-align: center; }
+        .gallery-item img { width: 100%; height: 120px; object-fit: cover; border-radius: 4px; background: #111; margin-bottom: 8px; opacity: 0.7; filter: grayscale(30%); transition: 0.3s; }
+        .gallery-item img:hover { opacity: 1; filter: grayscale(0%); cursor: pointer; }
+        .gallery-item .prompt { font-size: 0.6rem; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     </style>
 </head>
 <body>
 
 <nav>
-    <div class="nav-logo">Lightchain AI <span>|Testnet </span></div>
+    <div class="nav-logo">LCAI <span>IAM</span></div>
     <div class="system-console" id="console">
         <div class="console-line">>> INITIALIZING LCAI_IAM_CORE...</div>
         <div class="console-line">>> STATUS: DISCONNECTED</div>
@@ -54,6 +63,7 @@
         <button class="nav-link active" onclick="showView('id-view', this)">ZK IDENTITY</button>
         <button class="nav-link" onclick="showView('recovery-view', this)">IDENTITY RECOVERY</button>
         <button class="nav-link" onclick="showView('aivm-view', this)">LCAI AIVM ART</button>
+        <button class="nav-link" onclick="showView('gallery-view', this); scanChainForArt();">NETWORK GALLERY</button>
     </div>
 </nav>
 
@@ -104,12 +114,34 @@
         </div>
     </div>
 
-    <div id="aivm-view" class="view-pane" style="padding:0;">
-        <iframe src="artgenerator-ui.html" style="width:100%; height:100%; border:none;"></iframe>
+    <div id="aivm-view" class="view-pane">
+        <div class="card">
+            <h2>LCAI AIVM INFERENCE</h2>
+            <div class="art-preview" id="art-preview-box">
+                [ AIVM RENDER TARGET ]
+            </div>
+            <textarea id="art-prompt" class="panel-input" placeholder="Enter prompt for AIVM inference... (e.g. 'Cybernetic neural network glowing blue')"></textarea>
+            <button class="action-btn" onclick="generateArt()">SEND INFERENCE REQUEST</button>
+        </div>
     </div>
+
+    <div id="gallery-view" class="view-pane">
+        <div class="card" style="max-width: 900px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>ON-CHAIN ART REGISTRY</h2>
+                <button class="action-btn alt" style="width: auto; padding: 5px 15px;" onclick="scanChainForArt()">REFRESH SCAN</button>
+            </div>
+            <p style="font-size: 0.75rem; color: var(--text-dim);">Scanning Lightchain AI events for low-res AIVM outputs...</p>
+            <div class="gallery-grid" id="gallery-grid">
+                </div>
+        </div>
+    </div>
+
 </div>
 
 <script>
+// NOTE: Added 'requestInference' and the 'InferenceRequested' event to the ABI to support the art generator logic.
+// Please update these specific names if your smart contract uses different ones (e.g., 'generateArt').
 const CONFIG = {
     addr: "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB",
     abi: [
@@ -117,7 +149,9 @@ const CONFIG = {
         "function withdraw() external",
         "function manualVerified(address) public view returns (bool)",
         "function owner() public view returns (address)",
-        "function transferOwnership(address newOwner) public"
+        "function transferOwnership(address newOwner) public",
+        "function requestInference(string prompt) external payable",
+        "event InferenceRequested(address indexed user, string prompt)"
     ]
 };
 
@@ -191,6 +225,80 @@ async function refreshBalance() {
     } catch(e) {}
 }
 
+// NATIVE ART GENERATOR LOGIC
+async function generateArt() {
+    if(!contract) return log("ERR: CONNECT WALLET");
+    const prompt = document.getElementById('art-prompt').value;
+    if(!prompt) return log("ERR: PROMPT CANNOT BE EMPTY");
+    
+    const previewBox = document.getElementById('art-preview-box');
+    
+    try {
+        log(`AIVM: INITIATING INFERENCE FOR '${prompt.slice(0,10)}...'`);
+        previewBox.innerHTML = `<span style="color:var(--accent);">[ GENERATING HASH & EXECUTING... ]</span>`;
+        
+        // Execute Smart Contract Call (Assuming 0.001 ETH fee or adjust as needed)
+        // If your contract requires payment, use { value: ethers.parseEther("0.001") } as second arg
+        const tx = await contract.requestInference(prompt);
+        await tx.wait();
+        
+        log("AIVM: INFERENCE SUCCESSFUL", true);
+        
+        // Simulate pulling the resulting image from IPFS or AIVM backend after TX confirmation
+        const seed = Math.floor(Math.random() * 10000);
+        previewBox.innerHTML = `<img src="https://picsum.photos/seed/${seed}/600/250" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">`;
+        
+    } catch(e) { 
+        log(`ERR: INFERENCE FAILED - ${e.reason || "TX REJECTED"}`); 
+        previewBox.innerHTML = `[ AIVM RENDER TARGET ]`;
+    }
+}
+
+// CHAIN SCANNER LOGIC
+async function scanChainForArt() {
+    if(!contract) return;
+    const grid = document.getElementById('gallery-grid');
+    grid.innerHTML = `<div style="color:var(--text-dim); font-size: 0.8rem;">Querying blockchain logs...</div>`;
+    
+    try {
+        log(`SCAN: QUERYING CONTRACT EVENTS...`);
+        // Fetch past events based on the InferenceRequested signature
+        const filter = contract.filters.InferenceRequested();
+        // Look back 10,000 blocks
+        const events = await contract.queryFilter(filter, -10000); 
+        
+        grid.innerHTML = "";
+        
+        if (events.length === 0) {
+            grid.innerHTML = `<div style="color:var(--text-dim); font-size: 0.8rem;">No recent AIVM requests found.</div>`;
+            return;
+        }
+
+        // Map events to UI elements
+        events.reverse().forEach((ev, index) => {
+            const promptStr = ev.args[1] || `AIVM Request #${index}`;
+            const requester = ev.args[0];
+            
+            // Using placeholder images synced to the transaction hash/prompt for visual consistency
+            const simImgUrl = `https://picsum.photos/seed/${ev.transactionHash}/150/120`;
+            
+            grid.innerHTML += `
+                <div class="gallery-item">
+                    <img src="${simImgUrl}" alt="Low res art">
+                    <div class="prompt" title="${promptStr}">${promptStr}</div>
+                    <div class="prompt" style="color:var(--accent); margin-top:4px;">${requester.slice(0,6)}...</div>
+                </div>
+            `;
+        });
+        
+        log(`SCAN: FOUND ${events.length} LOGS`, true);
+        
+    } catch (e) {
+        log(`ERR: CHAIN SCAN FAILED`);
+        grid.innerHTML = `<div style="color:#ff4444; font-size: 0.8rem;">Failed to fetch events. Check contract ABI or network.</div>`;
+    }
+}
+
 async function connectWallet() {
     if(!window.ethereum) return log("ERR: NO WALLET");
     provider = new ethers.BrowserProvider(window.ethereum);
@@ -202,11 +310,9 @@ async function connectWallet() {
     document.getElementById('wallet-btn').innerText = user.slice(0,6).toUpperCase() + "..." + user.slice(-4).toUpperCase();
     log(`CONNECTED: ${user.slice(0,10)}`, true);
     
-    // UI REVEAL
     document.getElementById('side-menu').style.display = 'flex';
     document.getElementById('id-view').classList.add('connected');
     
-    // EXTENDED DATA GENERATION
     const now = new Date();
     const identityData = {
         "identity": {
@@ -258,4 +364,3 @@ function saveQR() {
 </script>
 </body>
 </html>
-
