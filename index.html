@@ -213,9 +213,22 @@ async function generateArt() {
     if(!prompt) return log("PROMPT EMPTY", "error");
 
     try {
-        log("BROADCASTING INFERENCE...");
-        document.getElementById('status-txt').innerText = "PENDING";
+        log("SIMULATING INFERENCE...");
+        document.getElementById('status-txt').innerText = "DEBUGGING";
         
+        // STATIC CALL SIMULATION TO CAPTURE REVERT REASON
+        try {
+            await contract.generateArt.staticCall(prompt, modelHash, { value: fee });
+            log("SIMULATION SUCCESSFUL", "success");
+        } catch (simError) {
+            console.error(simError);
+            const reason = simError.reason || "CONTRACT_REQUIRE_FAILED";
+            log(`REVERT_REASON: ${reason}`, "error");
+            // If simulation fails, we stop to save user gas
+            document.getElementById('status-txt').innerText = "REVERTED";
+            return;
+        }
+
         const tx = await contract.generateArt(prompt, modelHash, { 
             value: fee, 
             gasLimit: 3000000 
@@ -228,7 +241,7 @@ async function generateArt() {
         initGallery();
         updateWalletPill();
     } catch (e) {
-        log("REVERT: REJECTED", "error");
+        log("BROADCAST ERROR: " + (e.reason || "REJECTED"), "error");
         document.getElementById('status-txt').innerText = "ERROR";
     }
 }
@@ -255,8 +268,7 @@ async function runAdmin(type) {
             log(`USER ${target.slice(0, 6)}: ${res ? "VERIFIED" : "UNVERIFIED"}`);
         } else {
             const tx = await contract.setVerification(target, type === 'verify', { gasLimit: 200000 });
-            await tx.wait();
-            log("PERMISSION SYNCED", "success");
+            await tx.wait(); log("PERMISSION SYNCED", "success");
             if(target.toLowerCase() === user.toLowerCase()) { roles.isVerified = (type === 'verify'); updateMenu(); }
         }
     } catch (e) { log("ADMIN ACTION REVERTED", "error"); }
