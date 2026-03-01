@@ -32,9 +32,6 @@
         .action-btn.alt { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
         pre { background: var(--console-bg); padding: 20px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.75rem; color: #a0aec0; margin: 20px 0; white-space: pre-wrap; word-break: break-all; line-height: 1.4; }
         #qr-target { background: white; padding: 12px; display: inline-block; border-radius: 8px; margin-top: 10px; }
-        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; margin-top: 20px; }
-        .gallery-item { background: #000; border: 1px solid var(--border); border-radius: 6px; padding: 10px; text-align: center; }
-        .gallery-item img { width: 100%; height: 110px; object-fit: cover; border-radius: 4px; background: #111; margin-bottom: 8px; }
     </style>
 </head>
 <body>
@@ -68,7 +65,7 @@
     <div id="id-view" class="view-pane active">
         <div class="card">
             <h2>ZK-SBT IDENTITY</h2>
-            <pre id="id-json">{ "status": "awaiting_connection" }</pre>
+            <pre id="id-json">{ "status": "awaiting_auth" }</pre>
             <button onclick="saveJSON()" class="action-btn alt" style="width: auto; padding: 10px 25px;">DOWNLOAD JSON</button>
             <div id="qr-target"></div>
         </div>
@@ -82,7 +79,7 @@
             <button class="action-btn" onclick="runAdmin('setVerification', true)">VERIFY USER</button>
             <div style="background:#000; padding:12px; margin-top:20px; border-radius:4px; border:1px solid var(--border);">
                 <div style="font-size:0.6rem; color:var(--text-dim);">VAULT BALANCE</div>
-                <div id="revenue-val">0.00 tLCAI</div>
+                <div id="revenue-val" style="font-size: 1.2rem; font-weight: bold; color: var(--accent);">0.00 tLCAI</div>
             </div>
             <button class="action-btn alt" onclick="runOwner()" style="margin-top:10px;">WITHDRAW ALL</button>
         </div>
@@ -91,7 +88,7 @@
     <div id="aivm-view" class="view-pane">
         <div class="card">
             <h2>LCAI AIVM INFERENCE</h2>
-            <textarea id="art-prompt" class="panel-input" placeholder="Enter prompt..."></textarea>
+            <textarea id="art-prompt" class="panel-input" placeholder="Neural landscape..." style="height: 100px;"></textarea>
             <button class="action-btn" onclick="generateArt()">REQUEST INFERENCE (0.001 tLCAI)</button>
         </div>
     </div>
@@ -124,8 +121,7 @@ const log = (msg, type = "info") => {
     l.className = `console-line ${type === 'success' ? 'success' : type === 'error' ? 'error' : ''}`;
     l.innerText = `>> ${msg}`;
     const cb = document.getElementById('console');
-    cb.appendChild(l);
-    cb.scrollTop = cb.scrollHeight;
+    if(cb) { cb.appendChild(l); cb.scrollTop = cb.scrollHeight; }
 };
 
 async function syncTickers() {
@@ -142,8 +138,7 @@ async function syncTickers() {
 syncTickers();
 
 async function connectWallet() {
-    if (!window.ethereum) return log("NO WALLET DETECTED", "error");
-    log("REQUESTING CONNECTION...");
+    if (!window.ethereum) return log("METAMASK MISSING", "error");
     try {
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         user = accounts[0];
@@ -151,77 +146,75 @@ async function connectWallet() {
         signer = await provider.getSigner();
         contract = new ethers.Contract(CONFIG.addr, CONFIG.abi, signer);
         
-        log(`CONNECTED: ${user.slice(0,10)}`, "success");
+        log("HANDSHAKE INITIATED...", "info");
+
+        const rawOwner = await contract.owner();
+        const isOwner = (user.toLowerCase() === rawOwner.toLowerCase());
+        const isVerified = await contract.manualVerified(user);
+        
+        // Restore Full ZK Metadata
+        const identityData = {
+            "identity": {
+                "operator_id": `LCAI-${user.slice(2, 8).toUpperCase()}`,
+                "role": isOwner ? "SYSTEM_OWNER_ADMIN" : (isVerified ? "VERIFIED_OPERATOR" : "GUEST_NODE"),
+                "access_tier": isOwner ? "OMEGA_ACCESS" : (isVerified ? "STANDARD_NODE" : "LIMITED_ACCESS"),
+                "auth_method": "ZK_SBT_HANDSHAKE",
+                "timestamp": Math.floor(Date.now() / 1000)
+            },
+            "on_chain": {
+                "address": user,
+                "contract": CONFIG.addr,
+                "owner_match": isOwner
+            }
+        };
+
+        document.getElementById('id-json').innerText = JSON.stringify(identityData, null, 4);
         document.getElementById('wallet-btn').innerText = user.slice(0,6).toUpperCase();
         document.getElementById('side-menu').style.display = 'flex';
         
-        // Initial Read
-        try {
-            const owner = await contract.owner();
-            const isOwner = user.toLowerCase() === owner.toLowerCase();
-            const identityData = {
-                "identity": { "operator_id": `LCAI-${user.slice(2,8).toUpperCase()}`, "role": isOwner ? "OWNER" : "OPERATOR" },
-                "network": { "address": user, "contract": CONFIG.addr }
-            };
-            document.getElementById('id-json').innerText = JSON.stringify(identityData, null, 4);
-            if(isOwner) log("ADMIN ACCESS GRANTED", "success");
-        } catch(re) { log("SYNC ERROR: WRONG NETWORK?", "error"); }
+        if(isOwner) log("OWNER PRIVILEGES ACTIVE", "success");
+        else log("CONNECTION STABLE: GUEST MODE", "success");
 
+        document.getElementById('qr-target').innerHTML = "";
+        new QRCode(document.getElementById("qr-target"), { text: user, width: 140, height: 140 });
+        
         refreshBalance();
     } catch (e) {
-        log("CONNECTION FAILED: " + e.message, "error");
+        log("CONNECT FAILED: " + e.message, "error");
     }
 }
 
-async function runAdmin(method, val) {
-    if(!contract) return;
-    try {
-        const target = document.getElementById('admin-addr').value;
-        if(method === 'queryStatus') {
-            const res = await contract.manualVerified(target);
-            log(`USER ${target.slice(0,6)} VERIFIED: ${res}`);
-        } else {
-            const tx = await contract.setVerification(target, val);
-            await tx.wait(); log("VERIFICATION UPDATED", "success");
-        }
-    } catch(e) { log("ACTION DENIED", "error"); }
-}
-
 async function runOwner() {
-    if(!contract) return;
+    if(!contract) return log("CONNECT WALLET FIRST", "error");
     try {
+        log("BROADCASTING WITHDRAWAL...");
         const tx = await contract.withdraw();
-        await tx.wait(); log("VAULT EMPTIED", "success");
+        await tx.wait();
+        log("TREASURY WITHDRAWN", "success");
         refreshBalance();
-    } catch(e) { log("REVERT: NOT OWNER", "error"); }
+    } catch(e) { 
+        log("REVERT: NOT OWNER OR RPC ERROR", "error"); 
+    }
 }
 
 async function generateArt() {
     if(!contract) return;
     try {
         const prompt = document.getElementById('art-prompt').value;
+        document.getElementById('status-txt').innerText = "INFERENCE";
         const tx = await contract.requestInference(prompt, { value: ethers.parseEther("0.001") });
-        await tx.wait(); log("INFERENCE COMPLETE", "success");
-    } catch(e) { log("INFERENCE FAILED", "error"); }
-}
-
-async function initGallery() {
-    if(!contract) return;
-    const grid = document.getElementById('gallery-grid');
-    grid.innerHTML = "LOADING...";
-    try {
-        const events = await contract.queryFilter("InferenceRequested", -5000);
-        grid.innerHTML = "";
-        events.reverse().forEach(ev => {
-            grid.innerHTML += `<div class="gallery-item"><img src="https://picsum.photos/seed/${ev.transactionHash}/150/110"></div>`;
-        });
-    } catch(e) { grid.innerHTML = "EMPTY"; }
+        await tx.wait();
+        log("INFERENCE SUCCESSFUL", "success");
+        document.getElementById('status-txt').innerText = "IDLE";
+    } catch(e) { log("INFERENCE REJECTED", "error"); }
 }
 
 async function refreshBalance() {
     if(!provider) return;
-    const bal = await provider.getBalance(CONFIG.addr);
-    document.getElementById('revenue-val').innerText = `${ethers.formatEther(bal).slice(0,6)} tLCAI`;
+    try {
+        const bal = await provider.getBalance(CONFIG.addr);
+        document.getElementById('revenue-val').innerText = `${ethers.formatEther(bal).slice(0,8)} tLCAI`;
+    } catch(e) {}
 }
 
 function showView(id, btn) {
@@ -229,6 +222,11 @@ function showView(id, btn) {
     document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
     document.getElementById(id).classList.add('active');
     btn.classList.add('active');
+}
+
+function saveJSON() {
+    const b = new Blob([document.getElementById('id-json').innerText], {type:"application/json"});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download="id.json"; a.click();
 }
 </script>
 </body>
