@@ -10,7 +10,7 @@
         body { margin: 0; background: var(--bg); color: white; font-family: 'Inter', sans-serif; display: flex; height: 100vh; overflow: hidden; }
         nav { width: 280px; border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 25px; background: var(--panel); box-sizing: border-box; }
         .nav-logo { font-weight: 900; letter-spacing: 2px; color: var(--accent); margin-bottom: 25px; font-size: 1.1rem; text-align: center; }
-        .system-console { background: var(--console-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 0.65rem; height: 180px; overflow-y: auto; margin-bottom: 20px; color: #4e5d75; line-height: 1.5; }
+        .system-console { background: var(--console-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 0.65rem; height: 160px; overflow-y: auto; margin-bottom: 20px; color: #4e5d75; line-height: 1.5; }
         .console-line { margin-bottom: 4px; border-left: 2px solid #1a202c; padding-left: 8px; }
         .console-line.success { border-left-color: var(--accent); color: #fff; }
         .console-line.error { border-left-color: #ff4444; color: #ff4444; }
@@ -28,44 +28,32 @@
         .action-btn { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; width: 100%; font-weight: bold; }
         .action-btn.alt { background: transparent; border: 1px solid var(--accent); color: var(--accent); margin-top: 8px; }
         pre { background: var(--console-bg); padding: 20px; border-radius: 8px; font-size: 0.75rem; color: #a0aec0; white-space: pre-wrap; border: 1px solid var(--border); line-height: 1.4; cursor: pointer; }
-        pre:hover { border-color: var(--accent); color: #fff; }
         .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin-top: 20px; }
         .gallery-item { background: #000; border: 1px solid var(--border); border-radius: 6px; padding: 10px; text-align: center; }
         .gallery-item img { width: 100%; height: 130px; object-fit: cover; border-radius: 4px; filter: blur(2px); transition: 0.3s; }
         .gallery-item.high-res img { filter: blur(0); }
-        .badge { font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; background: #00c853; color: white; vertical-align: middle; }
     </style>
 </head>
 <body>
-
 <nav>
     <div class="nav-logo">LCAI <span>IAM</span></div>
     <div class="system-console" id="console">
-        <div class="console-line">>> INITIALIZING_SECURE_KERNEL</div>
+        <div class="console-line">>> KERNEL_ACTIVE</div>
     </div>
-    <div class="nav-menu" id="side-menu">
+    <div id="side-menu" class="nav-menu">
         <button class="nav-link active" onclick="showView('gallery-view', this); initGallery();">NETWORK GALLERY</button>
     </div>
 </nav>
 
 <div class="viewport">
     <header>
-        <div class="pill">
-            <span style="color:var(--text-dim)">MODEL:</span> 
-            <span id="active-model">AIVM-THETA</span> 
-            <span style="color:var(--text-dim)">|</span> 
-            <span id="load-num">0%</span> 
-            <span id="status-txt">IDLE</span>
-        </div>
-        <div class="header-right">
-            <button id="wallet-btn" class="wallet-pill" onclick="connectWallet()">CONNECT WALLET</button>
-        </div>
+        <div class="pill">MODEL: <span id="active-model">AIVM-THETA</span> | <span id="load-num">0%</span> <span id="status-txt">IDLE</span></div>
+        <div class="header-right"><button id="wallet-btn" class="wallet-pill" onclick="connectWallet()">CONNECT WALLET</button></div>
     </header>
 
     <div id="gallery-view" class="view-pane active">
         <div class="card" style="max-width: 900px;">
-            <h2>NETWORK GALLERY <span id="gallery-badge"></span></h2>
-            <p style="font-size:0.7rem; color:var(--text-dim);">Low-resolution preview (Public). Verified Users unlock HD viewing.</p>
+            <h2>NETWORK GALLERY</h2>
             <div class="gallery-grid" id="gallery-grid"></div>
         </div>
     </div>
@@ -73,21 +61,19 @@
     <div id="id-view" class="view-pane">
         <div class="card">
             <h2>ZK-SBT IDENTITY CARD</h2>
-            <p style="font-size:0.65rem; color:var(--text-dim); margin-bottom:10px;">Click code to download JSON. Click QR to download Image.</p>
-            <pre id="id-json" onclick="saveJSON()">// Identity Packet Offline: Handshake Required</pre>
+            <pre id="id-json" onclick="saveJSON()">// Awaiting Auth</pre>
             <div id="qr-target" onclick="saveQR()" style="margin-top:20px; background:white; padding:10px; display:none; border-radius:4px; cursor:pointer;"></div>
-            <p id="qr-hint" style="display:none; font-size:0.65rem; color:var(--text-dim); margin-top:8px;">Handshake Active: Click QR to Download .png</p>
         </div>
     </div>
 
     <div id="admin-view" class="view-pane">
         <div class="card">
             <h2>ADMIN OPS</h2>
-            <input type="text" class="panel-input" id="admin-addr" placeholder="Target Operator Address (0x...)">
+            <input type="text" class="panel-input" id="admin-addr" placeholder="Target Address">
             <button class="action-btn" onclick="runAdmin('query')">QUERY STATUS</button>
             <div style="display:flex; gap:10px; margin-top:10px;">
-                <button class="action-btn alt" onclick="runAdmin('verify')" style="flex:1">VERIFY USER</button>
-                <button class="action-btn alt" onclick="runAdmin('revoke')" style="flex:1; border-color:#ff4444; color:#ff4444;">REVOKE USER</button>
+                <button class="action-btn alt" onclick="runAdmin('verify')" style="flex:1">VERIFY</button>
+                <button class="action-btn alt" onclick="runAdmin('revoke')" style="flex:1; border-color:#ff4444; color:#ff4444;">REVOKE</button>
             </div>
         </div>
     </div>
@@ -96,10 +82,9 @@
         <div class="card">
             <h2>TREASURY VAULT</h2>
             <div style="background:#000; padding:25px; border-radius:8px; margin-bottom:20px; border:1px solid var(--border); text-align:center;">
-                <div style="font-size:0.65rem; color:var(--text-dim); letter-spacing:1px;">CONTRACT ASSETS</div>
-                <div id="revenue-val" style="font-size:2rem; color:var(--accent); font-weight:900; margin:10px 0;">0.00 tLCAI</div>
+                <div id="revenue-val" style="font-size:2rem; color:var(--accent); font-weight:900;">0.00 tLCAI</div>
             </div>
-            <button class="action-btn" onclick="runOwner()" style="height:50px; font-size:0.8rem;">WITHDRAW ALL FUNDS</button>
+            <button class="action-btn" onclick="runOwner()">WITHDRAW ALL</button>
         </div>
     </div>
 
@@ -107,12 +92,11 @@
         <div class="card">
             <h2>AIVM INFERENCE</h2>
             <select id="model-select" class="panel-input" onchange="document.getElementById('active-model').innerText=this.value">
-                <option value="AIVM-THETA">AIVM-THETA (Standard)</option>
-                <option value="AIVM-SIGMA">AIVM-SIGMA (HD)</option>
-                <option value="AIVM-OMEGA">AIVM-OMEGA (Experimental)</option>
+                <option value="AIVM-THETA" data-hash="0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef">AIVM-THETA (Standard)</option>
+                <option value="AIVM-SIGMA" data-hash="0x9999999999999999999999999999999999999999999999999999999999999999">AIVM-SIGMA (HD)</option>
             </select>
-            <textarea id="art-prompt" class="panel-input" placeholder="Neural landscape..." style="height:120px;"></textarea>
-            <button class="action-btn" onclick="generateArt()">REQUEST INFERENCE (0.001 tLCAI)</button>
+            <textarea id="art-prompt" class="panel-input" placeholder="Neural prompt..." style="height:120px;"></textarea>
+            <button class="action-btn" onclick="generateArt()">REQUEST INFERENCE (0.1 tLCAI)</button>
         </div>
     </div>
 </div>
@@ -166,18 +150,15 @@ async function connectWallet() {
 
 async function updateWalletPill() {
     if(!user || !provider) return;
-    try {
-        const bal = await provider.getBalance(user);
-        const ethBal = ethers.formatEther(bal).slice(0,6);
-        document.getElementById('wallet-btn').innerText = `${user.slice(0,6).toUpperCase()} | ${ethBal} LCAI`;
-    } catch(e) { document.getElementById('wallet-btn').innerText = user.slice(0,6).toUpperCase(); }
+    const bal = await provider.getBalance(user);
+    document.getElementById('wallet-btn').innerText = `${user.slice(0,6).toUpperCase()} | ${ethers.formatEther(bal).slice(0,6)} LCAI`;
 }
 
 function updateMenu() {
     const menu = document.getElementById('side-menu');
     let html = `<button class="nav-link" onclick="showView('gallery-view', this); initGallery();">NETWORK GALLERY</button>`;
     if(user) {
-        html += `<button class="nav-link" id="id-link" onclick="showView('id-view', this)">ZK IDENTITY</button>`;
+        html += `<button class="nav-link" onclick="showView('id-view', this)">ZK IDENTITY</button>`;
         if(roles.isOwner) {
             html += `<button class="nav-link" onclick="showView('admin-view', this)">ADMIN PANEL</button>`;
             html += `<button class="nav-link" onclick="showView('treasury-view', this)">TREASURY VAULT</button>`;
@@ -194,115 +175,61 @@ function updateIdentity() {
         "identity": {
             "operator_id": `LCAI-${user.slice(2, 8).toUpperCase()}`,
             "role": roles.isOwner ? "SYSTEM_OWNER" : (roles.isVerified ? "VERIFIED_OPERATOR" : "GUEST_NODE"),
-            "access_tier": roles.isOwner ? "OMEGA_ACCESS" : (roles.isVerified ? "STANDARD" : "LIMITED"),
-            "auth_method": "ZK_SBT_HANDSHAKE",
             "timestamp": Math.floor(Date.now() / 1000)
         }
     };
     document.getElementById('id-json').innerText = JSON.stringify(idData, null, 4);
     document.getElementById('qr-target').style.display = "inline-block";
-    document.getElementById('qr-hint').style.display = "block";
     document.getElementById('qr-target').innerHTML = "";
     new QRCode(document.getElementById("qr-target"), { text: JSON.stringify(idData), width: 140, height: 140 });
 }
 
+async function generateArt() {
+    const prompt = document.getElementById('art-prompt').value;
+    const sel = document.getElementById('model-select');
+    const modelHash = sel.options[sel.selectedIndex].getAttribute('data-hash');
+    const fee = ethers.parseEther("0.1"); // Attempting 0.1 LCAI fee based on contract activity
+
+    if(!prompt) return log("PROMPT EMPTY", "error");
+
+    try {
+        document.getElementById('status-txt').innerText = "SIMULATING...";
+        // PRE-FLIGHT SIMULATION
+        await contract.generateArt.staticCall(prompt, modelHash, { value: fee });
+        
+        log("SIMULATION SUCCESS. BROADCASTING...");
+        const tx = await contract.generateArt(prompt, modelHash, { value: fee, gasLimit: 2000000 });
+        await tx.wait();
+        log("INFERENCE SUCCESSFUL", "success");
+        initGallery();
+    } catch (e) {
+        console.error(e);
+        let errorReason = "REVERT: INVALID_FEE_OR_MODEL";
+        if (e.message.includes("insufficient funds")) errorReason = "INSUFFICIENT LCAI";
+        log(errorReason, "error");
+        document.getElementById('status-txt').innerText = "ERROR";
+    }
+}
+
 async function initGallery() {
+    if(!contract) return;
     const grid = document.getElementById('gallery-grid');
     grid.innerHTML = "SCANNING...";
     try {
         const events = await contract.queryFilter("InferenceRequested", -5000);
         grid.innerHTML = events.length === 0 ? "EMPTY" : "";
-        const isVerified = (roles.isVerified || roles.isOwner);
-        if(isVerified) document.getElementById('gallery-badge').innerHTML = `<span class="badge">ZK-VERIFIED HD</span>`;
-
         events.reverse().forEach(ev => {
-            let actions = "";
-            if(isVerified) actions += `<button class="action-btn alt" style="font-size:0.5rem; padding:4px;" onclick="window.open('https://picsum.photos/seed/${ev.transactionHash}/1200/800')">HD VIEW</button>`;
-            if(roles.isOwner) actions += `<button class="action-btn alt" style="font-size:0.5rem; padding:4px; border-color:#00c853; color:#00c853;" onclick="log('MINT_REQUESTED', 'info')">MINT NFT</button>`;
-
-            grid.innerHTML += `
-                <div class="gallery-item ${isVerified ? 'high-res' : ''}">
-                    <img src="https://picsum.photos/seed/${ev.transactionHash}/200/150">
-                    <div style="margin-top:8px; display:flex; flex-direction:column; gap:4px;">
-                        ${actions}
-                    </div>
-                </div>`;
+            grid.innerHTML += `<div class="gallery-item"><img src="https://picsum.photos/seed/${ev.transactionHash}/200/150"></div>`;
         });
-    } catch (e) { grid.innerHTML = "PUBLIC_PREVIEW_MODE"; }
-}
-
-async function runAdmin(type) {
-    const target = document.getElementById('admin-addr').value;
-    try {
-        if(type === 'query') {
-            const res = await contract.manualVerified(target);
-            log(`USER ${target.slice(0,6)}: ${res ? "VERIFIED" : "UNVERIFIED"}`);
-        } else {
-            const tx = await contract.setVerification(target, type === 'verify', { gasLimit: 200000 });
-            await tx.wait(); log("PERMISSION SYNCED", "success");
-            if(target.toLowerCase() === user.toLowerCase()) { roles.isVerified = (type === 'verify'); updateMenu(); }
-        }
-    } catch (e) { log("ADMIN ACTION REVERTED", "error"); }
+    } catch (e) { grid.innerHTML = "OFFLINE"; }
 }
 
 async function runOwner() {
     try {
-        log("INITIATING WITHDRAWAL...");
-        const tx = await contract.withdraw({ gasLimit: 200000 });
+        const tx = await contract.withdraw({ gasLimit: 500000 });
         await tx.wait(); log("VAULT WITHDRAWN", "success");
         refreshBalance();
-        updateWalletPill();
-    } catch (e) { log("WITHDRAWAL FAILED", "error"); }
-}
-
-async function generateArt() {
-    const prompt = document.getElementById('art-prompt').value;
-    // MATCHING MODEL HASH FROM artgenerator-ui.html
-    const modelHash = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
-    if(!prompt) return log("PROMPT EMPTY", "error");
-
-    try {
-        // Pre-check Balance
-        const userBal = await provider.getBalance(user);
-        const cost = ethers.parseEther("0.001");
-        if(userBal < cost) return log("INSUFFICIENT LCAI FOR FEE", "error");
-
-        document.getElementById('status-txt').innerText = "INFERENCE";
-        log("BROADCASTING INFERENCE...");
-        
-        let tx;
-        try {
-            // DEEP ERROR INSPECTION - Trying with high gas limit to handle AI logic
-            tx = await contract.generateArt(prompt, modelHash, { 
-                value: cost, 
-                gasLimit: 1500000 
-            });
-        } catch(err) {
-            log("METHOD 1 FAILED, TRYING FALLBACK...", "info");
-            tx = await contract.requestInference(prompt, { 
-                value: cost, 
-                gasLimit: 1500000 
-            });
-        }
-        
-        log("TRANSACTION SENT: " + tx.hash.slice(0,10), "success");
-        await tx.wait();
-        log("INFERENCE SUCCESSFUL", "success");
-        document.getElementById('status-txt').innerText = "IDLE";
-        updateWalletPill();
-        initGallery();
-    } catch (e) { 
-        console.error(e);
-        let errorMsg = "BLOCKCHAIN REVERT";
-        
-        // Attempting to decode the revert reason
-        if(e.reason) errorMsg = `REVERT: ${e.reason}`;
-        else if(e.message.includes("insufficient funds")) errorMsg = "INSUFFICIENT GAS";
-        else if(e.message.includes("user rejected")) errorMsg = "USER CANCELLED";
-        
-        log(errorMsg, "error"); 
-        document.getElementById('status-txt').innerText = "ERROR"; 
-    }
+    } catch (e) { log("WITHDRAWAL REVERTED", "error"); }
 }
 
 async function refreshBalance() {
@@ -319,7 +246,6 @@ function showView(id, btn) {
 }
 
 function saveJSON() {
-    if(!user) return;
     const data = document.getElementById('id-json').innerText;
     const b = new Blob([data], {type:"application/json"});
     const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download=`LCAI_ID_${user.slice(0,6)}.json`; a.click();
