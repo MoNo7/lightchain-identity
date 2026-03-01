@@ -31,7 +31,6 @@
         .status-table { width: 100%; font-size: 0.7rem; border-collapse: collapse; margin-top: 15px; }
         .status-table td, .status-table th { border: 1px solid var(--border); padding: 8px; text-align: left; }
         .status-online { color: #00c853; font-weight: bold; }
-        .status-offline { color: #ff4444; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -70,7 +69,7 @@
     <div id="id-view" class="view-pane">
         <div class="card">
             <h2>ZK-SBT IDENTITY CARD</h2>
-            <pre id="id-json" onclick="saveJSON()">// Identity Packet Offline</pre>
+            <pre id="id-json" onclick="saveJSON()">// Identity Packet Offline: Handshake Required</pre>
             <div id="qr-target" onclick="saveQR()" style="margin-top:20px; background:white; padding:10px; display:none; border-radius:4px; cursor:pointer;"></div>
         </div>
     </div>
@@ -89,9 +88,9 @@
             <table class="status-table">
                 <thead><tr><th>MODEL ID</th><th>DIGEST</th><th>STATUS</th></tr></thead>
                 <tbody id="model-status-body">
-                    <tr><td>AIVM-THETA</td><td>0x1234...cdef</td><td class="status-online">ONLINE</td></tr>
-                    <tr><td>AIVM-DELTA</td><td>0x8888...8888</td><td class="status-online">ONLINE</td></tr>
-                    <tr><td>AIVM-SIGMA</td><td>0x9999...9999</td><td class="status-offline">OFFLINE</td></tr>
+                    <tr><td>AIVM-THETA</td><td>0x6f63...0000</td><td class="status-online">ONLINE</td></tr>
+                    <tr><td>AIVM-DELTA</td><td>0x4a8c...0000</td><td class="status-online">ONLINE</td></tr>
+                    <tr><td>AIVM-SIGMA</td><td>0x2bf0...0000</td><td class="status-online">ONLINE</td></tr>
                 </tbody>
             </table>
         </div>
@@ -111,9 +110,9 @@
         <div class="card">
             <h2>AIVM INFERENCE</h2>
             <select id="model-select" class="panel-input" onchange="document.getElementById('active-model').innerText=this.value">
-                <option value="AIVM-THETA" data-hash="0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef">AIVM-THETA (Standard)</option>
-                <option value="AIVM-DELTA" data-hash="0x8888888888888888888888888888888888888888888888888888888888888888">AIVM-DELTA (Flux.1)</option>
-                <option value="AIVM-SIGMA" data-hash="0x9999999999999999999999999999999999999999999999999999999999999999">AIVM-SIGMA (HD)</option>
+                <option value="AIVM-THETA" data-hash="0x6f63a19b3cf48600000000000000000000000000000000000000000000000000">AIVM-THETA (Standard)</option>
+                <option value="AIVM-DELTA" data-hash="0x4a8c30d500000000000000000000000000000000000000000000000000000000">AIVM-DELTA (High Speed)</option>
+                <option value="AIVM-SIGMA" data-hash="0x2bf0539500000000000000000000000000000000000000000000000000000000">AIVM-SIGMA (Neural)</option>
             </select>
             <textarea id="art-prompt" class="panel-input" placeholder="Neural landscape..." style="height:120px;"></textarea>
             <button class="action-btn" onclick="generateArt()">REQUEST INFERENCE (0.1 tLCAI)</button>
@@ -232,7 +231,6 @@ async function generateArt() {
         log("BROADCASTING INFERENCE...");
         document.getElementById('status-txt').innerText = "PENDING";
         
-        // Removed staticCall bypass to force MetaMask popup
         const tx = await contract.generateArt(prompt, modelHash, { 
             value: fee, 
             gasLimit: 2500000 
