@@ -66,7 +66,8 @@ const CONFIG = {
 async function initHistory() {
     try {
         const provider = new ethers.BrowserProvider(window.ethereum);
-        // Matching your EXACT contract event signature
+        
+        // TARGET: AIArtStudio for Inference History (NOT the Identity SBT)
         const contract = new ethers.Contract(CONFIG.AIVM_ADDR, [
             "event ArtGenerated(address indexed user, string prompt, bytes32 modelDigest, uint256 fee)"
         ], provider);
@@ -74,26 +75,28 @@ async function initHistory() {
         const accounts = await window.ethereum.request({ method: 'eth_accounts' });
         const user = accounts[0];
 
-        // Scan for your address
+        window.parent.postMessage({ type: "LCAI_STATUS", message: "Scanning AIVM On-Chain Gallery..." }, "*");
+
+        // Scan for ArtGenerated events specifically from your wallet
         const filter = contract.filters.ArtGenerated(user);
         const events = await contract.queryFilter(filter, -10000); 
 
+        // Map events to the image worker URL
         history = events.map(e => ({
             prompt: e.args.prompt,
             url: `https://image.pollinations.ai/prompt/${encodeURIComponent(e.args.prompt)}?nologo=true`
         })).reverse().slice(0, 10);
 
-        // Render as clickable thumbnails
-        const grid = document.getElementById('history-grid');
-        grid.innerHTML = history.map((item, i) => `
-            <div class="gallery-item" onclick="loadHistory(${i})" style="width: 80px; height: 80px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; cursor: pointer;">
-                <img src="${item.url}" style="width: 100%; height: 100%; object-fit: cover;">
-            </div>
-        `).join('');
+        renderHistory();
         
-        window.parent.postMessage({ type: "LCAI_STATUS", message: `Gallery Synced: ${history.length} on-chain items found.` }, "*");
+        const statusMsg = history.length > 0 
+            ? `Gallery Synced: ${history.length} inferences found.` 
+            : "No AIVM inferences found on-chain yet.";
+            
+        window.parent.postMessage({ type: "LCAI_STATUS", message: statusMsg }, "*");
     } catch (e) {
-        console.error(e);
+        console.error("Gallery Sync Failed:", e);
+        window.parent.postMessage({ type: "LCAI_STATUS", message: "Gallery Sync Error: Check ABI Mismatch" }, "*");
     }
 }
         
