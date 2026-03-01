@@ -17,7 +17,7 @@
             background: var(--console-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; 
             font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; height: 180px; overflow-y: auto; 
             margin-bottom: 20px; color: #4e5d75; line-height: 1.5;
-            margin-top: 0px; /* Aligned with Header bottom border */
+            margin-top: 0px; /* Aligned to hit top nav bottom border precisely */
         }
         .console-line { margin-bottom: 4px; border-left: 2px solid #1a202c; padding-left: 8px; word-wrap: break-word; }
         .console-line.success { border-left-color: var(--accent); color: #fff; }
@@ -27,7 +27,7 @@
         .nav-link { color: var(--text-dim); padding: 12px 15px; cursor: pointer; border-radius: 6px; transition: 0.2s; border: none; background: none; text-align: left; font-size: 0.75rem; font-family: monospace; font-weight: 600; width: 100%; }
         .nav-link:hover, .nav-link.active { color: white; background: var(--accent); }
 
-        /* VIEWPORT & HEADER */
+        /* VIEWPORT */
         .viewport { flex: 1; display: flex; flex-direction: column; }
         header { height: 80px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; box-sizing: border-box; position: relative; }
         .tickers { display: flex; gap: 25px; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; position: absolute; left: 50%; transform: translateX(-50%); }
@@ -173,7 +173,6 @@ const log = (msg, type = "info") => {
     cb.scrollTop = cb.scrollHeight;
 };
 
-// Market Tickers
 async function syncTickers() {
     try {
         const ethR = await fetch('https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD');
@@ -187,7 +186,6 @@ async function syncTickers() {
 }
 setInterval(syncTickers, 6000); syncTickers();
 
-// Admin Panel
 async function runAdmin(method, status = null) {
     if(!contract) return log("ERR: WALLET NOT CONNECTED", "error");
     const target = document.getElementById('admin-addr').value || user;
@@ -222,37 +220,28 @@ async function refreshBalance() {
     } catch(e) {}
 }
 
-// Inference Call with Dynamic Estimation
 async function generateArt() {
     if(!contract) return log("ERR: CONNECT WALLET", "error");
     const prompt = document.getElementById('art-prompt').value;
     if(!prompt) return log("ERR: PROMPT EMPTY", "error");
     
     try {
-        log("ESTIMATING GAS & TRIGGERING WALLET...", "info");
-        
-        // Dynamic Gas and Value check
-        const fee = ethers.parseEther("0.001"); 
-        const estimatedGas = await contract.requestInference.estimateGas(prompt, { value: fee })
-            .catch(() => 500000n); // Fallback gas if estimate fails
-
+        log("LCAI AIVM: TRIGGERING INFERENCE...", "info");
+        // Adjusted for LCAI chain: We use a static high gas limit and standard fee
         const tx = await contract.requestInference(prompt, { 
-            value: fee, 
-            gasLimit: (estimatedGas * 120n) / 100n // 20% buffer
+            value: ethers.parseEther("0.001"), 
+            gasLimit: 800000 
         });
-
         log("TX SUBMITTED. AWAITING BLOCK...", "info");
         await tx.wait();
-        
-        log("ART GENERATED ON-CHAIN", "success");
+        log("INFERENCE SUCCESSFUL", "success");
         document.getElementById('art-preview-box').innerHTML = `<img src="https://picsum.photos/seed/${Date.now()}/600/250" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">`;
         initGallery();
     } catch(e) { 
-        log(`FAILED: ${e.reason || "REJECTED BY WALLET"}`, "error"); 
+        log(`FAILED: ${e.reason || "TX REJECTED"}`, "error"); 
     }
 }
 
-// Gallery Logic
 async function initGallery() {
     if(!contract) return;
     const grid = document.getElementById('gallery-grid');
@@ -260,7 +249,7 @@ async function initGallery() {
     try {
         const filter = contract.filters.InferenceRequested();
         const currentBlock = await provider.getBlockNumber();
-        const startBlock = Math.max(0, currentBlock - 50000); // Scans last 50k blocks
+        const startBlock = Math.max(0, currentBlock - 100000); // Massive 100k block scan
         
         allArtEvents = await contract.queryFilter(filter, startBlock, "latest"); 
         allArtEvents.reverse(); 
@@ -274,7 +263,7 @@ async function initGallery() {
 function renderGalleryPage() {
     const grid = document.getElementById('gallery-grid');
     grid.innerHTML = "";
-    if(allArtEvents.length === 0) { grid.innerHTML = "No recent art requests found."; return; }
+    if(allArtEvents.length === 0) { grid.innerHTML = "No art requests found."; return; }
 
     const start = (currentPage - 1) * pageSize;
     const end = start + pageSize;
@@ -287,7 +276,7 @@ function renderGalleryPage() {
             <div class="gallery-item">
                 <img src="https://picsum.photos/seed/${ev.transactionHash}/150/120" loading="lazy">
                 <div class="prompt" title="${p}">${p}</div>
-                <div class="prompt" style="color:var(--accent);">${ev.args[0].slice(0,6)}...</div>
+                <div class="prompt" style="color:var(--accent); font-weight:bold;">${ev.args[0].slice(0,6)}...</div>
             </div>`;
     });
 
@@ -298,9 +287,8 @@ function renderGalleryPage() {
 
 function changePage(dir) { currentPage += dir; renderGalleryPage(); }
 
-// Connection
 async function connectWallet() {
-    if(!window.ethereum) return log("ERR: NO WEB3 DETECTED", "error");
+    if(!window.ethereum) return log("ERR: NO WALLET DETECTED", "error");
     try {
         provider = new ethers.BrowserProvider(window.ethereum);
         const accs = await provider.send("eth_requestAccounts", []);
@@ -320,9 +308,20 @@ async function connectWallet() {
                 "name": `Operator_${user.slice(2, 6)}`,
                 "role": "LCAI_IAM_OPERATOR",
                 "access_tier": "Alpha_V1",
-                "auth_date": now.toISOString()
+                "created_at": now.toISOString(),
+                "unix_timestamp": Math.floor(now.getTime() / 1000)
             },
-            "chain_meta": { "address": user, "contract": CONFIG.addr, "network": "Lightchain_AIVM" }
+            "on_chain_meta": {
+                "address": user,
+                "contract": CONFIG.addr,
+                "verification": "zk-SNARK_SBT",
+                "network": "Lightchain_AIVM_Mainnet"
+            },
+            "security": {
+                "protocol": "IAM_CORE_v2.1",
+                "status": "active",
+                "hash": "Keccak-256"
+            }
         };
 
         document.getElementById('id-json').innerText = JSON.stringify(identityData, null, 4);
