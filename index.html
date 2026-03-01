@@ -30,7 +30,6 @@
         .status-table { width: 100%; font-size: 0.7rem; border-collapse: collapse; margin-top: 15px; font-family: monospace; }
         .status-table td, .status-table th { border: 1px solid var(--border); padding: 8px; text-align: left; }
         .status-online { color: #00c853; }
-        .status-checking { color: var(--text-dim); }
     </style>
 </head>
 <body>
@@ -70,17 +69,17 @@
             <input type="text" class="panel-input" id="admin-addr" placeholder="Target Operator Address (0x...)">
             <button class="action-btn" onclick="runAdmin('query')">QUERY USER STATUS</button>
             <div style="display:flex; gap:10px; margin-top:10px;">
-                <button class="action-btn alt" onclick="runAdmin('verify')" style="flex:1">VERIFY USER</button>
-                <button class="action-btn alt" onclick="runAdmin('revoke')" style="flex:1; border-color:#ff4444; color:#ff4444;">REVOKE USER</button>
+                <button class="action-btn alt" onclick="runAdmin('verify')" style="flex:1">VERIFY TARGET</button>
+                <button class="action-btn alt" onclick="verifySelf()" style="flex:1; border-color:#00ff88; color:#00ff88;">VERIFY SELF</button>
             </div>
             
             <h3 style="margin-top:30px; font-size:0.9rem;">MODEL LIVE PROBE</h3>
             <table class="status-table">
                 <thead><tr><th>MODEL</th><th>DIGEST</th><th>STATE</th></tr></thead>
                 <tbody id="telemetry-body">
-                    <tr><td>THETA</td><td>0x2bf0...</td><td id="stat-theta" class="status-checking">WAITING...</td></tr>
-                    <tr><td>DELTA</td><td>0x4a8c...</td><td id="stat-delta" class="status-checking">WAITING...</td></tr>
-                    <tr><td>SIGMA</td><td>0x6f63...</td><td id="stat-sigma" class="status-checking">WAITING...</td></tr>
+                    <tr><td>THETA</td><td>0x2bf0...</td><td id="stat-theta">WAITING...</td></tr>
+                    <tr><td>DELTA</td><td>0x4a8c...</td><td id="stat-delta">WAITING...</td></tr>
+                    <tr><td>SIGMA</td><td>0x6f63...</td><td id="stat-sigma">WAITING...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -105,7 +104,7 @@
                 <option value="AIVM-SIGMA" data-hash="0x6f63a19b3cf48600000000000000000000000000000000000000000000000000">AIVM-SIGMA (Neural)</option>
             </select>
             <textarea id="art-prompt" class="panel-input" placeholder="Neural landscape..." style="height:120px;"></textarea>
-            <button class="action-btn" onclick="generateArt()">REQUEST INFERENCE (0.25 tLCAI)</button>
+            <button class="action-btn" onclick="generateArt()">FORCE REQUEST INFERENCE (0.25 tLCAI)</button>
         </div>
     </div>
 </div>
@@ -142,28 +141,16 @@ async function connectWallet() {
         provider = new ethers.BrowserProvider(window.ethereum);
         signer = await provider.getSigner();
         contract = new ethers.Contract(CONFIG.addr, CONFIG.abi, signer);
-        
         const ownerAddr = await contract.owner();
         roles.isOwner = (user.toLowerCase() === ownerAddr.toLowerCase());
         roles.isVerified = await contract.manualVerified(user);
-
         log(`STREAK_SYNC: ${user.slice(0, 10)}`, "success");
-        updateMenu();
-        updateIdentity();
-        initGallery();
-        refreshBalance();
-        updateWalletPill();
-        probeModels(); 
+        updateMenu(); updateIdentity(); initGallery(); refreshBalance(); updateWalletPill(); probeModels(); 
     } catch (e) { log("HANDSHAKE FAILED", "error"); }
 }
 
 async function probeModels() {
-    const hashes = {
-        theta: "0x2bf0539500000000000000000000000000000000000000000000000000000000",
-        delta: "0x4a8c30d500000000000000000000000000000000000000000000000000000000",
-        sigma: "0x6f63a19b3cf48600000000000000000000000000000000000000000000000000"
-    };
-
+    const hashes = {theta: "0x2bf0539500000000000000000000000000000000000000000000000000000000", delta: "0x4a8c30d500000000000000000000000000000000000000000000000000000000", sigma: "0x6f63a19b3cf48600000000000000000000000000000000000000000000000000"};
     for (let m in hashes) {
         const el = document.getElementById(`stat-${m}`);
         try {
@@ -175,31 +162,28 @@ async function probeModels() {
     }
 }
 
+async function verifySelf() {
+    if(!user) return log("CONNECT WALLET FIRST", "error");
+    try {
+        log("SENDING SELF-VERIFICATION...");
+        const tx = await contract.setVerification(user, true, { gasLimit: 200000 });
+        await tx.wait(); log("SELF-VERIFIED SUCCESSFULLY", "success");
+        roles.isVerified = true; updateMenu(); probeModels();
+    } catch (e) { log("SELF-VERIFY REVERTED", "error"); }
+}
+
 async function generateArt() {
     const prompt = document.getElementById('art-prompt').value;
     const sel = document.getElementById('model-select');
     const modelHash = sel.options[sel.selectedIndex].getAttribute('data-hash');
     const fee = ethers.parseEther("0.25");
-
     try {
-        log("PRE-FLIGHT CHECK...");
-        const isActuallyVerified = await contract.manualVerified(user);
-        if(!isActuallyVerified) {
-            log("REVERT: ADDRESS NOT WHITELISTED", "error");
-            log("VERIFICATION TX MAY BE PENDING", "info");
-            return;
-        }
-
-        document.getElementById('status-txt').innerText = "PENDING";
+        log("FORCING INFERENCE REQUEST...");
         const tx = await contract.generateArt(prompt, modelHash, { value: fee, gasLimit: 3000000 });
         log("TX BROADCASTED", "success");
-        await tx.wait();
-        log("INFERENCE SUCCESSFUL", "success");
+        await tx.wait(); log("INFERENCE SUCCESSFUL", "success");
         initGallery();
-    } catch (e) {
-        log("REJECTED: CONTRACT REVERTED", "error");
-        document.getElementById('status-txt').innerText = "ERROR";
-    }
+    } catch (e) { log("REJECTED BY CONTRACT", "error"); }
 }
 
 async function runAdmin(type) {
@@ -210,12 +194,8 @@ async function runAdmin(type) {
             const res = await contract.manualVerified(target);
             log(`USER ${target.slice(0, 6)}: ${res ? "VERIFIED" : "UNVERIFIED"}`);
         } else {
-            log("SYNCING PERMISSIONS...");
             const tx = await contract.setVerification(target, type === 'verify', { gasLimit: 200000 });
             await tx.wait(); log("PERMISSION SYNCED", "success");
-            roles.isVerified = (type === 'verify'); 
-            updateMenu();
-            probeModels(); // Re-probe after verification
         }
     } catch (e) { log("ADMIN ACTION REVERTED", "error"); }
 }
@@ -243,15 +223,7 @@ function updateMenu() {
 }
 
 function updateIdentity() {
-    const idData = {
-        "identity": {
-            "operator_id": `LCAI-${user.slice(2, 8).toUpperCase()}`,
-            "role": roles.isOwner ? "SYSTEM_OWNER" : (roles.isVerified ? "VERIFIED_OPERATOR" : "GUEST_NODE"),
-            "access_tier": roles.isOwner ? "OMEGA" : (roles.isVerified ? "STANDARD" : "LIMITED"),
-            "auth_method": "ZK_SBT_HANDSHAKE",
-            "timestamp": Math.floor(Date.now() / 1000)
-        }
-    };
+    const idData = {"identity": {"operator_id": `LCAI-${user.slice(2, 8).toUpperCase()}`, "role": roles.isOwner ? "SYSTEM_OWNER" : (roles.isVerified ? "VERIFIED_OPERATOR" : "GUEST_NODE"), "access_tier": roles.isOwner ? "OMEGA" : (roles.isVerified ? "STANDARD" : "LIMITED"), "auth_method": "ZK_SBT_HANDSHAKE", "timestamp": Math.floor(Date.now() / 1000)}};
     document.getElementById('id-json').innerText = JSON.stringify(idData, null, 4);
     document.getElementById('qr-target').style.display = "inline-block";
     document.getElementById('qr-target').innerHTML = "";
@@ -265,9 +237,7 @@ async function initGallery() {
     try {
         const events = await contract.queryFilter("InferenceRequested", -50000);
         grid.innerHTML = events.length === 0 ? "EMPTY" : "";
-        events.reverse().forEach(ev => {
-            grid.innerHTML += `<div style="background:#000; padding:10px; border-radius:6px; border:1px solid var(--border);"><img src="https://picsum.photos/seed/${ev.transactionHash}/200/150" style="width:100%; border-radius:4px;"></div>`;
-        });
+        events.reverse().forEach(ev => { grid.innerHTML += `<div style="background:#000; padding:10px; border-radius:6px; border:1px solid var(--border);"><img src="https://picsum.photos/seed/${ev.transactionHash}/200/150" style="width:100%; border-radius:4px;"></div>`; });
     } catch (e) { grid.innerHTML = "OFFLINE"; }
 }
 
