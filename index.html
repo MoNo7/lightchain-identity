@@ -22,7 +22,7 @@
 
         /* VIEWPORT */
         .viewport { flex: 1; display: flex; flex-direction: column; }
-        header { height: 80px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; }
+        header { height: 80px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; position: relative; }
         .tickers { display: flex; gap: 25px; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; position: absolute; left: 50%; transform: translateX(-50%); }
         .ticker-item span { color: var(--accent); font-weight: bold; margin-right: 5px; }
         .header-right { display: flex; align-items: center; gap: 15px; margin-left: auto; }
@@ -86,18 +86,16 @@
                 <div class="admin-box">
                     <h4 style="color:var(--accent); margin-top:0;">ADMIN PANEL</h4>
                     <input type="text" class="panel-input" placeholder="User Address (0x...)" id="admin-addr">
-                    <button class="action-btn" onclick="runAdmin('queryStatus')">QUERY STATUS</button>
-                    <button class="action-btn" onclick="runAdmin('verifyIdentity')">VERIFY IDENTITY</button>
-                    <button class="action-btn alt" style="border-color:#ff4444; color:#ff4444;" onclick="runAdmin('revokeAccess')">REVOKE ACCESS</button>
+                    <button class="action-btn" onclick="runAdmin('setVerification', true)">VERIFY IDENTITY</button>
+                    <button class="action-btn alt" style="border-color:#ff4444; color:#ff4444;" onclick="runAdmin('setVerification', false)">REVOKE ACCESS</button>
                 </div>
                 <div class="admin-box">
                     <h4 style="color:var(--accent); margin-top:0;">OWNER PANEL</h4>
                     <div style="background:#000; padding:12px; border-radius:4px; margin-bottom:12px; border:1px solid var(--border);">
-                        <div style="font-size:0.6rem; color:var(--text-dim);">PROTOCOL REVENUE</div>
-                        <div style="font-size:1.1rem; font-weight:bold;" id="revenue-val">0.00 LCAI</div>
+                        <div style="font-size:0.6rem; color:var(--text-dim);">VAULT BALANCE</div>
+                        <div style="font-size:1.1rem; font-weight:bold;" id="revenue-val">0.00 ETH</div>
                     </div>
-                    <button class="action-btn" onclick="runOwner('withdraw')">WITHDRAW REVENUE</button>
-                    <button class="action-btn alt" onclick="runOwner('transferOwnership')">TRANSFER OWNERSHIP</button>
+                    <button class="action-btn" onclick="runOwner('withdraw')">WITHDRAW FUNDS</button>
                 </div>
             </div>
         </div>
@@ -112,12 +110,10 @@
 const CONFIG = {
     addr: "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB",
     abi: [
-        "function verifyIdentity(address user) public",
-        "function revokeAccess(address user) public",
-        "function queryStatus(address user) public view returns (uint256)",
-        "function withdraw() public",
-        "function transferOwnership(address newOwner) public",
-        "function getRevenue() public view returns (uint256)"
+        "function setVerification(address user, bool status) external",
+        "function withdraw() external",
+        "function manualVerified(address) public view returns (bool)",
+        "function owner() public view returns (address)"
     ]
 };
 
@@ -131,47 +127,44 @@ const log = (msg, ok = false) => {
     document.getElementById('console').scrollTop = 9999;
 };
 
-// --- TICKERS ---
 async function syncTickers() {
     try {
         const r = await fetch('https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD');
         const d = await r.json();
         document.getElementById('eth-price').innerText = `$${d.USD.toLocaleString()}`;
-        // LCAI Value fixed to Release standard $1.24 with minor micro-fluctuation
         const flux = (Math.random() * 0.004) - 0.002;
         document.getElementById('lcai-price').innerText = `$${(1.24 + flux).toFixed(3)}`;
     } catch(e) {}
 }
 setInterval(syncTickers, 8000); syncTickers();
 
-// --- LOGIC ---
-async function runAdmin(m) {
+// Matches setVerification(address, bool) in the IDE
+async function runAdmin(method, status) {
     if(!contract) return log("ERR: CONNECT WALLET");
-    const a = document.getElementById('admin-addr').value;
+    const target = document.getElementById('admin-addr').value;
+    if(!target) return log("ERR: TARGET ADDRESS REQUIRED");
     try {
-        log(`ADMIN_${m.toUpperCase()}...`);
-        if(m === 'queryStatus') {
-            const s = await contract.queryStatus(a || user);
-            log(`STATUS: ${s}`, true);
-        } else {
-            const tx = await contract[m](a);
-            await tx.wait();
-            log(`${m.toUpperCase()} SUCCESS`, true);
-        }
-    } catch(e) { log(`ERR: ${e.message.slice(0,40)}`); }
+        log(`TX: SET_VERIFICATION(${target.slice(0,6)}, ${status})...`);
+        const tx = await contract.setVerification(target, status);
+        await tx.wait();
+        log("TRANSACTION SUCCESSFUL", true);
+    } catch(e) { log(`ERR: ${e.reason || "PERMISSION DENIED"}`); }
 }
 
 async function runOwner(m) {
     if(!contract) return log("ERR: CONNECT WALLET");
     try {
-        log(`OWNER_${m.toUpperCase()}...`);
-        const a = document.getElementById('admin-addr').value;
-        const tx = (m === 'transferOwnership') ? await contract[m](a) : await contract[m]();
+        log(`TX: WITHDRAW_VAULT...`);
+        const tx = await contract.withdraw();
         await tx.wait();
-        log("OWNER ACTION COMPLETE", true);
-        const r = await contract.getRevenue();
-        document.getElementById('revenue-val').innerText = `${ethers.formatEther(r)} LCAI`;
-    } catch(e) { log(`ERR: ${e.message.slice(0,40)}`); }
+        log("FUNDS TRANSFERRED", true);
+        refreshBalance();
+    } catch(e) { log(`ERR: ${e.reason || "VAULT EMPTY OR NOT OWNER"}`); }
+}
+
+async function refreshBalance() {
+    const bal = await provider.getBalance(CONFIG.addr);
+    document.getElementById('revenue-val').innerText = `${ethers.formatEther(bal)} ETH`;
 }
 
 async function connectWallet() {
@@ -185,13 +178,12 @@ async function connectWallet() {
     document.getElementById('wallet-btn').innerText = user.slice(0,6).toUpperCase() + "..." + user.slice(-4).toUpperCase();
     log(`CONNECTED: ${user.slice(0,10)}`, true);
     
-    document.getElementById('id-json').innerText = JSON.stringify({address: user, verified: true, role: "IAM_OPERATOR"}, null, 4);
+    document.getElementById('id-json').innerText = JSON.stringify({address: user, network: "Lightchain_AIVM"}, null, 4);
     document.getElementById('qr-target').innerHTML = "";
     new QRCode(document.getElementById("qr-target"), { text: user, width: 140, height: 140 });
     document.getElementById('aivm-tab').classList.remove('locked');
 
-    const r = await contract.getRevenue();
-    document.getElementById('revenue-val').innerText = `${ethers.formatEther(r)} LCAI`;
+    refreshBalance();
 }
 
 function showView(id, btn) {
@@ -203,7 +195,7 @@ function showView(id, btn) {
 
 function saveJSON() {
     const b = new Blob([document.getElementById('id-json').innerText], {type:"application/json"});
-    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download="identity.json"; a.click();
+    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download="id.json"; a.click();
 }
 
 function saveQR() {
