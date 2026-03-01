@@ -34,9 +34,21 @@
         .card-title { font-size: 0.7rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase; margin-bottom: 20px; letter-spacing: 1px; display: flex; align-items: center; gap: 10px; }
         .card-title::after { content: ""; flex: 1; height: 1px; background: var(--border); }
 
+        /* Responsive adjustment if not owner */
+        .full-width { grid-column: span 2; max-width: 600px; margin: 0 auto; }        
         .admin-grid { display: grid; grid-template-columns: 1fr 200px; gap: 12px; }
         .input-pro { background: #0f111a; border: 1px solid var(--border); border-radius: 6px; padding: 12px; color: white; outline: none; }
+        .split-grid { 
+        display: grid; 
+        grid-template-columns: 1fr 1fr; 
+        gap: 24px; 
+        align-items: start;
+    }
+        
+        /* Button Hover Effects */
         .btn-pro { padding: 12px; border-radius: 6px; font-weight: 700; border: none; cursor: pointer; }
+        .btn-pro:hover { filter: brightness(1.2); transform: translateY(-1px); }
+        .btn-pro:active { transform: translateY(0); }        
         .btn-primary { background: var(--primary); color: white; }
         .btn-secondary { background: var(--secondary); color: black; }
         
@@ -73,44 +85,52 @@
             </nav>
         </aside>
 
-        <main class="main-content">
-            <div id="view-iam">
-                <div class="card" style="border-left: 4px solid var(--primary)">
-                    <h2>IAM Command Center</h2>
-                    <p style="color:var(--text-dim)">Manage Identity and AIVM Permissions.</p>
-                </div>
-                <div id="admin-panel" class="card hidden">
-                    <div class="card-title">Admin Management</div>
-                    <div class="admin-grid">
-                        <input type="text" id="target-addr" class="input-pro" placeholder="Wallet Address">
-                        <button class="btn-pro btn-secondary" onclick="setVerify(true)">Verify</button>
-                    </div>
-                </div>
-                <div id="owner-panel" class="card hidden" style="border-color:#f59e0b">
-                    <div class="card-title" style="color:#f59e0b">Master Vault</div>
-                    <div id="vault-balance" style="font-size:2rem; font-weight:900; color:#f59e0b">0.00 LCAI</div>
-                    <button class="btn-pro" style="background:#f59e0b; width:100%; margin-top:10px" onclick="withdraw()">Withdraw All</button>
-                </div>
+   <main class="main-content">
+    <div id="view-iam">
+        <div class="card" style="border-left: 4px solid var(--primary)">
+            <h2>IAM Command Center</h2>
+            <p style="color:var(--text-dim)">Manage Identity and AIVM Permissions.</p>
+        </div>
+        <div id="admin-panel" class="card hidden">
+            <div class="card-title">Quick Admin Verify</div>
+            <div class="admin-grid">
+                <input type="text" id="target-addr" class="input-pro" placeholder="Wallet Address">
+                <button class="btn-pro btn-secondary" onclick="setVerify(true, 'target-addr')">Verify</button>
             </div>
+        </div>
+    </div>
 
-            <div id="view-art" class="hidden">
-                <iframe src="artgenerator-ui.html"></iframe>
-            </div>
+    <div id="view-art" class="hidden">
+        <iframe src="artgenerator-ui.html"></iframe>
+    </div>
 
-            <div id="view-recovery" class="hidden">
-                <div class="card" style="border-left:4px solid var(--danger)">
-                    <div class="card-title" style="color:var(--danger)">Identity Recovery Panel</div>
-                    <div class="admin-grid">
-                        <input type="text" id="rec-addr" class="input-pro" placeholder="Address to Query/Recover">
-                        <button class="btn-pro btn-primary" onclick="queryRec()">Query Access</button>
-                        <div style="grid-column: span 2; display:flex; gap:10px; margin-top:10px">
-                            <button class="btn-pro btn-secondary" style="flex:1" onclick="recAction(true)">Restore/Verify</button>
-                            <button class="btn-pro" style="background:var(--danger); color:white; flex:1" onclick="recAction(false)">Revoke Access</button>
-                        </div>
+    <div id="view-recovery" class="hidden">
+        <div id="recovery-layout" class="split-grid">
+            
+            <div class="card" style="border-left: 4px solid var(--danger)">
+                <div class="card-title" style="color:var(--danger)">Identity Recovery Panel</div>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <input type="text" id="rec-addr" class="input-pro" placeholder="Address to Query/Recover">
+                    <button class="btn-pro btn-primary" onclick="queryStatus('rec-addr')">Query Access Status</button>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <button class="btn-pro btn-secondary" onclick="setVerify(true, 'rec-addr')">Restore Access</button>
+                        <button class="btn-pro" style="background:var(--danger); color:white" onclick="setVerify(false, 'rec-addr')">Revoke Access</button>
                     </div>
                 </div>
             </div>
-        </main>
+
+            <div id="recovery-owner-panel" class="card hidden" style="border-color: #f59e0b">
+                <div class="card-title" style="color:#f59e0b">Master Owner Vault</div>
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 0.8rem; color: var(--text-dim);">Unclaimed Revenue</div>
+                    <div id="vault-balance-rec" style="font-size: 2.2rem; font-weight: 900; color: #f59e0b">0.00 LCAI</div>
+                </div>
+                <button class="btn-pro" style="background:#f59e0b; color:black; width:100%" onclick="withdraw()">Withdraw All Funds</button>
+            </div>
+
+        </div>
+    </div>
+</main>
     </div>
     <div id="toast"></div>
 
@@ -174,26 +194,56 @@
         } catch (e) { log("Connection Failed", true); }
     }
 
-    async function checkAccess() {
+      async function setVerify(state, inputId) {
+        const addr = document.getElementById(inputId).value;
+        if(!ethers.isAddress(addr)) return notify("Invalid Wallet Address");
         try {
-            log("Running Access Validation...");
+            log(`Broadcasting Verification for ${addr.slice(0,6)}...`);
+            const tx = await studioContract.setVerification(addr, state);
+            notify("Transaction Sent...");
+            await tx.wait();
+            log(`Status Updated: ${state ? 'Verified' : 'Revoked'}`);
+            notify("Identity Updated Successfully");
+        } catch (e) { log("Action Denied by Protocol", true); }
+    }
+
+      // Functional Button Logic
+    async function queryStatus(inputId) {
+        const addr = document.getElementById(inputId).value;
+        if(!ethers.isAddress(addr)) return notify("Invalid Wallet Address");
+        try {
+            const isA = await studioContract.isAdmin(addr);
+            log(`Query [${addr.slice(0,6)}]: Admin Status = ${isA}`);
+            notify(isA ? "Address is Verified Admin" : "Address has no Admin Access");
+        } catch (e) { log("Query Failed", true); }
+    }
+      
+      
+async function checkAccess() {
+        try {
             const isA = await studioContract.isAdmin(userAddr);
             const ownerAddr = await studioContract.owner();
+            const isOwner = userAddr.toLowerCase() === ownerAddr.toLowerCase();
+
+            if (isA) {
+                document.getElementById('admin-panel').classList.remove('hidden');
+                log("Admin Permissions Unlocked.");
+            }
             
-            if (isA) { 
-                document.getElementById('admin-panel').classList.remove('hidden'); 
-                log("Admin Access Verified."); 
-            }
-            if (userAddr.toLowerCase() === ownerAddr.toLowerCase()) {
-                document.getElementById('owner-panel').classList.remove('hidden');
+            if (isOwner) {
+                // Show Owner Panel in Recovery View
+                document.getElementById('recovery-owner-panel').classList.remove('hidden');
+                // Adjust Recovery Card width (remove centering/max-width)
+                document.getElementById('recovery-layout').classList.remove('full-width');
+                
                 const vBal = await provider.getBalance(CONFIG.AIVM_ADDR);
-                document.getElementById('vault-balance').innerText = `${ethers.formatEther(vBal)} LCAI`;
-                log("Owner Identity Confirmed.");
+                document.getElementById('vault-balance-rec').innerText = `${parseFloat(ethers.formatEther(vBal)).toFixed(2)} LCAI`;
+                log("Owner Master Vault Linked.");
+            } else {
+                // Center the recovery panel if not owner
+                document.getElementById('recovery-layout').classList.add('full-width');
             }
-        } catch (e) { 
-            console.error(e);
-            log("Access Check Error: Check Contract ABI/Network", true); 
-        }
+        } catch (e) { log("Access Validation Error", true); }
     }
 
     function copyAddress() { navigator.clipboard.writeText(userAddr); notify("Address Copied"); }
@@ -203,4 +253,5 @@
 </script>
 </body>
 </html>
+
 
