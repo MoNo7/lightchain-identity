@@ -9,29 +9,29 @@
         :root { --accent: #0070ff; --bg: #020408; --panel: #0b0e14; --border: #1e2633; --text-dim: #6a768a; --console-bg: #05070a; }
         body { margin: 0; background: var(--bg); color: white; font-family: 'Inter', sans-serif; display: flex; height: 100vh; overflow: hidden; }
         nav { width: 280px; border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 25px; background: var(--panel); box-sizing: border-box; }
-        .nav-logo { font-weight: 900; letter-spacing: 2px; color: var(--accent); margin-bottom: 25px; font-size: 1.1rem; text-align: center; height: 30px; }
-        .system-console { background: var(--console-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 0.65rem; height: 180px; overflow-y: auto; margin-bottom: 20px; color: #4e5d75; line-height: 1.5; }
-        .console-line { margin-bottom: 4px; border-left: 2px solid #1a202c; padding-left: 8px; word-wrap: break-word; }
+        .nav-logo { font-weight: 900; letter-spacing: 2px; color: var(--accent); margin-bottom: 25px; font-size: 1.1rem; text-align: center; }
+        .system-console { background: var(--console-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 0.65rem; height: 220px; overflow-y: auto; margin-bottom: 20px; color: #4e5d75; line-height: 1.5; }
+        .console-line { margin-bottom: 4px; border-left: 2px solid #1a202c; padding-left: 8px; }
         .console-line.success { border-left-color: var(--accent); color: #fff; }
         .console-line.error { border-left-color: #ff4444; color: #ff4444; }
         .nav-menu { display: none; flex-direction: column; gap: 5px; }
-        .nav-link { color: var(--text-dim); padding: 12px 15px; cursor: pointer; border-radius: 6px; border: none; background: none; text-align: left; font-size: 0.75rem; font-family: monospace; font-weight: 600; width: 100%; }
+        .nav-link { color: var(--text-dim); padding: 12px 15px; cursor: pointer; border-radius: 6px; border: none; background: none; text-align: left; font-size: 0.75rem; font-family: monospace; width: 100%; }
         .nav-link:hover, .nav-link.active { color: white; background: var(--accent); }
         .viewport { flex: 1; display: flex; flex-direction: column; }
-        header { height: 80px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; box-sizing: border-box; position: relative; }
-        .tickers { display: flex; gap: 25px; font-family: monospace; font-size: 0.75rem; position: absolute; left: 50%; transform: translateX(-50%); }
-        .ticker-item span { color: var(--accent); font-weight: bold; margin-right: 5px; }
-        .header-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
-        .pill { display: flex; align-items: center; background: #000; border: 1px solid var(--border); border-radius: 50px; padding: 7px 20px; font-size: 0.7rem; color: var(--accent); font-family: monospace; }
+        header { height: 80px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; box-sizing: border-box; }
+        .header-right { display: flex; align-items: center; gap: 10px; }
+        .pill { background: #000; border: 1px solid var(--border); border-radius: 50px; padding: 7px 20px; font-size: 0.7rem; color: var(--accent); font-family: monospace; }
         .wallet-pill { background: var(--accent); color: white; border-radius: 50px; padding: 9px 20px; font-weight: 900; cursor: pointer; border: none; font-size: 0.75rem; }
         .view-pane { flex: 1; padding: 45px; display: none; overflow-y: auto; }
         .view-pane.active { display: block !important; }
-        .card { background: var(--panel); border: 1px solid var(--border); padding: 35px; border-radius: 12px; max-width: 750px; border-top: 4px solid var(--accent); margin-bottom: 20px; }
+        .card { background: var(--panel); border: 1px solid var(--border); padding: 35px; border-radius: 12px; max-width: 750px; border-top: 4px solid var(--accent); }
         .panel-input { width: 100%; background: #000; border: 1px solid #333; color: white; padding: 12px; border-radius: 4px; font-size: 0.75rem; margin-bottom: 12px; box-sizing: border-box; }
-        .action-btn { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; width: 100%; font-weight: bold; margin-bottom: 8px; }
-        .action-btn.alt { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
-        pre { background: var(--console-bg); padding: 20px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.75rem; color: #a0aec0; margin: 20px 0; white-space: pre-wrap; word-break: break-all; line-height: 1.4; }
-        #qr-target { background: white; padding: 12px; display: inline-block; border-radius: 8px; margin-top: 10px; }
+        .action-btn { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; width: 100%; font-weight: bold; }
+        .action-btn.alt { background: transparent; border: 1px solid var(--accent); color: var(--accent); margin-top: 10px; }
+        pre { background: var(--console-bg); padding: 20px; border-radius: 8px; font-size: 0.75rem; color: #a0aec0; white-space: pre-wrap; }
+        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 20px; }
+        .gallery-item { background: #000; border: 1px solid var(--border); border-radius: 4px; padding: 5px; }
+        .gallery-item img { width: 100%; border-radius: 2px; }
     </style>
 </head>
 <body>
@@ -39,7 +39,7 @@
 <nav>
     <div class="nav-logo">LCAI <span>IAM</span></div>
     <div class="system-console" id="console">
-        <div class="console-line">>> SYSTEM_READY...</div>
+        <div class="console-line">>> SYSTEM_READY</div>
     </div>
     <div class="nav-menu" id="side-menu">
         <button class="nav-link active" onclick="showView('id-view', this)">ZK IDENTITY</button>
@@ -51,13 +51,9 @@
 
 <div class="viewport">
     <header>
-        <div style="flex:1"></div>
-        <div class="tickers">
-            <div class="ticker-item"><span>ETH:</span> <div id="eth-price">$---</div></div>
-            <div class="ticker-item"><span>LCAI:</span> <div id="lcai-price">$---</div></div>
-        </div>
+        <div class="pill">NETWORK: <span id="net-id">...</span></div>
         <div class="header-right">
-            <div class="pill">AIVM-THETA | <span id="load-num">0%</span> | <span id="status-txt">IDLE</span></div>
+            <div class="pill">STATUS: <span id="status-txt">IDLE</span></div>
             <button id="wallet-btn" class="wallet-pill" onclick="connectWallet()">CONNECT WALLET</button>
         </div>
     </header>
@@ -66,36 +62,37 @@
         <div class="card">
             <h2>ZK-SBT IDENTITY</h2>
             <pre id="id-json">{ "status": "awaiting_connection" }</pre>
-            <button onclick="saveJSON()" class="action-btn alt" style="width: auto; padding: 10px 25px;">DOWNLOAD JSON</button>
-            <div id="qr-target"></div>
+            <div id="qr-target" style="margin-top:20px; background:white; padding:10px; display:inline-block; border-radius:4px;"></div>
         </div>
     </div>
 
     <div id="recovery-view" class="view-pane">
         <div class="card">
-            <h2>IDENTITY RECOVERY (ADMIN)</h2>
-            <input type="text" class="panel-input" placeholder="Target User Address" id="admin-addr">
-            <button class="action-btn" onclick="runAdmin('queryStatus')">QUERY STATUS</button>
-            <button class="action-btn" onclick="runAdmin('setVerification', true)">VERIFY USER</button>
-            <div style="background:#000; padding:12px; margin-top:20px; border-radius:4px; border:1px solid var(--border);">
-                <div style="font-size:0.6rem; color:var(--text-dim);">TREASURY VAULT</div>
-                <div id="revenue-val" style="font-size: 1.2rem; font-weight: bold; color: var(--accent);">0.00 tLCAI</div>
+            <h2>TREASURY & RECOVERY</h2>
+            <div style="background:#000; padding:20px; border-radius:8px; margin-bottom:20px; border:1px solid var(--border);">
+                <div style="font-size:0.7rem; color:var(--text-dim);">CONTRACT BALANCE</div>
+                <div id="revenue-val" style="font-size:1.5rem; color:var(--accent); font-weight:bold;">0.00 tLCAI</div>
             </div>
-            <button class="action-btn alt" onclick="runOwner()" style="margin-top:10px;">WITHDRAW ALL</button>
+            <button class="action-btn" onclick="runOwner()">WITHDRAW ALL FUNDS</button>
+            <hr style="border:0; border-top:1px solid var(--border); margin:25px 0;">
+            <input type="text" class="panel-input" id="admin-addr" placeholder="User Address (0x...)">
+            <button class="action-btn alt" onclick="runAdmin(true)">VERIFY USER</button>
+            <button class="action-btn alt" onclick="runAdmin(false)" style="border-color:#ff4444; color:#ff4444;">REVOKE USER</button>
         </div>
     </div>
 
     <div id="aivm-view" class="view-pane">
         <div class="card">
             <h2>LCAI AIVM INFERENCE</h2>
-            <textarea id="art-prompt" class="panel-input" placeholder="Neural landscape..." style="height: 100px;"></textarea>
+            <textarea id="art-prompt" class="panel-input" placeholder="Enter prompt..." style="height:100px;"></textarea>
             <button class="action-btn" onclick="generateArt()">REQUEST INFERENCE (0.001 tLCAI)</button>
         </div>
     </div>
 
     <div id="gallery-view" class="view-pane">
-        <div class="card" style="max-width: 950px;">
+        <div class="card" style="max-width: 900px;">
             <h2>NETWORK GALLERY</h2>
+            <button class="action-btn alt" onclick="initGallery()" style="width:auto; padding:5px 15px;">REFRESH SCAN</button>
             <div class="gallery-grid" id="gallery-grid"></div>
         </div>
     </div>
@@ -117,25 +114,13 @@ const CONFIG = {
 let user, provider, signer, contract;
 
 const log = (msg, type = "info") => {
+    const cb = document.getElementById('console');
     const l = document.createElement('div');
     l.className = `console-line ${type === 'success' ? 'success' : type === 'error' ? 'error' : ''}`;
     l.innerText = `>> ${msg}`;
-    const cb = document.getElementById('console');
-    if(cb) { cb.appendChild(l); cb.scrollTop = cb.scrollHeight; }
+    cb.appendChild(l);
+    cb.scrollTop = cb.scrollHeight;
 };
-
-async function syncTickers() {
-    try {
-        const ethR = await fetch('https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD');
-        const ethD = await ethR.json();
-        document.getElementById('eth-price').innerText = `$${ethD.USD.toLocaleString()}`;
-        const lcaiR = await fetch('https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=0x9ca8530ca349c966fe9ef903df17a75b8a778927&vs_currencies=usd');
-        const lcaiD = await lcaiR.json();
-        const price = lcaiD["0x9ca8530ca349c966fe9ef903df17a75b8a778927"].usd;
-        document.getElementById('lcai-price').innerText = `$${price.toFixed(5)}`;
-    } catch(e) { document.getElementById('lcai-price').innerText = "$0.0024"; }
-}
-syncTickers();
 
 async function connectWallet() {
     if (!window.ethereum) return log("METAMASK NOT FOUND", "error");
@@ -143,91 +128,102 @@ async function connectWallet() {
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         user = accounts[0];
         provider = new ethers.BrowserProvider(window.ethereum);
+        const net = await provider.getNetwork();
+        document.getElementById('net-id').innerText = net.chainId;
+        
         signer = await provider.getSigner();
         contract = new ethers.Contract(CONFIG.addr, CONFIG.abi, signer);
         
-        log("ESTABLISHING SECURE CHANNEL...", "info");
-
-        // Force Read from Network
-        const rawOwner = await contract.owner();
-        const isOwner = (user.toLowerCase() === rawOwner.toLowerCase());
-        const isVerified = await contract.manualVerified(user);
+        const ownerAddr = await contract.owner();
+        const isOwner = (user.toLowerCase() === ownerAddr.toLowerCase());
         
-        const identityData = {
-            "identity": {
-                "operator_id": `LCAI-${user.slice(2, 8).toUpperCase()}`,
-                "role": isOwner ? "SYSTEM_OWNER_ADMIN" : (isVerified ? "VERIFIED_OPERATOR" : "GUEST_NODE"),
-                "access_tier": isOwner ? "OMEGA_ACCESS" : "STANDARD",
-                "auth_method": "ZK_SBT_HANDSHAKE",
-                "timestamp": Math.floor(Date.now() / 1000)
-            },
-            "on_chain": { "address": user, "contract": CONFIG.addr, "is_owner": isOwner }
-        };
+        log(`CONNECTED: ${user.slice(0,10)}...`, "success");
+        if(isOwner) log("OWNER STATUS RECOGNIZED", "success");
 
-        document.getElementById('id-json').innerText = JSON.stringify(identityData, null, 4);
+        // Build ZK Metadata
+        const idData = {
+            "identity": {
+                "operator_id": `LCAI-${user.slice(2,8).toUpperCase()}`,
+                "role": isOwner ? "SYSTEM_OWNER" : "NODE_OPERATOR",
+                "access": isOwner ? "OMEGA" : "STANDARD",
+                "timestamp": Math.floor(Date.now()/1000)
+            },
+            "contract": { "address": CONFIG.addr, "owner": ownerAddr }
+        };
+        document.getElementById('id-json').innerText = JSON.stringify(idData, null, 4);
         document.getElementById('wallet-btn').innerText = user.slice(0,6).toUpperCase();
         document.getElementById('side-menu').style.display = 'flex';
         
-        log(`AUTH_SUCCESS: ${user.slice(0,10)}`, "success");
-        if(isOwner) log("OWNER STATUS RECOGNIZED", "success");
-
         document.getElementById('qr-target').innerHTML = "";
-        new QRCode(document.getElementById("qr-target"), { text: user, width: 140, height: 140 });
+        new QRCode(document.getElementById("qr-target"), { text: user, width: 120, height: 120 });
         
         refreshBalance();
-    } catch (e) { log("HANDSHAKE FAILED", "error"); }
-}
-
-async function runAdmin(method, val) {
-    if(!contract) return log("RE-CONNECT WALLET", "error");
-    const target = document.getElementById('admin-addr').value;
-    if(!target) return log("ENTER TARGET ADDRESS", "error");
-    try {
-        if(method === 'queryStatus') {
-            const res = await contract.manualVerified(target);
-            log(`USER ${target.slice(0,6)}: ${res ? "VERIFIED" : "UNVERIFIED"}`, "success");
-        } else {
-            const tx = await contract.setVerification(target, val);
-            log("TX PENDING...");
-            await tx.wait();
-            log("VERIFICATION SYNCED", "success");
-        }
-    } catch(e) { log("ACTION REJECTED", "error"); }
+    } catch (e) { log("CONNECTION FAILED", "error"); }
 }
 
 async function runOwner() {
-    if(!contract) return log("RE-CONNECT WALLET", "error");
+    if(!contract) return log("CONNECT WALLET", "error");
     try {
-        log("INITIATING WITHDRAWAL...");
-        const tx = await contract.withdraw();
-        log("TX BROADCASTED...");
+        log("PREPARING WITHDRAWAL...");
+        // Use high gas limit to bypass RPC estimation errors
+        const tx = await contract.withdraw({ gasLimit: 100000 });
+        log("TX SENT: " + tx.hash.slice(0,10), "success");
         await tx.wait();
-        log("VAULT WITHDRAWN", "success");
+        log("FUNDS TRANSFERRED", "success");
         refreshBalance();
-    } catch(e) { 
+    } catch (e) {
+        log("REJECTED: NOT OWNER OR 0 BALANCE", "error");
         console.error(e);
-        log("REVERT: PERMISSION DENIED", "error"); 
     }
+}
+
+async function runAdmin(status) {
+    const target = document.getElementById('admin-addr').value;
+    if(!target || !contract) return log("INVALID INPUT", "error");
+    try {
+        log("UPDATING PERMISSIONS...");
+        const tx = await contract.setVerification(target, status);
+        await tx.wait();
+        log("USER STATUS UPDATED", "success");
+    } catch (e) { log("ADMIN ACTION FAILED", "error"); }
 }
 
 async function generateArt() {
     if(!contract) return;
+    const prompt = document.getElementById('art-prompt').value;
     try {
-        const prompt = document.getElementById('art-prompt').value;
         document.getElementById('status-txt').innerText = "INFERENCE";
-        const tx = await contract.requestInference(prompt, { value: ethers.parseEther("0.001") });
+        const tx = await contract.requestInference(prompt, { 
+            value: ethers.parseEther("0.001"),
+            gasLimit: 200000 
+        });
         await tx.wait();
-        log("INFERENCE SUCCESSFUL", "success");
+        log("INFERENCE LOGGED", "success");
         document.getElementById('status-txt').innerText = "IDLE";
-    } catch(e) { log("INFERENCE FAILED", "error"); }
+    } catch (e) { 
+        log("INFERENCE FAILED", "error"); 
+        document.getElementById('status-txt').innerText = "IDLE";
+    }
+}
+
+async function initGallery() {
+    if(!contract) return;
+    const grid = document.getElementById('gallery-grid');
+    grid.innerHTML = "SCANNING...";
+    try {
+        const filter = contract.filters.InferenceRequested();
+        const events = await contract.queryFilter(filter, -5000);
+        grid.innerHTML = events.length === 0 ? "EMPTY" : "";
+        events.reverse().forEach(ev => {
+            grid.innerHTML += `<div class="gallery-item"><img src="https://picsum.photos/seed/${ev.transactionHash}/100/100"></div>`;
+        });
+    } catch (e) { grid.innerHTML = "RPC ERROR"; }
 }
 
 async function refreshBalance() {
     if(!provider) return;
-    try {
-        const bal = await provider.getBalance(CONFIG.addr);
-        document.getElementById('revenue-val').innerText = `${ethers.formatEther(bal).slice(0,8)} tLCAI`;
-    } catch(e) {}
+    const bal = await provider.getBalance(CONFIG.addr);
+    document.getElementById('revenue-val').innerText = `${ethers.formatEther(bal).slice(0,6)} tLCAI`;
 }
 
 function showView(id, btn) {
@@ -235,11 +231,6 @@ function showView(id, btn) {
     document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
     document.getElementById(id).classList.add('active');
     btn.classList.add('active');
-}
-
-function saveJSON() {
-    const b = new Blob([document.getElementById('id-json').innerText], {type:"application/json"});
-    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download="id.json"; a.click();
 }
 </script>
 </body>
