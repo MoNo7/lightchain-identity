@@ -8,13 +8,14 @@
         .workspace { flex: 1; display: flex; flex-direction: column; gap: 20px; padding: 20px; }
         .input-group { display: flex; flex-direction: column; gap: 12px; }
         .prompt-input { width: 100%; background: #111; border: 1px solid #444; border-radius: 10px; padding: 18px; color: white; font-size: 1rem; box-sizing: border-box; outline: none; }
+        .prompt-input:focus { border-color: #00ff80; }
         .controls-row { display: flex; gap: 12px; width: 100%; }
         select { flex: 1; background: #111; color: #00ff80; border: 1px solid #444; border-radius: 8px; padding: 10px; font-weight: bold; cursor: pointer; }
         .btn-gen { height: 50px; padding: 0 40px; background: #00ff80; color: black; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; transition: 0.2s; }
         .btn-gen:hover { background: #00cc66; transform: translateY(-1px); }
-        .output-view { flex: 1; background: #000; border: 1px solid #333; border-radius: 12px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
-        .output-img { max-width: 100%; max-height: 100%; display: none; object-fit: contain; }
-        .status-txt { color: #888; text-align: center; padding: 20px; }
+        .output-view { flex: 1; background: #000; border: 1px solid #333; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+        .output-img { max-width: 90%; max-height: 90%; display: none; border-radius: 8px; }
+        .status-txt { color: #888; text-align: center; padding: 20px; font-size: 0.9rem; }
         .history-sidebar { width: 280px; border-left: 1px solid #333; background: rgba(0,0,0,0.3); padding: 20px; display: flex; flex-direction: column; }
         #history-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; overflow-y: auto; }
         .gallery-item { position: relative; aspect-ratio: 1/1; background: #080808; border: 1px solid #444; border-radius: 8px; cursor: pointer; overflow: hidden; }
@@ -26,10 +27,10 @@
 
 <div class="workspace">
     <div class="input-group">
-        <input type="text" id="prompt-input" class="prompt-input" placeholder="Enter inference prompt...">
+        <input type="text" id="prompt-input" class="prompt-input" placeholder="Type your prompt and hit generate...">
         <div class="controls-row">
             <select id="model-select">
-                <option value="0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef">SDXL-Turbo (LCAI Default)</option>
+                <option value="0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef">SDXL-Turbo</option>
                 <option value="0x8888888888888888888888888888888888888888888888888888888888888888">Flux.1-Lightning</option>
                 <option value="0x9999999999999999999999999999999999999999999999999999999999999999">Stable Diffusion 3</option>
             </select>
@@ -37,14 +38,14 @@
         </div>
     </div>
     <div class="output-view">
-        <p id="status" class="status-txt">Awaiting AIVM Instruction...</p>
+        <p id="status" class="status-txt">Ready for Inference Command...</p>
         <img id="result-img" class="output-img">
     </div>
 </div>
 
 <div class="history-sidebar">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h3 style="font-size: 0.7rem; color: #00ff80; font-weight: 900; margin:0;">ON-CHAIN REVEALS</h3>
+        <h3 style="font-size: 0.7rem; color: #00ff80; font-weight: 900; margin:0; letter-spacing: 1px;">ON-CHAIN REVEALS</h3>
         <button onclick="initHistory()" style="background: #333; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.6rem; cursor: pointer;">SYNC ↻</button>
     </div>
     <div id="history-grid"></div>
@@ -53,7 +54,7 @@
 <script>
 const CONFIG = { AIVM_ADDR: "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB" };
 
-// Broad ABI to catch any version of the contract
+// Universal ABI covering both potential versions of the contract
 const ABI = [
     "function generateArt(string prompt, bytes32 modelDigest) public payable",
     "function generateArt(string prompt) public payable",
@@ -61,44 +62,61 @@ const ABI = [
     "event ArtGenerated(address indexed user, string prompt, uint256 timestamp)"
 ];
 
-let history = [];
-
 async function generate() {
-    const prompt = document.getElementById('prompt-input').value;
-    const model = document.getElementById('model-select').value;
-    const status = document.getElementById('status');
-    const img = document.getElementById('result-img');
+    const promptInput = document.getElementById('prompt-input');
+    const modelSelect = document.getElementById('model-select');
+    const statusEl = document.getElementById('status');
+    const imgEl = document.getElementById('result-img');
+    const btn = document.getElementById('gen-button');
 
-    if (!prompt) return;
+    if (!promptInput.value) return;
 
     try {
-        status.innerText = "Requesting Signature...";
+        btn.disabled = true;
+        statusEl.style.display = "block";
+        imgEl.style.display = "none";
+        statusEl.innerText = "Step 1: Connecting to Lightchain...";
+
         const provider = new ethers.BrowserProvider(window.ethereum);
         const signer = await provider.getSigner();
         const contract = new ethers.Contract(CONFIG.AIVM_ADDR, ABI, signer);
 
-        // Try 2-arg version, fallback to 1-arg if it fails
+        statusEl.innerText = "Step 2: Sign transaction in MetaMask...";
+
+        // TRANSACTION WITH FALLBACK LOGIC
         let tx;
+        const txOptions = { 
+            value: ethers.parseEther("0.1"),
+            gasLimit: 400000 // Fixed gas limit for testnet stability
+        };
+
         try {
-            tx = await contract.generateArt(prompt, model, { value: ethers.parseEther("0.1"), gasLimit: 400000 });
+            // Try 2-argument version (Prompt + Model)
+            tx = await contract.generateArt(promptInput.value, modelSelect.value, txOptions);
         } catch (e) {
-            console.log("Falling back to 1-arg call...");
-            tx = await contract.generateArt(prompt, { value: ethers.parseEther("0.1"), gasLimit: 400000 });
+            console.warn("Retrying with 1-argument version...");
+            // Try 1-argument version (Prompt only)
+            tx = await contract.generateArt(promptInput.value, txOptions);
         }
 
-        status.innerText = "Mining Inference Block...";
+        statusEl.innerText = "Step 3: Anchoring on-chain... (Waiting for block)";
         await tx.wait();
         
-        // Show Image
-        const safePrompt = encodeURIComponent(prompt.trim());
-        img.src = `https://image.pollinations.ai/prompt/${safePrompt}?nologo=true&seed=${Date.now()}`;
-        img.style.display = "block";
-        status.style.display = "none";
-        
+        // REVEAL
+        statusEl.innerText = "Step 4: Decoding AIVM output...";
+        const safePrompt = encodeURIComponent(promptInput.value.trim().replace(/\s+/g, '-'));
+        imgEl.src = `https://image.pollinations.ai/prompt/${safePrompt}?nologo=true&seed=${Date.now()}`;
+        imgEl.onload = () => {
+            statusEl.style.display = "none";
+            imgEl.style.display = "block";
+        };
+
         setTimeout(initHistory, 2000);
     } catch (e) {
-        status.innerText = "Inference Failed: Check LCAI Balance.";
         console.error(e);
+        statusEl.innerText = "Inference Failed: " + (e.reason || "Check Balance / MetaMask");
+    } finally {
+        btn.disabled = false;
     }
 }
 
@@ -106,43 +124,39 @@ async function initHistory() {
     try {
         const provider = new ethers.BrowserProvider(window.ethereum);
         const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-        const contract = new ethers.Contract(CONFIG.AIVM_ADDR, ABI, provider);
-        
-        // Scan the last 10k blocks for speed
-        const filter = contract.filters.ArtGenerated(accounts[0]);
-        const events = await contract.queryFilter(filter, -10000); 
+        if (!accounts[0]) return;
 
-        history = events.map(e => {
-            // Smart extraction of prompt and digest
-            const p = e.args.prompt || e.args[1];
-            const d = e.args.modelDigest ? e.args.modelDigest.slice(0, 10) : "LCAI-v1";
+        const contract = new ethers.Contract(CONFIG.AIVM_ADDR, ABI, provider);
+        const filter = contract.filters.ArtGenerated(accounts[0]);
+        const events = await contract.queryFilter(filter, -20000); 
+
+        const history = events.map(e => {
+            const p = e.args.prompt || e.args[1] || "AIVM Art";
+            const d = e.args.modelDigest ? e.args.modelDigest.slice(0, 10) : "0xLCAI";
             return {
                 prompt: p,
                 digest: d,
-                url: `https://image.pollinations.ai/prompt/${encodeURIComponent(p.trim())}?nologo=true&seed=${e.blockNumber}`
+                url: `https://image.pollinations.ai/prompt/${encodeURIComponent(p.trim().replace(/\s+/g, '-'))}?nologo=true&seed=${e.blockNumber}`
             };
         }).reverse();
 
-        renderHistory();
+        const grid = document.getElementById('history-grid');
+        grid.innerHTML = history.map((item, i) => `
+            <div class="gallery-item" onclick="loadHistory('${item.prompt}', '${item.url}')">
+                <img src="${item.url}" onerror="this.src='https://placehold.co/150x150/111/00ff80?text=SCANNING'">
+                <div class="digest">${item.digest}</div>
+            </div>
+        `).join('');
     } catch (e) { console.error("Sync Failed", e); }
 }
 
-function renderHistory() {
-    const grid = document.getElementById('history-grid');
-    grid.innerHTML = history.map((item, i) => `
-        <div class="gallery-item" onclick="loadHistory(${i})">
-            <img src="${item.url}" onerror="this.src='https://placehold.co/150x150/111/00ff80?text=AIVM'">
-            <div class="digest">${item.digest}</div>
-        </div>
-    `).join('');
-}
-
-function loadHistory(i) {
-    const item = history[i];
-    document.getElementById('prompt-input').value = item.prompt;
-    document.getElementById('result-img').src = item.url;
-    document.getElementById('result-img').style.display = "block";
-    document.getElementById('status').style.display = "none";
+function loadHistory(prompt, url) {
+    document.getElementById('prompt-input').value = prompt;
+    const imgEl = document.getElementById('result-img');
+    const statusEl = document.getElementById('status');
+    statusEl.style.display = "none";
+    imgEl.style.display = "block";
+    imgEl.src = url;
 }
 
 window.addEventListener('load', () => { if (window.ethereum) initHistory(); });
