@@ -150,7 +150,7 @@ async function syncTickers() {
         document.getElementById('lcai-price').innerText = "$0.00195"; 
     }
 }
-setInterval(syncTickers, 15000); syncTickers();
+setInterval(syncTickers, 5000); syncTickers();
 
 async function runAdmin(method, status = null) {
     if(!contract) return log("ERR: CONNECT WALLET");
@@ -232,3 +232,4 @@ function saveQR() {
 </script>
 </body>
 </html>
+
