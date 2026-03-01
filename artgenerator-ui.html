@@ -1,119 +1,75 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.11.1/ethers.umd.min.js"></script>
     <style>
-        /* Keeping your refined CSS exactly as it was */
-        body { font-family: monospace; background: transparent; color: white; margin: 0; display: flex; height: 100vh; overflow: hidden; }
-        .work-area { flex: 1; display: flex; flex-direction: column; padding: 20px; gap: 20px; }
-        .prompt-input { width: 100%; background: #0a0a0a; border: 1px solid #333; border-radius: 10px; padding: 15px; color: white; font-family: monospace; font-size: 1rem; box-sizing: border-box; }
-        .controls { display: flex; gap: 10px; }
-        select { flex: 1; background: #0a0a0a; color: #00ff80; border: 1px solid #333; border-radius: 6px; padding: 10px; font-weight: bold; }
-        .gen-btn { background: #00ff80; color: #000; border: none; padding: 0 30px; border-radius: 6px; font-weight: 900; cursor: pointer; }
-        .display { flex: 1; background: #000; border: 1px solid #222; border-radius: 12px; display: flex; align-items: center; justify-content: center; position: relative; }
-        .display img { max-width: 90%; max-height: 90%; display: none; }
-        .sidebar { width: 250px; border-left: 1px solid #222; background: rgba(0,0,0,0.2); padding: 15px; overflow-y: auto; }
-        .gallery { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .gal-img { aspect-ratio: 1/1; background: #111; border-radius: 4px; border: 1px solid #333; cursor: pointer; width: 100%; object-fit: cover; }
+        body { font-family: monospace; background: transparent; color: white; margin: 0; display: flex; height: 100%; overflow: hidden; }
+        .ui-container { flex: 1; display: flex; flex-direction: column; padding: 25px; gap: 20px; }
+        .p-input { width: 100%; background: #0a0a0a; border: 1px solid #333; border-radius: 10px; padding: 18px; color: white; font-size: 1rem; box-sizing: border-box; }
+        .c-row { display: flex; gap: 12px; }
+        select { flex: 1; background: #0a0a0a; color: #00ff80; border: 1px solid #333; border-radius: 8px; padding: 12px; font-weight: bold; }
+        .g-btn { background: #00ff80; color: #000; border: none; padding: 0 40px; border-radius: 8px; font-weight: 900; cursor: pointer; }
+        .canvas { flex: 1; background: #000; border: 1px solid #222; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+        .canvas img { max-width: 90%; max-height: 90%; display: none; }
+        .sidebar { width: 260px; border-left: 1px solid #222; padding: 20px; background: rgba(0,0,0,0.2); }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .item { aspect-ratio: 1/1; background: #111; border: 1px solid #333; border-radius: 4px; overflow: hidden; cursor: pointer; }
+        .item img { width: 100%; height: 100%; object-fit: cover; }
     </style>
 </head>
 <body>
-
-<div class="work-area">
-    <input type="text" id="prompt" class="prompt-input" placeholder="Type inference prompt...">
-    <div class="controls">
+<div class="ui-container">
+    <textarea id="prompt" class="p-input" rows="3" placeholder="Enter generative prompt..."></textarea>
+    <div class="c-row">
         <select id="model">
-            <option value="0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef">AIVM-THETA (SDXL)</option>
-            <option value="0x8888888888888888888888888888888888888888888888888888888888888888">AIVM-DELTA (FLUX)</option>
-            <option value="0x9999999999999999999999999999999999999999999999999999999999999999">AIVM-SIGMA: SD-3.5 Large</option>
+            <option value="0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef">AIVM-THETA: SDXL</option>
+            <option value="0x8888888888888888888888888888888888888888888888888888888888888888">AIVM-DELTA: FLUX</option>
         </select>
-        <button id="gen-btn" class="gen-btn" onclick="generate()">GENERATE</button>
+        <button id="btn" class="g-btn" onclick="generate()">GENERATE</button>
     </div>
-    <div class="display">
-        <p id="status" style="color:#444">READY FOR INPUT</p>
-        <img id="output-img">
-    </div>
+    <div class="canvas"><p id="st">READY</p><img id="res"></div>
 </div>
-
 <div class="sidebar">
-    <h3 style="font-size: 0.6rem; color: #00ff80; margin-bottom: 15px;">ON-CHAIN REVEALS</h3>
-    <div id="gallery" class="gallery"></div>
+    <div style="font-size:0.6rem; color:#00ff80; letter-spacing:2px;">ON-CHAIN REVEALS</div>
+    <div id="grid" class="grid"></div>
 </div>
 
 <script>
-const AIVM_ADDR = "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB";
+const ADDR = "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB";
 const ABI = ["function generateArt(string prompt, bytes32 modelDigest) public payable", "event ArtGenerated(address indexed user, string prompt, bytes32 modelDigest, uint256 fee)"];
-
-function notify(load, status) {
-    window.parent.postMessage({ type: 'AIVM_UPDATE', load, status }, '*');
-}
 
 async function generate() {
     const p = document.getElementById('prompt').value;
-    const m = document.getElementById('model').value;
-    const btn = document.getElementById('gen-btn');
-    const st = document.getElementById('status');
-
-    if (!p) return;
-
+    if(!p) return;
     try {
-        btn.disabled = true;
-        notify(25, 'signing');
-        st.innerText = "CHECK WALLET...";
-
+        window.parent.postMessage({type:'AIVM_METRICS', load:30, status:'signing'}, '*');
         const provider = new ethers.BrowserProvider(window.ethereum);
         const signer = await provider.getSigner();
-        const contract = new ethers.Contract(AIVM_ADDR, ABI, signer);
-
-        // Fixed: Use 1,000,000 Gas for AI compute and 0.1 LCAI fee
-        const tx = await contract.generateArt(p, m, { 
-            value: ethers.parseEther("0.1"),
-            gasLimit: 1000000 
-        });
-
-        notify(60, 'mining');
-        st.innerText = "ANCHORING ON LIGHTCHAIN...";
+        const contract = new ethers.Contract(ADDR, ABI, signer);
+        const tx = await contract.generateArt(p, document.getElementById('model').value, { value: ethers.parseEther("0.1"), gasLimit: 1000000 });
+        window.parent.postMessage({type:'AIVM_METRICS', load:70, status:'mining'}, '*');
         await tx.wait();
-
-        notify(100, 'success');
-        st.style.display = 'none';
-        const img = document.getElementById('output-img');
+        window.parent.postMessage({type:'AIVM_METRICS', load:100, status:'success'}, '*');
+        const img = document.getElementById('res');
         img.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(p)}?nologo=true&seed=${Date.now()}`;
-        img.style.display = 'block';
-
-        setTimeout(() => { notify(0, 'idle'); initHistory(); }, 3000);
-    } catch (e) {
-        notify(0, 'error');
-        st.innerText = "FAILED: " + (e.reason || "ERROR");
-    } finally { btn.disabled = false; }
+        img.style.display = 'block'; document.getElementById('st').style.display = 'none';
+        setTimeout(() => { window.parent.postMessage({type:'AIVM_METRICS', load:0, status:'idle'}, '*'); initHistory(); }, 4000);
+    } catch (e) { window.parent.postMessage({type:'AIVM_METRICS', load:0, status:'error'}, '*'); }
 }
 
 async function initHistory() {
     try {
         const provider = new ethers.BrowserProvider(window.ethereum);
         const accounts = await provider.send("eth_accounts", []);
-        if (!accounts[0]) return;
-
-        const contract = new ethers.Contract(AIVM_ADDR, ABI, provider);
-        const filter = contract.filters.ArtGenerated(accounts[0]);
-        const events = await contract.queryFilter(filter, -40000); // Deep scan for history
-
-        document.getElementById('gallery').innerHTML = events.reverse().map(e => {
-            const prompt = e.args.prompt;
-            const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?nologo=true&seed=${e.blockNumber}`;
-            return `<img src="${url}" class="gal-img" onclick="loadPrev('${prompt}', '${url}')">`;
+        if(!accounts[0]) return;
+        const contract = new ethers.Contract(ADDR, ABI, provider);
+        const events = await contract.queryFilter(contract.filters.ArtGenerated(accounts[0]), -30000);
+        document.getElementById('grid').innerHTML = events.reverse().map(e => {
+            const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(e.args.prompt)}?nologo=true&seed=${e.blockNumber}`;
+            return `<div class="item" onclick="document.getElementById('res').src='${url}'; document.getElementById('res').style.display='block';"><img src="${url}"></div>`;
         }).join('');
-    } catch (e) { console.warn("History failed."); }
+    } catch(e){}
 }
-
-function loadPrev(p, url) {
-    document.getElementById('prompt').value = p;
-    document.getElementById('output-img').src = url;
-    document.getElementById('output-img').style.display = 'block';
-    document.getElementById('status').style.display = 'none';
-}
-
 window.addEventListener('load', () => { if(window.ethereum) initHistory(); });
 </script>
 </body>
