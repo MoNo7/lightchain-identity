@@ -20,7 +20,7 @@
         .viewport { flex: 1; display: flex; flex-direction: column; }
         header { height: 80px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; box-sizing: border-box; }
         .pill { background: #000; border: 1px solid var(--border); border-radius: 50px; padding: 7px 20px; font-size: 0.7rem; color: var(--accent); font-family: monospace; display: flex; align-items: center; gap: 8px; }
-        .wallet-pill { background: var(--accent); color: white; border-radius: 50px; padding: 9px 20px; font-weight: 900; cursor: pointer; border: none; font-size: 0.75rem; }
+        .wallet-pill { background: var(--accent); color: white; border-radius: 50px; padding: 9px 24px; font-weight: 900; cursor: pointer; border: none; font-size: 0.75rem; font-family: monospace; letter-spacing: 1px; }
         .view-pane { flex: 1; padding: 45px; display: none; overflow-y: auto; }
         .view-pane.active { display: block !important; }
         .card { background: var(--panel); border: 1px solid var(--border); padding: 35px; border-radius: 12px; max-width: 750px; border-top: 4px solid var(--accent); margin-bottom: 20px; }
@@ -73,10 +73,10 @@
     <div id="id-view" class="view-pane">
         <div class="card">
             <h2>ZK-SBT IDENTITY CARD</h2>
-            <p style="font-size:0.65rem; color:var(--text-dim); margin-bottom:10px;">Click the code block below to download JSON Identity metadata.</p>
+            <p style="font-size:0.65rem; color:var(--text-dim); margin-bottom:10px;">Click code to download JSON. Click QR to download Image.</p>
             <pre id="id-json" onclick="saveJSON()">// Identity Packet Offline: Handshake Required</pre>
-            <div id="qr-target" onclick="saveQR()" style="margin-top:20px; background:white; padding:10px; display:none; border-radius:4px; cursor:pointer;" title="Click to Download QR Image"></div>
-            <p id="qr-hint" style="display:none; font-size:0.65rem; color:var(--text-dim); margin-top:8px;">Click QR Code to Download .png image</p>
+            <div id="qr-target" onclick="saveQR()" style="margin-top:20px; background:white; padding:10px; display:none; border-radius:4px; cursor:pointer;"></div>
+            <p id="qr-hint" style="display:none; font-size:0.65rem; color:var(--text-dim); margin-top:8px;">Handshake Active: Click QR to Download .png</p>
         </div>
     </div>
 
@@ -119,13 +119,14 @@
 
 <script>
 const CONFIG = {
-    addr: "0x5B2d46cb1e3451aA3d584f28E714892373D7c7C6", // UPDATED TO CURRENT DEPLOYED ADDRESS
+    addr: "0x5B2d46cb1e3451aA3d584f28E714892373D7c7C6",
     abi: [
         "function owner() public view returns (address)",
         "function setVerification(address user, bool status) external",
         "function withdraw() external",
         "function manualVerified(address) public view returns (bool)",
         "function requestInference(string prompt) external payable",
+        "function generateArt(string prompt, bytes32 modelDigest) public payable",
         "event InferenceRequested(address indexed user, string prompt)"
     ]
 };
@@ -159,9 +160,17 @@ async function connectWallet() {
         updateIdentity();
         initGallery();
         refreshBalance();
-        
-        document.getElementById('wallet-btn').innerText = user.slice(0,6).toUpperCase();
+        updateWalletPill(); // INITIAL PILL SYNC
     } catch (e) { log("HANDSHAKE FAILED", "error"); }
+}
+
+async function updateWalletPill() {
+    if(!user || !provider) return;
+    try {
+        const bal = await provider.getBalance(user);
+        const ethBal = ethers.formatEther(bal).slice(0,6);
+        document.getElementById('wallet-btn').innerText = `${user.slice(0,6).toUpperCase()} | ${ethBal} LCAI`;
+    } catch(e) { document.getElementById('wallet-btn').innerText = user.slice(0,6).toUpperCase(); }
 }
 
 function updateMenu() {
@@ -242,20 +251,35 @@ async function runOwner() {
         const tx = await contract.withdraw({ gasLimit: 200000 });
         await tx.wait(); log("VAULT WITHDRAWN", "success");
         refreshBalance();
-    } catch (e) { log("WITHDRAWAL FAILED: CHECK BALANCE", "error"); }
+        updateWalletPill(); // SYNC PILL AFTER GAIN
+    } catch (e) { log("WITHDRAWAL FAILED", "error"); }
 }
 
 async function generateArt() {
     const prompt = document.getElementById('art-prompt').value;
+    const modelHash = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
     try {
         document.getElementById('status-txt').innerText = "INFERENCE";
-        const tx = await contract.requestInference(prompt, { 
-            value: ethers.parseEther("0.001"),
-            gasLimit: 800000 // HIGH GAS FOR AI INFERENCE ON TESTNET
-        });
+        log("BROADCASTING INFERENCE...");
+        
+        // UNIFIED CALL: TRY generateArt FIRST (Used in artgenerator-ui), FALLBACK TO requestInference
+        let tx;
+        try {
+            tx = await contract.generateArt(prompt, modelHash, { 
+                value: ethers.parseEther("0.001"), 
+                gasLimit: 800000 
+            });
+        } catch(err) {
+            tx = await contract.requestInference(prompt, { 
+                value: ethers.parseEther("0.001"), 
+                gasLimit: 800000 
+            });
+        }
+        
         await tx.wait();
         log("INFERENCE SUCCESSFUL", "success");
         document.getElementById('status-txt').innerText = "IDLE";
+        updateWalletPill(); // SYNC PILL AFTER COST
         initGallery();
     } catch (e) { log("INFERENCE REJECTED", "error"); document.getElementById('status-txt').innerText = "IDLE"; }
 }
@@ -278,7 +302,6 @@ function saveJSON() {
     const data = document.getElementById('id-json').innerText;
     const b = new Blob([data], {type:"application/json"});
     const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download=`LCAI_ID_${user.slice(0,6)}.json`; a.click();
-    log("ID PACKET DOWNLOADED", "success");
 }
 
 function saveQR() {
@@ -288,7 +311,6 @@ function saveQR() {
     link.href = qrImg.src;
     link.download = `LCAI_QR_${user.slice(0,6)}.png`;
     link.click();
-    log("QR_CODE DOWNLOADED", "success");
 }
 
 initGallery();
