@@ -235,17 +235,59 @@ async function generateArt() {
 }
 
 async function runAdmin(method, status = null) {
-    if(!contract) return;
-    const target = document.getElementById('admin-addr').value || user;
+    if(!contract) return log("ERR: CONNECT WALLET", "error");
+    
+    const target = document.getElementById('admin-addr').value;
+    // Check if user provided an address, otherwise default to their own
+    const checkAddress = target && ethers.isAddress(target) ? target : user;
+
     try {
         if(method === 'queryStatus') {
-            const isVerified = await contract.manualVerified(target);
-            log(`STATUS: ${target.slice(0,6)}... ${isVerified ? "VERIFIED" : "UNVERIFIED"}`, "success");
+            // Use the provider directly for a "call" so it doesn't matter if you are admin
+            const isVerified = await contract.manualVerified(checkAddress);
+            log(`QUERY [${checkAddress.slice(0,6)}]: ${isVerified ? "VERIFIED" : "UNVERIFIED"}`, "success");
         } else {
-            const tx = await contract.setVerification(target, status);
-            await tx.wait(); log("IDENTITY UPDATED", "success");
+            // These require actual Admin Permissions
+            log(`ATTEMPTING ${status ? 'VERIFICATION' : 'REVOCATION'}...`, "info");
+            const tx = await contract.setVerification(checkAddress, status);
+            await tx.wait(); 
+            log("IDENTITY UPDATED ON-CHAIN", "success");
         }
-    } catch(e) { log("ERR: ADMIN DENIED", "error"); }
+    } catch(e) { 
+        // Better error parsing
+        console.error(e);
+        if (e.message.includes("executor") || e.message.includes("denied")) {
+            log("ADMIN DENIED: SIGNER LACKS PERMISSIONS", "error");
+        } else {
+            log(`TRANSACTION FAILED: ${e.reason || "REVERTED"}`, "error");
+        }
+    }
+}
+
+// Ensure the Gallery Scan uses a wide enough block range
+async function initGallery() {
+    if(!contract) return;
+    const grid = document.getElementById('gallery-grid');
+    grid.innerHTML = `<div style="color:var(--accent);">SCANNING LEDGER...</div>`;
+    try {
+        const filter = contract.filters.InferenceRequested();
+        // Increased block lookback for Testnets with fast block times
+        const events = await contract.queryFilter(filter, -10000); 
+        grid.innerHTML = "";
+        if(events.length === 0) {
+            grid.innerHTML = `<div style="color:var(--text-dim);">NO RECENT INFERENCE DATA</div>`;
+        }
+        events.reverse().forEach(ev => {
+            grid.innerHTML += `
+                <div class="gallery-item">
+                    <img src="https://picsum.photos/seed/${ev.transactionHash}/150/120">
+                    <div class="prompt" title="${ev.args[1]}">${ev.args[1] || "AIVM Art"}</div>
+                </div>`;
+        });
+        log(`GALLERY: ${events.length} EVENTS FOUND`, "success");
+    } catch(e) { 
+        log("GALLERY SCAN FAIL", "error"); 
+    }
 }
 
 async function runOwner() {
@@ -264,19 +306,6 @@ async function refreshBalance() {
     } catch(e) {}
 }
 
-async function initGallery() {
-    if(!contract) return;
-    const grid = document.getElementById('gallery-grid');
-    grid.innerHTML = `<div style="color:var(--accent);">SCANNING LEDGER...</div>`;
-    try {
-        const filter = contract.filters.InferenceRequested();
-        const currentBlock = await provider.getBlockNumber();
-        allArtEvents = await contract.queryFilter(filter, Math.max(0, currentBlock - 50000), "latest"); 
-        allArtEvents.reverse(); 
-        log(`SYNCED: ${allArtEvents.length} RECORDS`, "success");
-        currentPage = 1; renderGalleryPage();
-    } catch(e) { log("GALLERY SCAN FAIL", "error"); }
-}
 
 function renderGalleryPage() {
     const grid = document.getElementById('gallery-grid');
@@ -336,3 +365,4 @@ function saveJSON() {
 </script>
 </body>
 </html>
+
