@@ -133,27 +133,31 @@ async function connectWallet(auto = false) {
         
         const network = await provider.getNetwork();
         if (network.chainId !== 504n) {
-            log("WRONG NETWORK - SWITCH TO 504", "error");
+            log(`WRONG NETWORK (${network.chainId}) - SWITCH TO 504`, "error");
             return;
         }
 
         signer = await provider.getSigner();
         contract = new ethers.Contract(CONFIG.addr, CONFIG.abi, signer);
         
-        const ownerAddr = await contract.owner();
-        roles.isOwner = (user.toLowerCase() === ownerAddr.toLowerCase());
-        roles.isVerified = await contract.manualVerified(user);
-        
-        log(`CONNECTED: ${user.slice(0, 10)}`, "success");
-        updateMenu(); updateIdentity(); initGallery(); refreshBalance(); updateWalletPill(); probeModels(); 
+        // Debug Handshake calls
+        try {
+            const ownerAddr = await contract.owner();
+            roles.isOwner = (user.toLowerCase() === ownerAddr.toLowerCase());
+            roles.isVerified = await contract.manualVerified(user);
+            log(`CONNECTED: ${user.slice(0, 10)}`, "success");
+            updateMenu(); updateIdentity(); initGallery(); refreshBalance(); updateWalletPill(); probeModels(); 
+        } catch (callError) {
+            log("CONTRACT CALL FAILED - IS ADDRESS CORRECT?", "error");
+            console.error(callError);
+        }
     } catch (e) { 
         console.error(e);
-        log("HANDSHAKE FAILED", "error"); 
+        log("HANDSHAKE FAILED - CHECK METAMASK", "error"); 
     }
 }
 
-// Auto-connect on load
-window.addEventListener('load', () => connectWallet(true));
+window.addEventListener('load', () => setTimeout(() => connectWallet(true), 500));
 
 window.addEventListener('message', (e) => {
     if (e.data.type === 'AIVM_METRICS') {
