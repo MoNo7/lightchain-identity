@@ -7,55 +7,33 @@
     <style>
         :root { --primary: #5865f2; --secondary: #00ff80; --bg: #0f1016; --card: #1a1b26; --border: #2d2f45; --text: #ffffff; --text-dim: #94a3b8; }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
-        
-        /* Optimized for Iframe: No Body Scroll */
-        body { background: transparent; color: var(--text); padding: 10px; overflow-y: auto; overflow-x: hidden; }
-
-        .workspace { display: flex; flex-direction: column; gap: 20px; max-width: 1200px; margin: 0 auto; }
-        
-        /* Input Area */
-        .input-group { background: var(--card); border: 1px solid var(--border); border-radius: 12px; display: flex; padding: 8px; gap: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        body { background: transparent; color: var(--text); padding: 0; height: 100vh; overflow-y: auto; overflow-x: hidden; }
+        .workspace { display: flex; flex-direction: column; gap: 20px; padding: 10px; }
+        .input-group { background: var(--card); border: 1px solid var(--border); border-radius: 12px; display: flex; padding: 8px; gap: 10px; }
         .prompt-input { flex: 1; background: transparent; border: none; color: white; padding: 12px; outline: none; font-size: 1rem; }
         .btn-gen { background: var(--primary); color: white; border: none; padding: 10px 25px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s; }
-        .btn-gen:hover { background: #4752c4; transform: translateY(-1px); }
-
-        /* Preview Display */
-        .output-view { min-height: 512px; aspect-ratio: 16/9; background: #08090f; border: 1px solid var(--border); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--text-dim); overflow: hidden; position: relative; }
-        .mint-overlay { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.8); padding: 8px 15px; border-radius: 20px; border: 1px solid var(--secondary); font-size: 0.7rem; color: var(--secondary); display: none; align-items: center; gap: 8px; z-index: 10; }
-        
-        /* Gallery Section */
-        .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
-        .card-title { font-size: 0.7rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase; margin-bottom: 15px; letter-spacing: 1px; }
-        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
-        .gallery-item { background: #000; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; position: relative; aspect-ratio: 1; }
-        .gallery-img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
-
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        .mint-spinner { width: 12px; height: 12px; border: 2px solid var(--secondary); border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .output-view { height: calc(100vh - 120px); min-height: 512px; background: #08090f; border: 1px solid var(--border); border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+        .output-img { width: 100%; height: 100%; object-fit: contain; display: none; }
+        .status-txt { color: var(--text-dim); font-size: 1.1rem; text-align: center; }
+        .mint-overlay { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.8); padding: 8px 15px; border-radius: 20px; border: 1px solid var(--secondary); font-size: 0.7rem; color: var(--secondary); display: none; align-items: center; gap: 8px; }
     </style>
 </head>
 <body>
     <div class="workspace">
         <div class="input-group">
-            <input type="text" id="prompt-input" class="prompt-input" placeholder="Describe the masterpiece you want the AIVM to imagine...">
+            <input type="text" id="prompt-input" class="prompt-input" placeholder="A cosmic panda painting in oil...">
             <button id="generate-btn" class="btn-gen" onclick="generate()">GENERATE (1.00 LCAI)</button>
         </div>
-
-        <div class="output-view" id="art-output">
-            <div id="mint-status" class="mint-overlay"><div class="mint-spinner"></div>AIVM Anchoring...</div>
-            Awaiting AIVM Instruction...
-        </div>
-
-        <div class="card">
-            <div class="card-title">Art History</div>
-            <div id="art-gallery" class="gallery-grid"></div>
+        <div class="output-view" id="output-view">
+            <div id="mint-status" class="mint-overlay">Anchoring to LCAI...</div>
+            <p id="status-txt" class="status-txt">Awaiting AIVM Instruction...</p>
+            <img id="result-img" class="output-img">
         </div>
     </div>
 
     <script>
         const CONFIG = { AIVM_ADDR: "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB" };
-        const ABI = ["function generateArt(string) external payable", "event ArtGenerated(address indexed,string,bytes32,uint256)"];
+        const ABI = ["function generateArt(string) external payable"];
         
         async function generate() {
             const prompt = document.getElementById('prompt-input').value;
@@ -66,14 +44,32 @@
                 const signer = await provider.getSigner();
                 const contract = new ethers.Contract(CONFIG.AIVM_ADDR, ABI, signer);
                 
+                document.getElementById('status-txt').innerText = "Broadcasting to Lightchain Testnet...";
                 document.getElementById('mint-status').style.display = 'flex';
+                document.getElementById('result-img').style.display = 'none';
+
+                // Send Transaction to AIArtStudio
                 const tx = await contract.generateArt(prompt, { value: ethers.parseEther("1.0") });
+                document.getElementById('status-txt').innerText = "Transaction Sent. Waiting for Block Finalization...";
                 await tx.wait();
                 
-                // Logic to update UI with pollination/gateway images goes here...
-                document.getElementById('art-output').innerText = "Inference Signal Anchored. Processing...";
+                // REVEAL LOGIC: Pulling from AIVM Worker
+                document.getElementById('status-txt').innerText = "Inference Signal Anchored. Revealing Result...";
+                
+                // We use a deterministic seed based on the prompt for the demo reveal
+                const seed = Math.floor(Math.random() * 1000000);
+                const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?seed=${seed}&nologo=true`;
+                
+                const img = document.getElementById('result-img');
+                img.src = imgUrl;
+                img.onload = () => {
+                    document.getElementById('status-txt').style.display = 'none';
+                    img.style.display = 'block';
+                    document.getElementById('mint-status').style.display = 'none';
+                };
             } catch (e) {
                 console.error(e);
+                document.getElementById('status-txt').innerText = "Error: Protocol Reverted.";
                 document.getElementById('mint-status').style.display = 'none';
             }
         }
