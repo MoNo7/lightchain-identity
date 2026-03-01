@@ -10,16 +10,15 @@
         body { margin: 0; background: var(--bg); color: white; font-family: 'Inter', sans-serif; display: flex; height: 100vh; overflow: hidden; }
         nav { width: 280px; border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 25px; background: var(--panel); box-sizing: border-box; }
         .nav-logo { font-weight: 900; letter-spacing: 2px; color: var(--accent); margin-bottom: 25px; font-size: 1.1rem; text-align: center; }
-        .system-console { background: var(--console-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 0.65rem; height: 200px; overflow-y: auto; margin-bottom: 20px; color: #4e5d75; line-height: 1.5; }
+        .system-console { background: var(--console-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 0.65rem; height: 160px; overflow-y: auto; margin-bottom: 20px; color: #4e5d75; line-height: 1.5; }
         .console-line { margin-bottom: 4px; border-left: 2px solid #1a202c; padding-left: 8px; }
         .console-line.success { border-left-color: var(--accent); color: #fff; }
         .console-line.error { border-left-color: #ff4444; color: #ff4444; }
-        .nav-menu { display: none; flex-direction: column; gap: 5px; }
-        .nav-link { color: var(--text-dim); padding: 12px 15px; cursor: pointer; border-radius: 6px; border: none; background: none; text-align: left; font-size: 0.75rem; font-family: monospace; width: 100%; font-weight: 600; }
+        .nav-menu { display: flex; flex-direction: column; gap: 5px; }
+        .nav-link { color: var(--text-dim); padding: 12px 15px; cursor: pointer; border-radius: 6px; border: none; background: none; text-align: left; font-size: 0.75rem; font-family: monospace; width: 100%; font-weight: 600; transition: 0.2s; }
         .nav-link:hover, .nav-link.active { color: white; background: var(--accent); }
         .viewport { flex: 1; display: flex; flex-direction: column; }
         header { height: 80px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; box-sizing: border-box; }
-        .header-right { display: flex; align-items: center; gap: 15px; }
         .pill { background: #000; border: 1px solid var(--border); border-radius: 50px; padding: 7px 20px; font-size: 0.7rem; color: var(--accent); font-family: monospace; display: flex; align-items: center; gap: 8px; }
         .wallet-pill { background: var(--accent); color: white; border-radius: 50px; padding: 9px 20px; font-weight: 900; cursor: pointer; border: none; font-size: 0.75rem; }
         .view-pane { flex: 1; padding: 45px; display: none; overflow-y: auto; }
@@ -29,9 +28,11 @@
         .action-btn { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; width: 100%; font-weight: bold; }
         .action-btn.alt { background: transparent; border: 1px solid var(--accent); color: var(--accent); margin-top: 8px; }
         pre { background: var(--console-bg); padding: 20px; border-radius: 8px; font-size: 0.75rem; color: #a0aec0; white-space: pre-wrap; border: 1px solid var(--border); line-height: 1.4; }
-        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; margin-top: 20px; }
-        .gallery-item { background: #000; border: 1px solid var(--border); border-radius: 6px; padding: 8px; text-align: center; }
-        .gallery-item img { width: 100%; height: 110px; object-fit: cover; border-radius: 4px; }
+        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin-top: 20px; }
+        .gallery-item { background: #000; border: 1px solid var(--border); border-radius: 6px; padding: 10px; text-align: center; }
+        .gallery-item img { width: 100%; height: 130px; object-fit: cover; border-radius: 4px; filter: blur(2px); transition: 0.3s; }
+        .gallery-item.high-res img { filter: blur(0); }
+        .badge { font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; background: #00c853; color: white; vertical-align: middle; }
     </style>
 </head>
 <body>
@@ -39,14 +40,10 @@
 <nav>
     <div class="nav-logo">LCAI <span>IAM</span></div>
     <div class="system-console" id="console">
-        <div class="console-line">>> CORE_LOADED</div>
+        <div class="console-line">>> INITIALIZING_SECURE_KERNEL</div>
     </div>
     <div class="nav-menu" id="side-menu">
-        <button class="nav-link active" onclick="showView('id-view', this)">ZK IDENTITY</button>
-        <button class="nav-link" onclick="showView('admin-view', this)">ADMIN PANEL</button>
-        <button class="nav-link" onclick="showView('treasury-view', this)">TREASURY VAULT</button>
-        <button class="nav-link" onclick="showView('aivm-view', this)">LCAI AIVM ART</button>
-        <button class="nav-link" onclick="showView('gallery-view', this); initGallery();">NETWORK GALLERY</button>
+        <button class="nav-link active" onclick="showView('gallery-view', this); initGallery();">NETWORK GALLERY</button>
     </div>
 </nav>
 
@@ -64,18 +61,26 @@
         </div>
     </header>
 
-    <div id="id-view" class="view-pane active">
+    <div id="gallery-view" class="view-pane active">
+        <div class="card" style="max-width: 900px;">
+            <h2>NETWORK GALLERY <span id="gallery-badge"></span></h2>
+            <p style="font-size:0.7rem; color:var(--text-dim);">Low-resolution preview (Public). Verified Users unlock HD viewing.</p>
+            <div class="gallery-grid" id="gallery-grid"></div>
+        </div>
+    </div>
+
+    <div id="id-view" class="view-pane">
         <div class="card">
             <h2>ZK-SBT IDENTITY</h2>
-            <pre id="id-json">{ "status": "awaiting_connection" }</pre>
-            <div id="qr-target" style="margin-top:20px; background:white; padding:10px; display:inline-block; border-radius:4px;"></div>
+            <pre id="id-json">{ "status": "restricted", "msg": "Connect wallet to generate Identity Packet" }</pre>
+            <div id="qr-target" onclick="saveJSON()" style="margin-top:20px; background:white; padding:10px; display:none; border-radius:4px; cursor:pointer;" title="Click to Download Metadata"></div>
+            <p id="qr-hint" style="display:none; font-size:0.65rem; color:var(--text-dim); margin-top:8px;">Click QR to Download JSON Identity Packet</p>
         </div>
     </div>
 
     <div id="admin-view" class="view-pane">
         <div class="card">
-            <h2>IDENTITY RECOVERY & OPS</h2>
-            <p style="font-size:0.7rem; color:var(--text-dim); margin-bottom:20px;">Manual verification override for GUEST_NODES.</p>
+            <h2>ADMIN OPS</h2>
             <input type="text" class="panel-input" id="admin-addr" placeholder="Target Operator Address (0x...)">
             <button class="action-btn" onclick="runAdmin('query')">QUERY STATUS</button>
             <div style="display:flex; gap:10px; margin-top:10px;">
@@ -87,7 +92,7 @@
 
     <div id="treasury-view" class="view-pane">
         <div class="card">
-            <h2>REVENUE & WITHDRAWAL</h2>
+            <h2>TREASURY VAULT</h2>
             <div style="background:#000; padding:25px; border-radius:8px; margin-bottom:20px; border:1px solid var(--border); text-align:center;">
                 <div style="font-size:0.65rem; color:var(--text-dim); letter-spacing:1px;">CONTRACT ASSETS</div>
                 <div id="revenue-val" style="font-size:2rem; color:var(--accent); font-weight:900; margin:10px 0;">0.00 tLCAI</div>
@@ -98,24 +103,17 @@
 
     <div id="aivm-view" class="view-pane">
         <div class="card">
-            <h2>LCAI AIVM INFERENCE</h2>
+            <h2>AIVM INFERENCE</h2>
             <select id="model-select" class="panel-input" onchange="document.getElementById('active-model').innerText=this.value">
                 <option value="AIVM-THETA">AIVM-THETA (Standard)</option>
                 <option value="AIVM-SIGMA">AIVM-SIGMA (HD)</option>
                 <option value="AIVM-OMEGA">AIVM-OMEGA (Experimental)</option>
             </select>
-            <textarea id="art-prompt" class="panel-input" placeholder="Enter prompt..." style="height:120px;"></textarea>
+            <textarea id="art-prompt" class="panel-input" placeholder="Neural landscape..." style="height:120px;"></textarea>
             <button class="action-btn" onclick="generateArt()">REQUEST INFERENCE (0.001 tLCAI)</button>
         </div>
     </div>
 
-    <div id="gallery-view" class="view-pane">
-        <div class="card" style="max-width: 900px;">
-            <h2>NETWORK GALLERY</h2>
-            <button class="action-btn alt" onclick="initGallery()" style="width:auto; padding:5px 15px;">REFRESH SCAN</button>
-            <div class="gallery-grid" id="gallery-grid"></div>
-        </div>
-    </div>
 </div>
 
 <script>
@@ -131,7 +129,7 @@ const CONFIG = {
     ]
 };
 
-let user, provider, signer, contract;
+let user, provider, signer, contract, roles = { isOwner: false, isVerified: false };
 
 const log = (msg, type = "info") => {
     const cb = document.getElementById('console');
@@ -143,7 +141,7 @@ const log = (msg, type = "info") => {
 };
 
 async function connectWallet() {
-    if (!window.ethereum) return log("METAMASK NOT FOUND", "error");
+    if (!window.ethereum) return log("METAMASK MISSING", "error");
     try {
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         user = accounts[0];
@@ -152,81 +150,51 @@ async function connectWallet() {
         contract = new ethers.Contract(CONFIG.addr, CONFIG.abi, signer);
         
         const ownerAddr = await contract.owner();
-        const isOwner = (user.toLowerCase() === ownerAddr.toLowerCase());
-        const isVerified = await contract.manualVerified(user);
+        roles.isOwner = (user.toLowerCase() === ownerAddr.toLowerCase());
+        roles.isVerified = await contract.manualVerified(user);
 
-        log(`SESSION_START: ${user.slice(0,10)}`, "success");
-
-        // RESTORE FULL IDENTITY METADATA
-        const idData = {
-            "identity": {
-                "operator_id": `LCAI-${user.slice(2, 8).toUpperCase()}`,
-                "role": isOwner ? "SYSTEM_OWNER_ADMIN" : (isVerified ? "VERIFIED_OPERATOR" : "GUEST_NODE"),
-                "access_tier": isOwner ? "OMEGA_ACCESS" : (isVerified ? "STANDARD_ACCESS" : "LIMITED"),
-                "auth_method": "ZK_SBT_HANDSHAKE",
-                "timestamp": Math.floor(Date.now() / 1000)
-            },
-            "network": { "address": user, "contract": CONFIG.addr, "is_owner": isOwner }
-        };
-
-        document.getElementById('id-json').innerText = JSON.stringify(idData, null, 4);
+        log(`STREAK_SYNC: ${user.slice(0,10)}`, "success");
+        updateMenu();
+        updateIdentity();
+        initGallery();
+        refreshBalance();
+        
         document.getElementById('wallet-btn').innerText = user.slice(0,6).toUpperCase();
-        document.getElementById('side-menu').style.display = 'flex';
-        
-        if(isOwner) log("ADMIN PRIVILEGES GRANTED", "success");
-
-        document.getElementById('qr-target').innerHTML = "";
-        new QRCode(document.getElementById("qr-target"), { text: user, width: 120, height: 120 });
-        
-        refreshBalance();
-    } catch (e) { log("CONNECTION FAILED", "error"); }
+    } catch (e) { log("HANDSHAKE FAILED", "error"); }
 }
 
-async function runAdmin(type) {
-    const target = document.getElementById('admin-addr').value;
-    if(!target || !contract) return log("INPUT REQUIRED", "error");
-    try {
-        if(type === 'query') {
-            const res = await contract.manualVerified(target);
-            log(`USER ${target.slice(0,6)}: ${res ? "VERIFIED" : "UNVERIFIED"}`);
-        } else {
-            log("BROADCASTING UPDATE...");
-            const tx = await contract.setVerification(target, type === 'verify');
-            await tx.wait();
-            log("PERMISSION UPDATED", "success");
+function updateMenu() {
+    const menu = document.getElementById('side-menu');
+    let html = `<button class="nav-link" onclick="showView('gallery-view', this); initGallery();">NETWORK GALLERY</button>`;
+    
+    if(user) {
+        html += `<button class="nav-link" id="id-link" onclick="showView('id-view', this)">ZK IDENTITY</button>`;
+        if(roles.isOwner) {
+            html += `<button class="nav-link" onclick="showView('admin-view', this)">ADMIN PANEL</button>`;
+            html += `<button class="nav-link" onclick="showView('treasury-view', this)">TREASURY VAULT</button>`;
         }
-    } catch (e) { log("ADMIN REVERTED", "error"); }
-}
-
-async function runOwner() {
-    if(!contract) return;
-    try {
-        log("INITIATING TREASURY WITHDRAWAL...");
-        const tx = await contract.withdraw();
-        log("TX SENT: " + tx.hash.slice(0,10));
-        await tx.wait();
-        log("VAULT WITHDRAWN", "success");
-        refreshBalance();
-    } catch (e) { log("WITHDRAWAL FAILED: CHECK BALANCE/AUTH", "error"); }
-}
-
-async function generateArt() {
-    if(!contract) return;
-    const prompt = document.getElementById('art-prompt').value;
-    const model = document.getElementById('model-select').value;
-    try {
-        document.getElementById('status-txt').innerText = "INFERENCE";
-        document.getElementById('load-num').innerText = "20%";
-        const tx = await contract.requestInference(`[${model}] ${prompt}`, { value: ethers.parseEther("0.001") });
-        document.getElementById('load-num').innerText = "60%";
-        await tx.wait();
-        log("INFERENCE SUCCESSFUL", "success");
-        document.getElementById('load-num').innerText = "100%";
-        document.getElementById('status-txt').innerText = "IDLE";
-    } catch (e) { 
-        log("INFERENCE REJECTED", "error");
-        document.getElementById('status-txt').innerText = "IDLE";
+        if(roles.isVerified || roles.isOwner) {
+            html += `<button class="nav-link" onclick="showView('aivm-view', this)">LCAI AIVM ART</button>`;
+        }
     }
+    menu.innerHTML = html;
+}
+
+function updateIdentity() {
+    const idData = {
+        "identity": {
+            "operator_id": `LCAI-${user.slice(2, 8).toUpperCase()}`,
+            "role": roles.isOwner ? "SYSTEM_OWNER" : (roles.isVerified ? "VERIFIED_OPERATOR" : "GUEST_NODE"),
+            "access_tier": roles.isOwner ? "OMEGA_ACCESS" : (roles.isVerified ? "STANDARD" : "LIMITED"),
+            "auth_method": "ZK_SBT_HANDSHAKE",
+            "timestamp": Math.floor(Date.now() / 1000)
+        }
+    };
+    document.getElementById('id-json').innerText = JSON.stringify(idData, null, 4);
+    document.getElementById('qr-target').style.display = "inline-block";
+    document.getElementById('qr-hint').style.display = "block";
+    document.getElementById('qr-target').innerHTML = "";
+    new QRCode(document.getElementById("qr-target"), { text: JSON.stringify(idData), width: 140, height: 140 });
 }
 
 async function initGallery() {
@@ -236,18 +204,63 @@ async function initGallery() {
     try {
         const events = await contract.queryFilter("InferenceRequested", -5000);
         grid.innerHTML = events.length === 0 ? "EMPTY" : "";
+        
+        const isVerified = (roles.isVerified || roles.isOwner);
+        if(isVerified) document.getElementById('gallery-badge').innerHTML = `<span class="badge">ZK-VERIFIED HD</span>`;
+
         events.reverse().forEach(ev => {
-            grid.innerHTML += `<div class="gallery-item"><img src="https://picsum.photos/seed/${ev.transactionHash}/150/110"></div>`;
+            let actions = "";
+            if(isVerified) actions += `<button class="action-btn alt" style="font-size:0.5rem; padding:4px;" onclick="window.open('https://picsum.photos/seed/${ev.transactionHash}/1200/800')">HD VIEW</button>`;
+            if(roles.isOwner) actions += `<button class="action-btn alt" style="font-size:0.5rem; padding:4px; border-color:#00c853; color:#00c853;">MINT NFT</button>`;
+
+            grid.innerHTML += `
+                <div class="gallery-item ${isVerified ? 'high-res' : ''}">
+                    <img src="https://picsum.photos/seed/${ev.transactionHash}/200/150">
+                    <div style="margin-top:8px; display:flex; flex-direction:column; gap:4px;">
+                        ${actions}
+                    </div>
+                </div>`;
         });
     } catch (e) { grid.innerHTML = "SYNC ERROR"; }
 }
 
+async function runAdmin(type) {
+    const target = document.getElementById('admin-addr').value;
+    try {
+        if(type === 'query') {
+            const res = await contract.manualVerified(target);
+            log(`USER ${target.slice(0,6)}: ${res ? "VERIFIED" : "UNVERIFIED"}`);
+        } else {
+            const tx = await contract.setVerification(target, type === 'verify');
+            await tx.wait(); log("PERMISSION SYNCED", "success");
+            if(target.toLowerCase() === user.toLowerCase()) { roles.isVerified = (type === 'verify'); updateMenu(); }
+        }
+    } catch (e) { log("ADMIN ACTION REVERTED", "error"); }
+}
+
+async function runOwner() {
+    try {
+        const tx = await contract.withdraw();
+        await tx.wait(); log("VAULT WITHDRAWN", "success");
+        refreshBalance();
+    } catch (e) { log("WITHDRAWAL FAILED", "error"); }
+}
+
+async function generateArt() {
+    const prompt = document.getElementById('art-prompt').value;
+    try {
+        document.getElementById('status-txt').innerText = "INFERENCE";
+        const tx = await contract.requestInference(prompt, { value: ethers.parseEther("0.001") });
+        await tx.wait();
+        log("INFERENCE SUCCESSFUL", "success");
+        document.getElementById('status-txt').innerText = "IDLE";
+    } catch (e) { log("INFERENCE REJECTED", "error"); document.getElementById('status-txt').innerText = "IDLE"; }
+}
+
 async function refreshBalance() {
     if(!provider) return;
-    try {
-        const bal = await provider.getBalance(CONFIG.addr);
-        document.getElementById('revenue-val').innerText = `${ethers.formatEther(bal).slice(0,6)} tLCAI`;
-    } catch(e) {}
+    const bal = await provider.getBalance(CONFIG.addr);
+    document.getElementById('revenue-val').innerText = `${ethers.formatEther(bal).slice(0,6)} tLCAI`;
 }
 
 function showView(id, btn) {
@@ -256,6 +269,15 @@ function showView(id, btn) {
     document.getElementById(id).classList.add('active');
     btn.classList.add('active');
 }
+
+function saveJSON() {
+    const data = document.getElementById('id-json').innerText;
+    const b = new Blob([data], {type:"application/json"});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download=`LCAI_ID_${user.slice(0,6)}.json`; a.click();
+    log("ID PACKET DOWNLOADED", "success");
+}
+
+initGallery(); // Show gallery to public on load
 </script>
 </body>
 </html>
