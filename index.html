@@ -39,7 +39,7 @@
 <nav>
     <div class="nav-logo">LCAI <span>IAM</span></div>
     <div class="system-console" id="console">
-        <div class="console-line">>> INITIALIZING LCAI_IAM_CORE...</div>
+        <div class="console-line">>> SYSTEM_READY...</div>
     </div>
     <div class="nav-menu" id="side-menu">
         <button class="nav-link active" onclick="showView('id-view', this)">ZK IDENTITY</button>
@@ -65,7 +65,7 @@
     <div id="id-view" class="view-pane active">
         <div class="card">
             <h2>ZK-SBT IDENTITY</h2>
-            <pre id="id-json">{ "status": "awaiting_auth" }</pre>
+            <pre id="id-json">{ "status": "awaiting_connection" }</pre>
             <button onclick="saveJSON()" class="action-btn alt" style="width: auto; padding: 10px 25px;">DOWNLOAD JSON</button>
             <div id="qr-target"></div>
         </div>
@@ -74,11 +74,11 @@
     <div id="recovery-view" class="view-pane">
         <div class="card">
             <h2>IDENTITY RECOVERY (ADMIN)</h2>
-            <input type="text" class="panel-input" placeholder="User Address" id="admin-addr">
+            <input type="text" class="panel-input" placeholder="Target User Address" id="admin-addr">
             <button class="action-btn" onclick="runAdmin('queryStatus')">QUERY STATUS</button>
             <button class="action-btn" onclick="runAdmin('setVerification', true)">VERIFY USER</button>
             <div style="background:#000; padding:12px; margin-top:20px; border-radius:4px; border:1px solid var(--border);">
-                <div style="font-size:0.6rem; color:var(--text-dim);">VAULT BALANCE</div>
+                <div style="font-size:0.6rem; color:var(--text-dim);">TREASURY VAULT</div>
                 <div id="revenue-val" style="font-size: 1.2rem; font-weight: bold; color: var(--accent);">0.00 tLCAI</div>
             </div>
             <button class="action-btn alt" onclick="runOwner()" style="margin-top:10px;">WITHDRAW ALL</button>
@@ -138,7 +138,7 @@ async function syncTickers() {
 syncTickers();
 
 async function connectWallet() {
-    if (!window.ethereum) return log("METAMASK MISSING", "error");
+    if (!window.ethereum) return log("METAMASK NOT FOUND", "error");
     try {
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         user = accounts[0];
@@ -146,54 +146,67 @@ async function connectWallet() {
         signer = await provider.getSigner();
         contract = new ethers.Contract(CONFIG.addr, CONFIG.abi, signer);
         
-        log("HANDSHAKE INITIATED...", "info");
+        log("ESTABLISHING SECURE CHANNEL...", "info");
 
+        // Force Read from Network
         const rawOwner = await contract.owner();
         const isOwner = (user.toLowerCase() === rawOwner.toLowerCase());
         const isVerified = await contract.manualVerified(user);
         
-        // Restore Full ZK Metadata
         const identityData = {
             "identity": {
                 "operator_id": `LCAI-${user.slice(2, 8).toUpperCase()}`,
                 "role": isOwner ? "SYSTEM_OWNER_ADMIN" : (isVerified ? "VERIFIED_OPERATOR" : "GUEST_NODE"),
-                "access_tier": isOwner ? "OMEGA_ACCESS" : (isVerified ? "STANDARD_NODE" : "LIMITED_ACCESS"),
+                "access_tier": isOwner ? "OMEGA_ACCESS" : "STANDARD",
                 "auth_method": "ZK_SBT_HANDSHAKE",
                 "timestamp": Math.floor(Date.now() / 1000)
             },
-            "on_chain": {
-                "address": user,
-                "contract": CONFIG.addr,
-                "owner_match": isOwner
-            }
+            "on_chain": { "address": user, "contract": CONFIG.addr, "is_owner": isOwner }
         };
 
         document.getElementById('id-json').innerText = JSON.stringify(identityData, null, 4);
         document.getElementById('wallet-btn').innerText = user.slice(0,6).toUpperCase();
         document.getElementById('side-menu').style.display = 'flex';
         
-        if(isOwner) log("OWNER PRIVILEGES ACTIVE", "success");
-        else log("CONNECTION STABLE: GUEST MODE", "success");
+        log(`AUTH_SUCCESS: ${user.slice(0,10)}`, "success");
+        if(isOwner) log("OWNER STATUS RECOGNIZED", "success");
 
         document.getElementById('qr-target').innerHTML = "";
         new QRCode(document.getElementById("qr-target"), { text: user, width: 140, height: 140 });
         
         refreshBalance();
-    } catch (e) {
-        log("CONNECT FAILED: " + e.message, "error");
-    }
+    } catch (e) { log("HANDSHAKE FAILED", "error"); }
+}
+
+async function runAdmin(method, val) {
+    if(!contract) return log("RE-CONNECT WALLET", "error");
+    const target = document.getElementById('admin-addr').value;
+    if(!target) return log("ENTER TARGET ADDRESS", "error");
+    try {
+        if(method === 'queryStatus') {
+            const res = await contract.manualVerified(target);
+            log(`USER ${target.slice(0,6)}: ${res ? "VERIFIED" : "UNVERIFIED"}`, "success");
+        } else {
+            const tx = await contract.setVerification(target, val);
+            log("TX PENDING...");
+            await tx.wait();
+            log("VERIFICATION SYNCED", "success");
+        }
+    } catch(e) { log("ACTION REJECTED", "error"); }
 }
 
 async function runOwner() {
-    if(!contract) return log("CONNECT WALLET FIRST", "error");
+    if(!contract) return log("RE-CONNECT WALLET", "error");
     try {
-        log("BROADCASTING WITHDRAWAL...");
+        log("INITIATING WITHDRAWAL...");
         const tx = await contract.withdraw();
+        log("TX BROADCASTED...");
         await tx.wait();
-        log("TREASURY WITHDRAWN", "success");
+        log("VAULT WITHDRAWN", "success");
         refreshBalance();
     } catch(e) { 
-        log("REVERT: NOT OWNER OR RPC ERROR", "error"); 
+        console.error(e);
+        log("REVERT: PERMISSION DENIED", "error"); 
     }
 }
 
@@ -206,7 +219,7 @@ async function generateArt() {
         await tx.wait();
         log("INFERENCE SUCCESSFUL", "success");
         document.getElementById('status-txt').innerText = "IDLE";
-    } catch(e) { log("INFERENCE REJECTED", "error"); }
+    } catch(e) { log("INFERENCE FAILED", "error"); }
 }
 
 async function refreshBalance() {
