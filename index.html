@@ -10,7 +10,7 @@
         body { margin: 0; background: var(--bg); color: white; font-family: 'Inter', sans-serif; display: flex; height: 100vh; overflow: hidden; }
         nav { width: 280px; border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 25px; background: var(--panel); box-sizing: border-box; }
         .nav-logo { font-weight: 900; letter-spacing: 2px; color: var(--accent); margin-bottom: 25px; font-size: 1.1rem; text-align: center; }
-        .system-console { background: var(--console-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 0.65rem; height: 160px; overflow-y: auto; margin-bottom: 20px; color: #4e5d75; line-height: 1.5; }
+        .system-console { background: var(--console-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 0.65rem; height: 180px; overflow-y: auto; margin-bottom: 20px; color: #4e5d75; line-height: 1.5; }
         .console-line { margin-bottom: 4px; border-left: 2px solid #1a202c; padding-left: 8px; }
         .console-line.success { border-left-color: var(--accent); color: #fff; }
         .console-line.error { border-left-color: #ff4444; color: #ff4444; }
@@ -35,6 +35,7 @@
     </style>
 </head>
 <body>
+
 <nav>
     <div class="nav-logo">LCAI <span>IAM</span></div>
     <div class="system-console" id="console">
@@ -47,8 +48,16 @@
 
 <div class="viewport">
     <header>
-        <div class="pill">MODEL: <span id="active-model">AIVM-THETA</span> | <span id="load-num">0%</span> <span id="status-txt">IDLE</span></div>
-        <div class="header-right"><button id="wallet-btn" class="wallet-pill" onclick="connectWallet()">CONNECT WALLET</button></div>
+        <div class="pill">
+            <span style="color:var(--text-dim)">MODEL:</span> 
+            <span id="active-model">AIVM-THETA</span> 
+            <span style="color:var(--text-dim)">|</span> 
+            <span id="load-num">0%</span> 
+            <span id="status-txt">IDLE</span>
+        </div>
+        <div class="header-right">
+            <button id="wallet-btn" class="wallet-pill" onclick="connectWallet()">CONNECT WALLET</button>
+        </div>
     </header>
 
     <div id="gallery-view" class="view-pane active">
@@ -61,19 +70,21 @@
     <div id="id-view" class="view-pane">
         <div class="card">
             <h2>ZK-SBT IDENTITY CARD</h2>
-            <pre id="id-json" onclick="saveJSON()">// Awaiting Auth</pre>
+            <p style="font-size:0.65rem; color:var(--text-dim); margin-bottom:10px;">Click code to download JSON. Click QR to download Image.</p>
+            <pre id="id-json" onclick="saveJSON()">// Identity Packet Offline: Handshake Required</pre>
             <div id="qr-target" onclick="saveQR()" style="margin-top:20px; background:white; padding:10px; display:none; border-radius:4px; cursor:pointer;"></div>
+            <p id="qr-hint" style="display:none; font-size:0.65rem; color:var(--text-dim); margin-top:8px;">Handshake Active: Click QR to Download .png</p>
         </div>
     </div>
 
     <div id="admin-view" class="view-pane">
         <div class="card">
-            <h2>ADMIN OPS</h2>
-            <input type="text" class="panel-input" id="admin-addr" placeholder="Target Address">
+            <h2>ADMIN PANEL</h2>
+            <input type="text" class="panel-input" id="admin-addr" placeholder="Target Operator Address (0x...)">
             <button class="action-btn" onclick="runAdmin('query')">QUERY STATUS</button>
             <div style="display:flex; gap:10px; margin-top:10px;">
-                <button class="action-btn alt" onclick="runAdmin('verify')" style="flex:1">VERIFY</button>
-                <button class="action-btn alt" onclick="runAdmin('revoke')" style="flex:1; border-color:#ff4444; color:#ff4444;">REVOKE</button>
+                <button class="action-btn alt" onclick="runAdmin('verify')" style="flex:1">VERIFY USER</button>
+                <button class="action-btn alt" onclick="runAdmin('revoke')" style="flex:1; border-color:#ff4444; color:#ff4444;">REVOKE USER</button>
             </div>
         </div>
     </div>
@@ -84,7 +95,7 @@
             <div style="background:#000; padding:25px; border-radius:8px; margin-bottom:20px; border:1px solid var(--border); text-align:center;">
                 <div id="revenue-val" style="font-size:2rem; color:var(--accent); font-weight:900;">0.00 tLCAI</div>
             </div>
-            <button class="action-btn" onclick="runOwner()">WITHDRAW ALL</button>
+            <button class="action-btn" onclick="runOwner()">WITHDRAW ALL FUNDS</button>
         </div>
     </div>
 
@@ -156,7 +167,7 @@ async function updateWalletPill() {
 
 function updateMenu() {
     const menu = document.getElementById('side-menu');
-    let html = `<button class="nav-link" onclick="showView('gallery-view', this); initGallery();">NETWORK GALLERY</button>`;
+    let html = `<button class="nav-link active" onclick="showView('gallery-view', this); initGallery();">NETWORK GALLERY</button>`;
     if(user) {
         html += `<button class="nav-link" onclick="showView('id-view', this)">ZK IDENTITY</button>`;
         if(roles.isOwner) {
@@ -175,38 +186,67 @@ function updateIdentity() {
         "identity": {
             "operator_id": `LCAI-${user.slice(2, 8).toUpperCase()}`,
             "role": roles.isOwner ? "SYSTEM_OWNER" : (roles.isVerified ? "VERIFIED_OPERATOR" : "GUEST_NODE"),
+            "access_tier": roles.isOwner ? "OMEGA" : (roles.isVerified ? "STANDARD" : "LIMITED"),
+            "auth_method": "ZK_SBT_HANDSHAKE",
             "timestamp": Math.floor(Date.now() / 1000)
         }
     };
     document.getElementById('id-json').innerText = JSON.stringify(idData, null, 4);
     document.getElementById('qr-target').style.display = "inline-block";
+    document.getElementById('qr-hint').style.display = "block";
     document.getElementById('qr-target').innerHTML = "";
     new QRCode(document.getElementById("qr-target"), { text: JSON.stringify(idData), width: 140, height: 140 });
+}
+
+async function runAdmin(type) {
+    const target = document.getElementById('admin-addr').value;
+    if(!target) return log("INPUT REQUIRED", "error");
+    try {
+        if(type === 'query') {
+            const res = await contract.manualVerified(target);
+            log(`USER ${target.slice(0,6)}: ${res ? "VERIFIED" : "UNVERIFIED"}`);
+        } else {
+            const tx = await contract.setVerification(target, type === 'verify', { gasLimit: 200000 });
+            await tx.wait(); log("PERMISSION SYNCED", "success");
+            if(target.toLowerCase() === user.toLowerCase()) { roles.isVerified = (type === 'verify'); updateMenu(); }
+        }
+    } catch (e) { log("ADMIN ACTION REVERTED", "error"); }
+}
+
+async function runOwner() {
+    try {
+        log("INITIATING WITHDRAWAL...");
+        const tx = await contract.withdraw({ gasLimit: 200000 });
+        await tx.wait(); log("VAULT WITHDRAWN", "success");
+        refreshBalance();
+        updateWalletPill();
+    } catch (e) { log("WITHDRAWAL FAILED", "error"); }
 }
 
 async function generateArt() {
     const prompt = document.getElementById('art-prompt').value;
     const sel = document.getElementById('model-select');
     const modelHash = sel.options[sel.selectedIndex].getAttribute('data-hash');
-    const fee = ethers.parseEther("0.1"); // Attempting 0.1 LCAI fee based on contract activity
+    const fee = ethers.parseEther("0.1");
 
     if(!prompt) return log("PROMPT EMPTY", "error");
 
     try {
         document.getElementById('status-txt').innerText = "SIMULATING...";
-        // PRE-FLIGHT SIMULATION
+        // PRE-FLIGHT CHECK
         await contract.generateArt.staticCall(prompt, modelHash, { value: fee });
         
         log("SIMULATION SUCCESS. BROADCASTING...");
         const tx = await contract.generateArt(prompt, modelHash, { value: fee, gasLimit: 2000000 });
         await tx.wait();
         log("INFERENCE SUCCESSFUL", "success");
+        document.getElementById('status-txt').innerText = "IDLE";
         initGallery();
+        updateWalletPill();
     } catch (e) {
-        console.error(e);
-        let errorReason = "REVERT: INVALID_FEE_OR_MODEL";
-        if (e.message.includes("insufficient funds")) errorReason = "INSUFFICIENT LCAI";
-        log(errorReason, "error");
+        let errorMsg = "REVERT: INVALID_FEE_OR_MODEL";
+        if (e.message.includes("insufficient funds")) errorMsg = "INSUFFICIENT LCAI";
+        log(errorMsg, "error");
         document.getElementById('status-txt').innerText = "ERROR";
     }
 }
@@ -224,14 +264,6 @@ async function initGallery() {
     } catch (e) { grid.innerHTML = "OFFLINE"; }
 }
 
-async function runOwner() {
-    try {
-        const tx = await contract.withdraw({ gasLimit: 500000 });
-        await tx.wait(); log("VAULT WITHDRAWN", "success");
-        refreshBalance();
-    } catch (e) { log("WITHDRAWAL REVERTED", "error"); }
-}
-
 async function refreshBalance() {
     if(!provider) return;
     const bal = await provider.getBalance(CONFIG.addr);
@@ -246,6 +278,7 @@ function showView(id, btn) {
 }
 
 function saveJSON() {
+    if(!user) return;
     const data = document.getElementById('id-json').innerText;
     const b = new Blob([data], {type:"application/json"});
     const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download=`LCAI_ID_${user.slice(0,6)}.json`; a.click();
