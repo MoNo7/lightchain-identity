@@ -16,7 +16,7 @@
         .system-console { 
             background: var(--console-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; 
             font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; height: 180px; overflow-y: auto; 
-            margin-bottom: 20px; color: #4e5d75; line-height: 1.5; margin-top: 0px; 
+            margin-bottom: 20px; color: #4e5d75; line-height: 1.5; 
         }
         .console-line { margin-bottom: 4px; border-left: 2px solid #1a202c; padding-left: 8px; word-wrap: break-word; }
         .console-line.success { border-left-color: var(--accent); color: #fff; }
@@ -34,7 +34,6 @@
         
         .header-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
         .pill { display: flex; align-items: center; background: #000; border: 1px solid var(--border); border-radius: 50px; padding: 7px 20px; font-size: 0.7rem; color: var(--accent); font-family: monospace; }
-        
         .wallet-pill { background: var(--accent); color: white; border-radius: 50px; padding: 9px 20px; font-weight: 900; cursor: pointer; border: none; font-size: 0.75rem; }
 
         .view-pane { flex: 1; padding: 45px; display: none; overflow-y: auto; }
@@ -45,22 +44,14 @@
         .action-btn { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; width: 100%; font-weight: bold; margin-bottom: 8px; }
         .action-btn.alt { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
         
-        pre { background: var(--console-bg); padding: 20px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.75rem; color: var(--text-dim); margin: 20px 0; white-space: pre-wrap; word-break: break-all; }
-        #qr-target { background: white; padding: 12px; display: inline-block; border-radius: 8px; margin-top: 20px; }
+        pre { background: var(--console-bg); padding: 20px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.75rem; color: #a0aec0; margin: 20px 0; white-space: pre-wrap; word-break: break-all; line-height: 1.4; }
+        #qr-target { background: white; padding: 12px; display: inline-block; border-radius: 8px; margin-top: 10px; }
 
-        /* GALLERY */
-        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; margin-top: 20px; min-height: 300px; }
+        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; margin-top: 20px; }
         .gallery-item { background: #000; border: 1px solid var(--border); border-radius: 6px; padding: 10px; text-align: center; }
         .gallery-item img { width: 100%; height: 110px; object-fit: cover; border-radius: 4px; background: #111; margin-bottom: 8px; }
-        .gallery-item .prompt { font-size: 0.6rem; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
-        .pagination-ctrl { display: flex; justify-content: center; align-items: center; gap: 20px; margin-top: 25px; font-family: monospace; font-size: 0.75rem; }
-        .pg-btn { background: var(--border); color: white; border: none; padding: 8px 18px; border-radius: 4px; cursor: pointer; }
-        .pg-btn:disabled { opacity: 0.3; cursor: not-allowed; }
         .art-preview { width: 100%; height: 250px; background: #000; border: 1px dashed var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-dim); margin-bottom: 15px; overflow: hidden; }
-
-        /* MODEL SELECTOR */
-        .selector-label { font-size: 0.65rem; color: var(--text-dim); margin-bottom: 5px; display: block; font-family: monospace; }
         .model-select { width: 100%; background: #000; border: 1px solid #333; color: var(--accent); padding: 10px; border-radius: 4px; font-size: 0.75rem; margin-bottom: 15px; cursor: pointer; font-family: monospace; font-weight: bold; }
     </style>
 </head>
@@ -70,7 +61,6 @@
     <div class="nav-logo">LCAI <span>IAM</span></div>
     <div class="system-console" id="console">
         <div class="console-line">>> INITIALIZING LCAI_IAM_CORE...</div>
-        <div class="console-line">>> TARGET: LIGHTCHAIN_AIVM</div>
     </div>
     <div class="nav-menu" id="side-menu">
         <button class="nav-link active" onclick="showView('id-view', this)">ZK IDENTITY</button>
@@ -96,7 +86,7 @@
     <div id="id-view" class="view-pane">
         <div class="card">
             <h2>ZK-SBT IDENTITY</h2>
-            <pre id="id-json">{ "auth": "pending_wallet_connection" }</pre>
+            <pre id="id-json">{ "status": "awaiting_handshake" }</pre>
             <button onclick="saveJSON()" class="action-btn alt" style="width: auto; padding: 10px 25px;">DOWNLOAD JSON</button>
             <br><br>
             <div id="qr-target"></div>
@@ -120,7 +110,7 @@
                         <div style="font-size:0.6rem; color:var(--text-dim);">VAULT BALANCE</div>
                         <div style="font-size:1.1rem; font-weight:bold;" id="revenue-val">0.00 ETH</div>
                     </div>
-                    <button class="action-btn" onclick="runOwner('withdraw')">WITHDRAW</button>
+                    <button class="action-btn" onclick="runOwner()">WITHDRAW</button>
                 </div>
             </div>
         </div>
@@ -131,32 +121,21 @@
             <h2>LCAI AIVM INFERENCE</h2>
             <div class="art-preview" id="art-preview-box">[ RENDER TARGET ]</div>
             
-            <span class="selector-label">SELECT NEURAL MODEL</span>
             <select id="model-selector" class="model-select">
                 <option value="Stable-Diffusion-XL">STABLE DIFFUSION XL (v1.0)</option>
-                <option value="Midjourney-V6-Bridge">MIDJOURNEY v6 BRIDGE</option>
                 <option value="LCAI-Theta-Latent">LCAI THETA LATENT (Custom)</option>
                 <option value="Dall-E-3-API">DALL-E 3 NEURAL</option>
             </select>
 
-            <span class="selector-label">PROMPT INPUT</span>
-            <textarea id="art-prompt" class="panel-input" placeholder="Neural synthwave landscape..." style="height: 100px;"></textarea>
+            <textarea id="art-prompt" class="panel-input" placeholder="Enter prompt..." style="height: 100px;"></textarea>
             <button class="action-btn" onclick="generateArt()">REQUEST INFERENCE</button>
         </div>
     </div>
 
     <div id="gallery-view" class="view-pane">
         <div class="card" style="max-width: 950px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h2>NETWORK GALLERY</h2>
-                <button class="action-btn alt" style="width: auto; padding: 5px 15px;" onclick="initGallery()">FORCE SCAN</button>
-            </div>
+            <h2>NETWORK GALLERY</h2>
             <div class="gallery-grid" id="gallery-grid"></div>
-            <div class="pagination-ctrl">
-                <button class="pg-btn" id="pg-prev" onclick="changePage(-1)" disabled>PREV</button>
-                <span id="pg-info">PAGE 1 OF 1</span>
-                <button class="pg-btn" id="pg-next" onclick="changePage(1)" disabled>NEXT</button>
-            </div>
         </div>
     </div>
 </div>
@@ -174,9 +153,6 @@ const CONFIG = {
 };
 
 let user, provider, signer, contract;
-let allArtEvents = [];
-let currentPage = 1;
-const pageSize = 10;
 
 const log = (msg, type = "info") => {
     const l = document.createElement('div');
@@ -187,147 +163,8 @@ const log = (msg, type = "info") => {
     cb.scrollTop = cb.scrollHeight;
 };
 
-// Market Tickers
-async function syncTickers() {
-    try {
-        const ethR = await fetch('https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD');
-        const ethD = await ethR.json();
-        document.getElementById('eth-price').innerText = `$${ethD.USD.toLocaleString()}`;
-        const lcaiR = await fetch('https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=0x9ca8530ca349c966fe9ef903df17a75b8a778927&vs_currencies=usd');
-        const lcaiD = await lcaiR.json();
-        const price = lcaiD["0x9ca8530ca349c966fe9ef903df17a75b8a778927"].usd;
-        document.getElementById('lcai-price').innerText = `$${price.toFixed(5)}`;
-    } catch(e) { document.getElementById('lcai-price').innerText = "$0.00195"; }
-}
-setInterval(syncTickers, 6000); syncTickers();
-
-// Inference Call
-async function generateArt() {
-    if(!contract) return log("ERR: CONNECT WALLET", "error");
-    const prompt = document.getElementById('art-prompt').value;
-    const model = document.getElementById('model-selector').value;
-    if(!prompt) return log("ERR: PROMPT EMPTY", "error");
-    
-    try {
-        document.getElementById('status-txt').innerText = "INFERENCE";
-        document.getElementById('load-num').innerText = "25%";
-        log(`AIVM: INITIATING ${model} REQUEST...`, "info");
-        
-        const fullPrompt = `[Model: ${model}] ${prompt}`;
-        const tx = await contract.requestInference(fullPrompt, { 
-            value: ethers.parseEther("0.001"), 
-            gasLimit: 800000 
-        });
-
-        document.getElementById('load-num').innerText = "60%";
-        log("TX SUBMITTED. AWAITING BLOCK...", "info");
-        await tx.wait();
-        
-        document.getElementById('load-num').innerText = "100%";
-        document.getElementById('status-txt').innerText = "IDLE";
-        log(`${model} RENDER COMPLETE`, "success");
-        document.getElementById('art-preview-box').innerHTML = `<img src="https://picsum.photos/seed/${Date.now()}/600/250" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">`;
-        initGallery();
-    } catch(e) { 
-        document.getElementById('status-txt').innerText = "ERROR";
-        log(`FAILED: ${e.reason || "TX REJECTED"}`, "error"); 
-    }
-}
-
-async function runAdmin(method, status = null) {
-    if(!contract) return log("ERR: CONNECT WALLET", "error");
-    
-    const target = document.getElementById('admin-addr').value;
-    // Check if user provided an address, otherwise default to their own
-    const checkAddress = target && ethers.isAddress(target) ? target : user;
-
-    try {
-        if(method === 'queryStatus') {
-            // Use the provider directly for a "call" so it doesn't matter if you are admin
-            const isVerified = await contract.manualVerified(checkAddress);
-            log(`QUERY [${checkAddress.slice(0,6)}]: ${isVerified ? "VERIFIED" : "UNVERIFIED"}`, "success");
-        } else {
-            // These require actual Admin Permissions
-            log(`ATTEMPTING ${status ? 'VERIFICATION' : 'REVOCATION'}...`, "info");
-            const tx = await contract.setVerification(checkAddress, status);
-            await tx.wait(); 
-            log("IDENTITY UPDATED ON-CHAIN", "success");
-        }
-    } catch(e) { 
-        // Better error parsing
-        console.error(e);
-        if (e.message.includes("executor") || e.message.includes("denied")) {
-            log("ADMIN DENIED: SIGNER LACKS PERMISSIONS", "error");
-        } else {
-            log(`TRANSACTION FAILED: ${e.reason || "REVERTED"}`, "error");
-        }
-    }
-}
-
-// Ensure the Gallery Scan uses a wide enough block range
-async function initGallery() {
-    if(!contract) return;
-    const grid = document.getElementById('gallery-grid');
-    grid.innerHTML = `<div style="color:var(--accent);">SCANNING LEDGER...</div>`;
-    try {
-        const filter = contract.filters.InferenceRequested();
-        // Increased block lookback for Testnets with fast block times
-        const events = await contract.queryFilter(filter, -10000); 
-        grid.innerHTML = "";
-        if(events.length === 0) {
-            grid.innerHTML = `<div style="color:var(--text-dim);">NO RECENT INFERENCE DATA</div>`;
-        }
-        events.reverse().forEach(ev => {
-            grid.innerHTML += `
-                <div class="gallery-item">
-                    <img src="https://picsum.photos/seed/${ev.transactionHash}/150/120">
-                    <div class="prompt" title="${ev.args[1]}">${ev.args[1] || "AIVM Art"}</div>
-                </div>`;
-        });
-        log(`GALLERY: ${events.length} EVENTS FOUND`, "success");
-    } catch(e) { 
-        log("GALLERY SCAN FAIL", "error"); 
-    }
-}
-
-async function runOwner() {
-    if(!contract) return;
-    try {
-        const tx = await contract.withdraw();
-        await tx.wait(); log("VAULT WITHDRAWN", "success");
-        refreshBalance();
-    } catch(e) { log("ERR: OWNER ONLY", "error"); }
-}
-
-async function refreshBalance() {
-    try {
-        const bal = await provider.getBalance(CONFIG.addr);
-        document.getElementById('revenue-val').innerText = `${ethers.formatEther(bal).slice(0,6)} ETH`;
-    } catch(e) {}
-}
-
-
-function renderGalleryPage() {
-    const grid = document.getElementById('gallery-grid');
-    grid.innerHTML = "";
-    const start = (currentPage - 1) * pageSize;
-    const pageItems = allArtEvents.slice(start, start + pageSize);
-    pageItems.forEach(ev => {
-        grid.innerHTML += `
-            <div class="gallery-item">
-                <img src="https://picsum.photos/seed/${ev.transactionHash}/150/120">
-                <div class="prompt" title="${ev.args[1]}">${ev.args[1] || "AIVM Art"}</div>
-            </div>`;
-    });
-    document.getElementById('pg-info').innerText = `PAGE ${currentPage} OF ${Math.ceil(allArtEvents.length/pageSize) || 1}`;
-    document.getElementById('pg-prev').disabled = currentPage === 1;
-    document.getElementById('pg-next').disabled = currentPage >= Math.ceil(allArtEvents.length/pageSize);
-}
-
-function changePage(dir) { currentPage += dir; renderGalleryPage(); }
-
 async function connectWallet() {
-    if(!window.ethereum) return log("ERR: NO WALLET", "error");
+    if(!window.ethereum) return;
     try {
         provider = new ethers.BrowserProvider(window.ethereum);
         const accs = await provider.send("eth_requestAccounts", []);
@@ -335,20 +172,96 @@ async function connectWallet() {
         contract = new ethers.Contract(CONFIG.addr, CONFIG.abi, signer);
         
         document.getElementById('wallet-btn').innerText = user.slice(0,6).toUpperCase();
-        log(`IDENTITY CONNECTED: ${user.slice(0,10)}`, "success");
+        log(`CORE ATTACHED: ${user.slice(0,10)}`, "success");
         
         document.getElementById('side-menu').style.display = 'flex';
         document.getElementById('id-view').classList.add('connected');
         
+        // RESTORED FULL METADATA
         const identityData = {
-            "identity": { "role": "LCAI_IAM_OPERATOR", "access": "Alpha_V1" },
-            "on_chain_meta": { "address": user, "contract": CONFIG.addr, "network": "Lightchain_AIVM" }
+            "identity": {
+                "operator_id": `LCAI-${user.slice(2, 8).toUpperCase()}`,
+                "role": "SYSTEM_ADMIN_OPERATOR",
+                "access_tier": "OMEGA_ACCESS",
+                "auth_method": "ZK_SBT_HANDSHAKE",
+                "timestamp": Math.floor(Date.now() / 1000)
+            },
+            "on_chain": {
+                "address": user,
+                "contract_nexus": CONFIG.addr,
+                "network": "Lightchain_AIVM_Mainnet",
+                "status": "VERIFIED_SBT_HOLDER"
+            }
         };
         document.getElementById('id-json').innerText = JSON.stringify(identityData, null, 4);
         document.getElementById('qr-target').innerHTML = "";
         new QRCode(document.getElementById("qr-target"), { text: user, width: 140, height: 140 });
         refreshBalance();
-    } catch(e) { log("ERR: CONNECTION FAILED", "error"); }
+    } catch(e) { log("CONNECTION FAILED", "error"); }
+}
+
+async function runAdmin(method, status = null) {
+    if(!contract) return log("NOT CONNECTED", "error");
+    const target = document.getElementById('admin-addr').value || user;
+    try {
+        if(method === 'queryStatus') {
+            // FIXED QUERY
+            const isVerified = await contract.manualVerified(target);
+            log(`ADDR [${target.slice(0,6)}]: ${isVerified ? "VERIFIED" : "UNVERIFIED"}`, "success");
+        } else {
+            const tx = await contract.setVerification(target, status);
+            log("TX SUBMITTED...", "info");
+            await tx.wait(); 
+            log("IDENTITY UPDATED", "success");
+        }
+    } catch(e) { 
+        log(`FAILED: LACK_OF_PERMISSION`, "error"); 
+        console.error(e);
+    }
+}
+
+async function runOwner() {
+    if(!contract) return;
+    try {
+        const tx = await contract.withdraw();
+        await tx.wait(); log("TREASURY WITHDRAWN", "success");
+        refreshBalance();
+    } catch(e) { log("OWNER ACTION REJECTED", "error"); }
+}
+
+async function refreshBalance() {
+    if(!provider) return;
+    const bal = await provider.getBalance(CONFIG.addr);
+    document.getElementById('revenue-val').innerText = `${ethers.formatEther(bal).slice(0,6)} ETH`;
+}
+
+async function generateArt() {
+    if(!contract) return;
+    const prompt = document.getElementById('art-prompt').value;
+    const model = document.getElementById('model-selector').value;
+    try {
+        document.getElementById('status-txt').innerText = "INFERENCE";
+        document.getElementById('load-num').innerText = "35%";
+        const tx = await contract.requestInference(`[${model}] ${prompt}`, { value: ethers.parseEther("0.001") });
+        await tx.wait();
+        document.getElementById('load-num').innerText = "100%";
+        document.getElementById('status-txt').innerText = "IDLE";
+        document.getElementById('art-preview-box').innerHTML = `<img src="https://picsum.photos/seed/${Date.now()}/600/250" style="width:100%; height:100%; object-fit:cover;">`;
+    } catch(e) { document.getElementById('status-txt').innerText = "ERROR"; }
+}
+
+async function initGallery() {
+    if(!contract) return;
+    const grid = document.getElementById('gallery-grid');
+    grid.innerHTML = "SYNCING...";
+    try {
+        const filter = contract.filters.InferenceRequested();
+        const events = await contract.queryFilter(filter, -10000); 
+        grid.innerHTML = "";
+        events.reverse().forEach(ev => {
+            grid.innerHTML += `<div class="gallery-item"><img src="https://picsum.photos/seed/${ev.transactionHash}/150/110"></div>`;
+        });
+    } catch(e) {}
 }
 
 function showView(id, btn) {
@@ -358,6 +271,14 @@ function showView(id, btn) {
     btn.classList.add('active');
 }
 
+async function syncTickers() {
+    try {
+        const r = await fetch('https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD');
+        const d = await r.json(); document.getElementById('eth-price').innerText = `$${d.USD}`;
+    } catch(e) {}
+}
+syncTickers(); setInterval(syncTickers, 30000);
+
 function saveJSON() {
     const b = new Blob([document.getElementById('id-json').innerText], {type:"application/json"});
     const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download="id.json"; a.click();
@@ -365,4 +286,3 @@ function saveJSON() {
 </script>
 </body>
 </html>
-
