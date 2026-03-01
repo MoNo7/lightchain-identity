@@ -171,33 +171,41 @@ async function connectWallet() {
         user = accs[0]; signer = await provider.getSigner();
         contract = new ethers.Contract(CONFIG.addr, CONFIG.abi, signer);
         
+        // 1. Check actual on-chain status for the Identity panel
+        const isActuallyVerified = await contract.manualVerified(user);
+        
+        // 2. Update UI
         document.getElementById('wallet-btn').innerText = user.slice(0,6).toUpperCase();
         log(`CORE ATTACHED: ${user.slice(0,10)}`, "success");
         
         document.getElementById('side-menu').style.display = 'flex';
         document.getElementById('id-view').classList.add('connected');
         
-        // RESTORED FULL METADATA
+        // 3. Dynamic Metadata (Reflects true state)
         const identityData = {
             "identity": {
                 "operator_id": `LCAI-${user.slice(2, 8).toUpperCase()}`,
-                "role": "SYSTEM_ADMIN_OPERATOR",
-                "access_tier": "OMEGA_ACCESS",
+                "role": isActuallyVerified ? "VERIFIED_ADMIN_OPERATOR" : "UNVERIFIED_GUEST",
+                "access_tier": isActuallyVerified ? "OMEGA_ACCESS" : "RESTRICTED_ACCESS",
                 "auth_method": "ZK_SBT_HANDSHAKE",
                 "timestamp": Math.floor(Date.now() / 1000)
             },
             "on_chain": {
                 "address": user,
                 "contract_nexus": CONFIG.addr,
-                "network": "Lightchain_AIVM_Mainnet",
-                "status": "VERIFIED_SBT_HOLDER"
+                "status": isActuallyVerified ? "VALIDATED_ON_CHAIN" : "PENDING_VERIFICATION"
             }
         };
+        
         document.getElementById('id-json').innerText = JSON.stringify(identityData, null, 4);
         document.getElementById('qr-target').innerHTML = "";
         new QRCode(document.getElementById("qr-target"), { text: user, width: 140, height: 140 });
         refreshBalance();
-    } catch(e) { log("CONNECTION FAILED", "error"); }
+        
+    } catch(e) { 
+        log("CONNECTION FAILED", "error"); 
+        console.error(e);
+    }
 }
 
 async function runAdmin(method, status = null) {
@@ -286,3 +294,4 @@ function saveJSON() {
 </script>
 </body>
 </html>
+
