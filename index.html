@@ -101,8 +101,12 @@
         </div>
     </div>
     <script>
-        // Synchronized with Native LCAI AIVM V2
-        const CONFIG = { SBT_ADDR: "0xd71462F0002Ee9373fCe05B568583Ed13e75f600", AIVM_ADDR: "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB" };
+        // Updated to use your latest Deployed Contract Addresses
+        const CONFIG = { 
+            SBT_ADDR: "0xd71462F0002Ee9373fCe05B568583Ed13e75f600", 
+            AIVM_ADDR: "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB" 
+        };
+
         const ABI = [
             "function hasSBT(address) view returns (bool)", 
             "function isAdmin(address) view returns (bool)", 
@@ -112,25 +116,34 @@
             "function withdraw() external", 
             "event ArtGenerated(address indexed,string,bytes32,uint256)" 
         ];
-        
+
         let provider, signer, userAddr, sbtContract, studioContract;
         const sbtSvg = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="45" fill="none" stroke="#5865f2" stroke-width="5"/><path d="M30 50L45 65L70 35" stroke="#00ff80" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
         function log(m, e) { const out = document.getElementById('console-output'); const div = document.createElement('div'); div.style.color = e ? "#ff4444" : "#7dd3fc"; div.innerText = `> ${m}`; out.appendChild(div); out.scrollTop = out.scrollHeight; }
-        async function updateVault() { if (!provider) return; const bal = await provider.getBalance(CONFIG.AIVM_ADDR); document.getElementById('revenue-display').innerText = `${parseFloat(ethers.formatEther(bal)).toFixed(2)} LCAI`; }
         
-async function connect() {
+        async function updateVault() { 
+            if (!provider) return; 
+            const bal = await provider.getBalance(CONFIG.AIVM_ADDR); 
+            document.getElementById('revenue-display').innerText = `${parseFloat(ethers.formatEther(bal)).toFixed(2)} LCAI`; 
+        }
+        
+        async function connect() {
             if (!window.ethereum) return log("MetaMask not found", true);
             try {
+                // Explicit version for ethers v6 connection
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                userAddr = accounts[0];
                 provider = new ethers.BrowserProvider(window.ethereum);
-                const accounts = await provider.send("eth_requestAccounts", []);
-                userAddr = accounts[0]; signer = await provider.getSigner();
+                signer = await provider.getSigner();
+
                 sbtContract = new ethers.Contract(CONFIG.SBT_ADDR, ABI, signer);
                 studioContract = new ethers.Contract(CONFIG.AIVM_ADDR, ABI, signer);
+
                 document.getElementById('address-display').innerText = `${userAddr.slice(0,6)}...${userAddr.slice(-4)}`;
                 const bal = await provider.getBalance(userAddr);
                 document.getElementById('balance-display').innerText = `${parseFloat(ethers.formatEther(bal)).toFixed(2)} LCAI`;
-                document.getElementById('connect-btn').innerText = "Sync Active";
+                document.getElementById('connect-btn').innerText = "Wallet Linked";
 
                 // Native LCAI AIVM V2 Event Listener
                 studioContract.on("ArtGenerated", (u, p, digest, fee) => { 
@@ -140,8 +153,14 @@ async function connect() {
                     renderArt(p); 
                 });
 
-                log(`Authenticated: ${userAddr}`); checkIdentity(); updateVault(); scanHistory(); 
-            } catch (err) { log("Connection failed.", true); }
+                log(`Authenticated: ${userAddr}`); 
+                checkIdentity(); 
+                updateVault(); 
+                scanHistory(); 
+            } catch (err) { 
+                log("Connection failed.", true); 
+                console.error(err);
+            }
         }
 
         async function scanHistory() {
@@ -156,56 +175,52 @@ async function connect() {
             } catch (e) { log("Native Scan Failed.", true); }
         }
 
-JavaScript
-// 1. Updated to use Native LCAI AIVM Gateways
-const GATEWAYS = [
-    "https://api.lightchain.ai/v1/aivm/render/",
-    "https://gateway.lightchain.ai/ipfs/"
-];
+        const GATEWAYS = [
+            "https://api.lightchain.ai/v1/aivm/render/",
+            "https://gateway.lightchain.ai/ipfs/"
+        ];
 
-// 2. Optimized Gallery for Native LCAI Proof-of-Inference
-function addToGallery(p, resultHash = null) {
-    const gallery = document.getElementById('art-gallery');
-    const item = document.createElement('div');
-    item.className = 'gallery-item';
-    
-    // Use the resultHash (IPFS) if available, otherwise fallback to live inference URL
-    const url = resultHash ? 
-        `${GATEWAYS[1]}${resultHash}` : 
-        `${GATEWAYS[0]}${encodeURIComponent(p)}?width=512&height=512&nologo=true&seed=${Math.floor(Math.random()*99999)}`;
-    
-    item.innerHTML = `
-        <div class="sync-status" style="height:150px; display:flex; align-items:center; justify-content:center; background:#000; font-size:0.6rem; color:var(--primary); animation:pulse 1s infinite">LCAI Syncing...</div>
-        <img src="${url}" class="gallery-img" style="display:none" 
-             onload="this.style.display='block'; this.previousElementSibling.style.display='none'; this.nextElementSibling.style.display='flex';"
-             onerror="this.src='https://image.pollinations.ai/prompt/${encodeURIComponent(p)}?width=512&height=512';">
-        <div class="gallery-controls" style="display:none">
-            <button class="btn-gallery" style="background:var(--primary);color:white" onclick="window.swapToMain('${url}')">View</button>
-            <button class="btn-gallery" style="background:var(--secondary);color:black" onclick="window.downloadImg('${url}')">DL</button>
-        </div>`;
-    gallery.appendChild(item);
-}
+        function addToGallery(p) {
+            const gallery = document.getElementById('art-gallery');
+            const item = document.createElement('div');
+            item.className = 'gallery-item';
+            const seed = Math.floor(Math.random()*99999);
+            const promptEncoded = encodeURIComponent(p);
+            const url = `${GATEWAYS[0]}${promptEncoded}?width=512&height=512&nologo=true&seed=${seed}`;
+            
+            item.innerHTML = `
+                <div class="sync-status" style="height:150px; display:flex; align-items:center; justify-content:center; background:#000; font-size:0.6rem; color:var(--primary); animation:pulse 1s infinite">Syncing...</div>
+                <img src="${url}" class="gallery-img" style="display:none" 
+                     onload="this.style.display='block'; this.previousElementSibling.style.display='none'; this.nextElementSibling.style.display='flex';"
+                     onerror="this.src='https://image.pollinations.ai/prompt/${promptEncoded}?width=512&height=512&nologo=true';">
+                <div class="gallery-controls" style="display:none">
+                    <button class="btn-gallery" style="background:var(--primary);color:white" onclick="window.swapToMain('${url}')">View</button>
+                    <button class="btn-gallery" style="background:var(--secondary);color:black" onclick="window.downloadImg('${url}')">DL</button>
+                </div>`;
+            gallery.appendChild(item);
+        }
 
-// 3. Robust Native Render with State Handling
-function renderArt(p) {
-    const out = document.getElementById('art-output');
-    out.innerHTML = `<div id="mint-status" class="mint-overlay" style="display:flex"><div class="mint-spinner"></div>Status: AIVM Manifesting...</div><div style="color:var(--primary); font-weight:bold; animation:pulse 1.5s infinite">LCAI Native Inference in Progress...</div>`;
-    
-    const url = `${GATEWAYS[0]}${encodeURIComponent(p)}?width=1024&height=1024&nologo=true&seed=${Date.now()}`;
-    const img = new Image();
-    img.src = url;
-
-    img.onload = () => {
-        out.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:contain;">`;
-        addToGallery(p);
-        log("LCAI AIVM manifest complete.");
-    };
-
-    img.onerror = () => {
-        log("Native Node Latency. Retrying LCAI Gateway...", false);
-        setTimeout(() => renderArt(p), 5000);
-    };
-}
+        function renderArt(p) {
+            const out = document.getElementById('art-output');
+            out.innerHTML = `<div id="mint-status" class="mint-overlay" style="display:flex"><div class="mint-spinner"></div>Status: Manifesting Pixels...</div><div style="color:var(--primary); font-weight:bold; animation:pulse 1.5s infinite">AIVM Inference in Progress...</div>`;
+            
+            const promptEncoded = encodeURIComponent(p);
+            const url = `${GATEWAYS[0]}${promptEncoded}?width=1024&height=1024&nologo=true&seed=${Date.now()}`;
+            
+            const img = new Image();
+            img.src = url;
+            img.onload = () => {
+                out.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:contain;">`;
+                addToGallery(p);
+                log("AIVM manifest complete.");
+            };
+            img.onerror = () => {
+                log("Primary Node Busy. Switching to Mirror...", false);
+                const fallbackUrl = `https://image.pollinations.ai/prompt/${promptEncoded}?width=1024&height=1024&nologo=true&seed=${Date.now()}`;
+                out.innerHTML = `<img src="${fallbackUrl}" style="width:100%; height:100%; object-fit:contain;">`;
+                addToGallery(p);
+            };
+        }
 
         async function checkIdentity() {
             try {
@@ -224,18 +239,25 @@ function renderArt(p) {
         
         document.getElementById('admin-query').onclick = async () => { 
             const a = document.getElementById('admin-user-addr').value; 
-            if (!ethers.isAddress(a)) return; 
+            if (!ethers.isAddress(a)) return log("Invalid Address", true); 
             log(`Querying: SBT=${await sbtContract.hasSBT(a)} | Admin=${await sbtContract.isAdmin(a)}`); 
         };
         
         document.getElementById('admin-verify').onclick = async () => { 
-            try { await (await studioContract.setVerification(document.getElementById('admin-user-addr').value, true)).wait(); log("Verified!"); } 
-            catch (e) { log("Denied", true); } 
+            try { 
+                const tx = await studioContract.setVerification(document.getElementById('admin-user-addr').value, true); 
+                await tx.wait();
+                log("Verified!"); 
+            } catch (e) { log("Denied", true); } 
         };
         
         document.getElementById('withdraw-btn').onclick = async () => { 
-            try { await (await studioContract.withdraw()).wait(); log("Withdrawn!"); updateVault(); } 
-            catch (e) { log("Denied", true); } 
+            try { 
+                const tx = await studioContract.withdraw(); 
+                await tx.wait();
+                log("Withdrawn!"); 
+                updateVault(); 
+            } catch (e) { log("Denied", true); } 
         };
         
         document.getElementById('generate-btn').onclick = async () => {
@@ -253,10 +275,9 @@ function renderArt(p) {
                 document.getElementById('mint-status').style.display = 'none'; 
             }
         };
+
         document.getElementById('connect-btn').onclick = connect;
         log("System Online. Awaiting Handshake...");
     </script>
 </body>
 </html>
-
-
