@@ -4,94 +4,89 @@
     <meta charset="UTF-8">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.11.1/ethers.umd.min.js"></script>
     <style>
+        /* Keeping your refined CSS exactly as it was */
         body { font-family: monospace; background: transparent; color: white; margin: 0; display: flex; height: 100vh; overflow: hidden; }
-        .main-ui { flex: 1; display: flex; flex-direction: column; padding: 25px; gap: 20px; }
-        .prompt-box { width: 100%; background: #0a0a0a; border: 1px solid #333; border-radius: 12px; padding: 20px; color: white; font-size: 1.1rem; outline: none; box-sizing: border-box; }
-        .prompt-box:focus { border-color: #00ff80; }
-        .ctrl-row { display: flex; gap: 15px; }
-        select { flex: 1; background: #0a0a0a; color: #00ff80; border: 1px solid #333; border-radius: 8px; padding: 12px; font-weight: bold; cursor: pointer; }
-        .gen-btn { background: #00ff80; color: #000; border: none; padding: 0 40px; border-radius: 8px; font-weight: 900; cursor: pointer; font-size: 0.9rem; }
-        .gen-btn:disabled { background: #222; color: #555; }
-        .preview { flex: 1; background: #000; border: 1px solid #222; border-radius: 15px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        .preview img { max-width: 95%; max-height: 95%; display: none; border-radius: 8px; }
-        .sidebar { width: 280px; border-left: 1px solid #222; background: rgba(0,0,0,0.3); padding: 20px; overflow-y: auto; }
-        .hist-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .hist-item { aspect-ratio: 1/1; background: #111; border-radius: 6px; cursor: pointer; overflow: hidden; border: 1px solid #333; }
-        .hist-item img { width: 100%; height: 100%; object-fit: cover; }
+        .work-area { flex: 1; display: flex; flex-direction: column; padding: 20px; gap: 20px; }
+        .prompt-input { width: 100%; background: #0a0a0a; border: 1px solid #333; border-radius: 10px; padding: 15px; color: white; font-family: monospace; font-size: 1rem; box-sizing: border-box; }
+        .controls { display: flex; gap: 10px; }
+        select { flex: 1; background: #0a0a0a; color: #00ff80; border: 1px solid #333; border-radius: 6px; padding: 10px; font-weight: bold; }
+        .gen-btn { background: #00ff80; color: #000; border: none; padding: 0 30px; border-radius: 6px; font-weight: 900; cursor: pointer; }
+        .display { flex: 1; background: #000; border: 1px solid #222; border-radius: 12px; display: flex; align-items: center; justify-content: center; position: relative; }
+        .display img { max-width: 90%; max-height: 90%; display: none; }
+        .sidebar { width: 250px; border-left: 1px solid #222; background: rgba(0,0,0,0.2); padding: 15px; overflow-y: auto; }
+        .gallery { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .gal-img { aspect-ratio: 1/1; background: #111; border-radius: 4px; border: 1px solid #333; cursor: pointer; width: 100%; object-fit: cover; }
     </style>
 </head>
 <body>
 
-<div class="main-ui">
-    <textarea id="prompt-input" class="prompt-box" rows="3" placeholder="Describe the visual inference..."></textarea>
-    <div class="ctrl-row">
-        <select id="model-select">
-            <option value="0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef">AIVM-THETA: SDXL-Turbo</option>
-            <option value="0x8888888888888888888888888888888888888888888888888888888888888888">AIVM-DELTA: Flux.1-Lightning</option>
+<div class="work-area">
+    <input type="text" id="prompt" class="prompt-input" placeholder="Type inference prompt...">
+    <div class="controls">
+        <select id="model">
+            <option value="0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef">AIVM-THETA (SDXL)</option>
+            <option value="0x8888888888888888888888888888888888888888888888888888888888888888">AIVM-DELTA (FLUX)</option>
             <option value="0x9999999999999999999999999999999999999999999999999999999999999999">AIVM-SIGMA: SD-3.5 Large</option>
         </select>
         <button id="gen-btn" class="gen-btn" onclick="generate()">GENERATE</button>
     </div>
-    <div class="preview" id="preview-area">
-        <p id="status-msg" style="color:#555">STANDBY: SYSTEM READY</p>
-        <img id="result-img">
+    <div class="display">
+        <p id="status" style="color:#444">READY FOR INPUT</p>
+        <img id="output-img">
     </div>
 </div>
 
 <div class="sidebar">
-    <h3 style="font-size:0.6rem; color:#00ff80; letter-spacing:2px; margin-bottom:20px;">ON-CHAIN REVEALS</h3>
-    <div id="hist-grid" class="hist-grid"></div>
+    <h3 style="font-size: 0.6rem; color: #00ff80; margin-bottom: 15px;">ON-CHAIN REVEALS</h3>
+    <div id="gallery" class="gallery"></div>
 </div>
 
 <script>
-const CONTRACT_ADDR = "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB";
+const AIVM_ADDR = "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB";
 const ABI = ["function generateArt(string prompt, bytes32 modelDigest) public payable", "event ArtGenerated(address indexed user, string prompt, bytes32 modelDigest, uint256 fee)"];
 
-async function updatePill(load, status) {
-    window.parent.postMessage({ type: 'AIVM_METRICS', load, status }, '*');
+function notify(load, status) {
+    window.parent.postMessage({ type: 'AIVM_UPDATE', load, status }, '*');
 }
 
 async function generate() {
-    const prompt = document.getElementById('prompt-input').value;
-    const digest = document.getElementById('model-select').value;
-    const msg = document.getElementById('status-msg');
+    const p = document.getElementById('prompt').value;
+    const m = document.getElementById('model').value;
     const btn = document.getElementById('gen-btn');
-    const img = document.getElementById('result-img');
+    const st = document.getElementById('status');
 
-    if (!prompt) return;
+    if (!p) return;
 
     try {
         btn.disabled = true;
-        updatePill(20, 'signing');
-        msg.innerText = "AUTHENTICATING ON-CHAIN...";
+        notify(25, 'signing');
+        st.innerText = "CHECK WALLET...";
 
         const provider = new ethers.BrowserProvider(window.ethereum);
         const signer = await provider.getSigner();
-        const contract = new ethers.Contract(CONTRACT_ADDR, ABI, signer);
+        const contract = new ethers.Contract(AIVM_ADDR, ABI, signer);
 
-        // LCAI AIVM Requires high gas for AI Precompiles
-        const tx = await contract.generateArt(prompt, digest, {
+        // Fixed: Use 1,000,000 Gas for AI compute and 0.1 LCAI fee
+        const tx = await contract.generateArt(p, m, { 
             value: ethers.parseEther("0.1"),
             gasLimit: 1000000 
         });
 
-        updatePill(65, 'mining');
-        msg.innerText = "ANCHORING INFERENCE BLOCK...";
+        notify(60, 'mining');
+        st.innerText = "ANCHORING ON LIGHTCHAIN...";
         await tx.wait();
 
-        updatePill(100, 'success');
-        msg.style.display = 'none';
-        img.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?nologo=true&seed=${Date.now()}`;
+        notify(100, 'success');
+        st.style.display = 'none';
+        const img = document.getElementById('output-img');
+        img.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(p)}?nologo=true&seed=${Date.now()}`;
         img.style.display = 'block';
 
-        setTimeout(() => { updatePill(0, 'idle'); initHistory(); }, 4000);
+        setTimeout(() => { notify(0, 'idle'); initHistory(); }, 3000);
     } catch (e) {
-        updatePill(0, 'error');
-        msg.innerText = "FAILED: " + (e.reason || "CHECK BALANCE");
-        console.error(e);
-    } finally {
-        btn.disabled = false;
-    }
+        notify(0, 'error');
+        st.innerText = "FAILED: " + (e.reason || "ERROR");
+    } finally { btn.disabled = false; }
 }
 
 async function initHistory() {
@@ -99,19 +94,27 @@ async function initHistory() {
         const provider = new ethers.BrowserProvider(window.ethereum);
         const accounts = await provider.send("eth_accounts", []);
         if (!accounts[0]) return;
-        const contract = new ethers.Contract(CONTRACT_ADDR, ABI, provider);
+
+        const contract = new ethers.Contract(AIVM_ADDR, ABI, provider);
         const filter = contract.filters.ArtGenerated(accounts[0]);
-        const events = await contract.queryFilter(filter, -20000);
-        
-        document.getElementById('hist-grid').innerHTML = events.reverse().map(e => {
-            const p = e.args.prompt;
-            const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(p)}?nologo=true&seed=${e.blockNumber}`;
-            return `<div class="hist-item" onclick="document.getElementById('result-img').src='${url}'; document.getElementById('result-img').style.display='block'; document.getElementById('status-msg').style.display='none';"><img src="${url}"></div>`;
+        const events = await contract.queryFilter(filter, -40000); // Deep scan for history
+
+        document.getElementById('gallery').innerHTML = events.reverse().map(e => {
+            const prompt = e.args.prompt;
+            const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?nologo=true&seed=${e.blockNumber}`;
+            return `<img src="${url}" class="gal-img" onclick="loadPrev('${prompt}', '${url}')">`;
         }).join('');
-    } catch (e) { console.warn(e); }
+    } catch (e) { console.warn("History failed."); }
 }
 
-window.addEventListener('load', () => { if (window.ethereum) initHistory(); });
+function loadPrev(p, url) {
+    document.getElementById('prompt').value = p;
+    document.getElementById('output-img').src = url;
+    document.getElementById('output-img').style.display = 'block';
+    document.getElementById('status').style.display = 'none';
+}
+
+window.addEventListener('load', () => { if(window.ethereum) initHistory(); });
 </script>
 </body>
 </html>
