@@ -4,301 +4,95 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AIVM Control Center | Lightchain AI</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.11.1/ethers.umd.min.js"></script>
     <style>
-        :root { --primary: #5865f2; --secondary: #00ff80; --danger: #ff4444; --bg: #0f1016; --nav-bg: #13141f; --card: #1a1b26; --border: #2d2f45; --text: #ffffff; --text-dim: #94a3b8; }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
-        body { background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        header { height: 64px; background: var(--nav-bg); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; z-index: 100; }
-        .header-left-group { display: flex; align-items: center; gap: 20px; flex: 1; }
-        .brand-title { font-weight: 800; color: var(--primary); font-size: 1.1rem; }
-        .header-center-group { display: flex; align-items: center; gap: 20px; flex: 1; justify-content: center; }
-        .ticker-item { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; font-family: monospace; background: rgba(0,0,0,0.3); padding: 4px 12px; border-radius: 6px; border: 1px solid var(--border); }
-        .ticker-val { color: var(--secondary); }
-        .header-right { display: flex; align-items: center; gap: 16px; flex: 1; justify-content: flex-end; }
-        .wallet-pill { background: #1e293b; padding: 6px 14px; border-radius: 8px; font-family: monospace; border: 1px solid var(--border); font-size: 0.75rem; display: flex; align-items: center; gap: 10px; cursor: pointer; }
-        .balance-txt { color: var(--secondary); font-weight: 700; border-right: 1px solid var(--border); padding-right: 10px; }
-        .container { display: flex; flex: 1; overflow: hidden; }
-        .sidebar { width: 420px; background: var(--nav-bg); border-right: 1px solid var(--border); padding: 24px; display: flex; flex-direction: column; gap: 20px; }
-        .main-content { flex: 1; padding: 32px; overflow-y: auto; background: radial-gradient(circle at top right, #1a1b26 0%, #0f1016 100%); display: flex; flex-direction: column; }
-        .nav-menu { display: flex; flex-direction: column; gap: 8px; }
-        .nav-item { padding: 12px 16px; border-radius: 8px; color: var(--text-dim); text-decoration: none; font-size: 0.9rem; transition: 0.2s; cursor: pointer; display: flex; align-items: center; gap: 12px; border: 1px solid transparent; }
-        .nav-item:hover { background: #1e2030; color: white; }
-        .nav-item.active { background: rgba(88, 101, 242, 0.1); color: var(--primary); border-color: rgba(88, 101, 242, 0.3); font-weight: 600; }
-        .console { height: 280px; background: #000; border: 1px solid var(--border); border-radius: 8px; padding: 16px; font-family: monospace; font-size: 0.75rem; color: #7dd3fc; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
-        .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 24px; width: 100%; }
-        .card-title { font-size: 0.7rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase; margin-bottom: 20px; letter-spacing: 1px; display: flex; align-items: center; gap: 10px; }
-        .card-title::after { content: ""; flex: 1; height: 1px; background: var(--border); }
-        .compact-profile { max-width: 650px; }
-        .profile-grid { display: grid; grid-template-columns: 1fr 140px; gap: 24px; align-items: start; }
-        .qr-col { background: #fff; padding: 10px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
-        .qr-col:hover { transform: scale(1.03); }
-        .info-label { font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 4px; }
-        .info-value { font-family: monospace; font-size: 0.9rem; color: var(--secondary); word-wrap: break-word; overflow-wrap: break-word; }
-        .btn-pro { padding: 12px; border-radius: 6px; font-weight: 700; border: none; cursor: pointer; transition: 0.2s; }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-secondary { background: var(--secondary); color: black; }
-        .hidden { display: none !important; }
-        #view-art { flex: 1; width: 100%; height: 100%; display: flex; flex-direction: column; }
-        iframe { flex: 1; border: none; border-radius: 12px; background: #000; }
-        .split-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
-        #toast { position: fixed; bottom: 24px; right: 24px; background: var(--nav-bg); border: 1px solid var(--primary); color: white; padding: 12px 20px; border-radius: 8px; display: none; z-index: 1000; }
+        body { margin: 0; background: #050505; color: white; font-family: monospace; overflow: hidden; }
+        header { position: fixed; top: 0; left: 0; right: 0; height: 70px; display: flex; align-items: center; justify-content: space-between; padding: 0 30px; border-bottom: 1px solid #222; z-index: 100; background: rgba(5,5,5,0.8); backdrop-filter: blur(10px); }
+        .nav-right { display: flex; align-items: center; gap: 15px; }
+        
+        /* Cluster Status Pill */
+        .cluster-pill { display: flex; align-items: center; background: #000; border: 1px solid #333; border-radius: 50px; padding: 6px 18px; font-size: 0.7rem; color: #00ff80; cursor: pointer; transition: 0.3s; }
+        .cluster-pill:hover { border-color: #00ff80; box-shadow: 0 0 10px rgba(0,255,128,0.2); }
+        .c-tag { opacity: 0.5; margin-right: 10px; font-weight: bold; }
+        .c-val { font-weight: 800; margin-right: 10px; min-width: 60px; }
+        .c-stat { background: #222; color: #fff; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; font-size: 0.6rem; }
+
+        /* Wallet Pill */
+        .wallet-pill { background: #00ff80; color: #000; border-radius: 50px; padding: 7px 20px; font-size: 0.75rem; font-weight: 900; cursor: pointer; border: none; transition: 0.2s; box-shadow: 0 4px 15px rgba(0,255,128,0.2); }
+        .wallet-pill:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,255,128,0.3); }
+
+        main { margin-top: 70px; height: calc(100vh - 70px); width: 100vw; }
+        iframe { width: 100%; height: 100%; border: none; }
     </style>
 </head>
 <body>
-    <header>
-        <div class="header-left-group">
-            <div class="brand-title">Lightchain AI | Testnet</div>
-            <button class="btn-pro btn-primary" id="connect-btn" onclick="connect()">Connect Wallet</button>
-        </div>
-        <div class="header-center-group">
-            <div class="ticker-item"><span style="color:var(--text-dim)">ETH</span><span id="eth-price" class="ticker-val">$---</span></div>
-            <div class="ticker-item"><span style="color:var(--text-dim)">LCAI</span><span class="ticker-val">$0.0021</span></div>
-        </div>
-        <div class="header-right">
-        <div class="nav-cluster-container" style="display: flex; align-items: center; gap: 15px; position: absolute; top: 20px; right: 30px; z-index: 1000;">
+
+<header>
+    <div class="logo" style="font-weight: 900; letter-spacing: 2px; color: #00ff80;">LIGHTCHAIN <span style="color:white">AIVM</span></div>
     
-    <div id="cluster-status-pill" style="display: flex; align-items: center; background: #0a0a0a; border: 1px solid #333; border-radius: 50px; padding: 6px 20px; font-family: monospace; font-size: 0.7rem; color: #00ff80; box-shadow: 0 0 15px rgba(0,255,128,0.05);">
-        <span id="cluster-name" style="opacity: 0.5; margin-right: 12px; letter-spacing: 1px;">AIVM-THETA</span>
-        <span id="cluster-load" style="font-weight: 800; margin-right: 12px; min-width: 65px;">LOAD: 0%</span>
-        <span id="cluster-status" style="font-weight: 800; color: #fff; background: #222; padding: 2px 8px; border-radius: 4px; text-transform: uppercase;">IDLE</span>
-    </div>
-
-    <div id="wallet-pill" onclick="copyAddress()" style="cursor: pointer; background: #00ff80; color: #000; border-radius: 50px; padding: 6px 20px; font-family: monospace; font-size: 0.7rem; font-weight: 900; transition: all 0.2s ease; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 15px rgba(0,255,128,0.2);">
-        <span id="wallet-display">CONNECT WALLET</span>
-    </div>
-</div>
+    <div class="nav-right">
+        <div id="cluster-pill" class="cluster-pill" onclick="toggleCluster()">
+            <span id="c-name" class="c-tag">AIVM-THETA</span>
+            <span id="c-load" class="c-val">LOAD: 0%</span>
+            <span id="c-status" class="c-stat">IDLE</span>
         </div>
-    </header>
 
-    <div class="container">
-        <aside class="sidebar">
-            <div class="card-title">System Console</div>
-            <div id="console-output" class="console"></div>
-            <div class="card-title">Navigation</div>
-            <nav class="nav-menu">
-                <div onclick="showView('iam')" id="nav-iam" class="nav-item active"><span>🛡️</span> IAM Control Center</div>
-                <div onclick="showView('art')" id="nav-art" class="nav-item"><span>🎨</span> LCAI AIVM Art</div>
-                <div onclick="showView('recovery')" id="nav-recovery" class="nav-item"><span>🔑</span> Identity Recovery</div>
-            </nav>
-        </aside>
-
-        <main class="main-content">
-            <div id="view-iam" class="hidden">
-                <div class="card compact-profile" style="border-left: 4px solid var(--secondary)">
-                    <div class="card-title">ZK Identity Profile</div>
-                    <div id="zk-info-area" class="profile-grid">
-                        <div class="info-col">
-                            <div><div class="info-label">Identity Name</div><div id="zk-name" class="info-value">LCAI Voyager</div></div>
-                            <div style="margin: 15px 0;"><div class="info-label">Verification Status</div><div class="info-value">● ACTIVE (ZK-Verified)</div></div>
-                            <div><div class="info-label">DID Identifier</div><div id="zk-did" class="info-value">did:lcai:eth:0x...</div></div>
-                            <div style="display: flex; gap: 10px; margin-top: 20px;">
-                                <button class="btn-pro btn-primary" style="flex:1" onclick="exportIdentity()">Export JSON</button>
-                                <button class="btn-pro btn-secondary" onclick="showView('art')">Launch Workspace</button>
-                            </div>
-                        </div>
-                        <div class="qr-col" onclick="downloadQR()" title="Download Wallet QR">
-                            <div id="qrcode"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="view-art" class="hidden"><iframe src="artgenerator-ui.html"></iframe></div>
-
-            <div id="view-recovery" class="hidden">
-                <div id="recovery-layout" class="split-grid">
-                    <div class="card" style="border-left: 4px solid var(--danger)">
-                        <div class="card-title" style="color:var(--danger)">Identity Recovery Panel</div>
-                        <div style="display: flex; flex-direction: column; gap: 12px;">
-                            <input type="text" id="rec-addr" class="input-pro" placeholder="Target Address" style="background:#0f111a; color:white; border:1px solid var(--border); padding:12px;">
-                            <button class="btn-pro btn-primary" onclick="queryAccess()">Query Access Status</button>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                                <button class="btn-pro btn-secondary" onclick="updateVerify(true)">Restore Access</button>
-                                <button class="btn-pro" style="background:var(--danger); color:white" onclick="updateVerify(false)">Revoke Access</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="recovery-owner-panel" class="card hidden" style="border-color: #f59e0b">
-                        <div class="card-title" style="color:#f59e0b">Master Owner Vault</div>
-                        <div id="vault-balance-rec" style="font-size: 2.2rem; font-weight: 900; color: #f59e0b">0.00 LCAI</div>
-                        <button class="btn-pro" style="background:#f59e0b; color:black; width:100%; margin-top:20px;" onclick="withdraw()">Withdraw All Funds</button>
-                    </div>
-                </div>
-            </div>
-        </main>
+        <button id="wallet-pill" class="wallet-pill" onclick="handleWalletAction()">CONNECT WALLET</button>
     </div>
-    <div id="toast"></div>
+</header>
 
-    <script>
-        let currentWallet = "";
-        const CONFIG = { SBT_ADDR: "0xd71462F0002Ee9373fCe05B568583Ed13e75f600", AIVM_ADDR: "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB" };
-        const ABI = ["function manualVerified(address) view returns (bool)", "function owner() view returns (address)", "function setVerification(address,bool) external", "function withdraw() external"];
-        let provider, signer, userAddr, studioContract, qrcode;
+<main>
+    <iframe id="aivm-frame" src="artgenerator-ui.html"></iframe>
+</main>
 
-        function log(m) { const out = document.getElementById('console-output'); const d = document.createElement('div'); d.innerText = `> ${m}`; out.appendChild(d); out.scrollTop = out.scrollHeight; }
-        function notify(m) { const t = document.getElementById('toast'); t.innerText = m; t.style.display = 'block'; setTimeout(()=>t.style.display='none', 3000); }
-        function copyAddress() { navigator.clipboard.writeText(userAddr); notify("Address Copied"); }
+<script>
+let userAddress = "";
+const clusters = ["AIVM-THETA", "AIVM-DELTA", "AIVM-SIGMA"];
+let currentClusterIdx = 0;
 
-// AIVM Cluster Metric Receiver
-window.addEventListener('message', (e) => {
-    if (e.data.type === 'AIVM_SYNC') {
-        const loadEl = document.getElementById('cluster-load');
-        const statusEl = document.getElementById('cluster-status');
-        
-        loadEl.innerText = `LOAD: ${e.data.load}%`;
-        statusEl.innerText = e.data.status.toUpperCase();
-        
-        // Status Color Coding
-        if (e.data.status === 'mining') {
-            statusEl.style.color = '#ffcc00'; // Yellow
-            statusEl.style.background = 'rgba(255, 204, 0, 0.1)';
-        } else if (e.data.status === 'error') {
-            statusEl.style.color = '#ff4444'; // Red
-            statusEl.style.background = 'rgba(255, 68, 68, 0.1)';
-        } else {
-            statusEl.style.color = '#fff'; // White/Default
-            statusEl.style.background = '#222';
-        }
+async function handleWalletAction() {
+    if (!userAddress) {
+        await connect();
+    } else {
+        await navigator.clipboard.writeText(userAddress);
+        const btn = document.getElementById('wallet-pill');
+        btn.innerText = "COPIED!";
+        setTimeout(() => { btn.innerText = userAddress.slice(0,6).toUpperCase() + "..." + userAddress.slice(-4).toUpperCase(); }, 1000);
     }
-});
-
-        async function updatePrices() {
-            try {
-                const res = await fetch('https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD');
-                const data = await res.json();
-                document.getElementById('eth-price').innerText = `$${parseFloat(data.USD).toFixed(2)}`;
-            } catch (e) { document.getElementById('eth-price').innerText = "Offline"; }
-        }
-        setInterval(updatePrices, 30000); updatePrices();
-
-        function showView(viewId) {
-            ['iam', 'art', 'recovery'].forEach(v => {
-                document.getElementById('view-' + v).classList.add('hidden');
-                document.getElementById('nav-' + v).classList.remove('active');
-            });
-            document.getElementById('view-' + viewId).classList.remove('hidden');
-            document.getElementById('nav-' + viewId).classList.add('active');
-        }
-// Click-to-Copy Functionality
-async function copyAddress() {
-    if (!currentWallet) { connect(); return; }
-    await navigator.clipboard.writeText(currentWallet);
-    const display = document.getElementById('wallet-display');
-    const originalText = display.innerText;
-    display.innerText = "COPIED!";
-    setTimeout(() => { display.innerText = originalText; }, 1000);
 }
-        async function connect() {
-            if (!window.ethereum) return notify("MetaMask Required");
-            if (window.ethereum) {
-                const provider = new ethers.BrowserProvider(window.ethereum);
-                const accounts = await provider.send("eth_requestAccounts", []);
-                currentWallet = accounts[0];
-                document.getElementById('wallet-display').innerText = 
-                    `${currentWallet.slice(0, 6)}...${currentWallet.slice(-4)}`.toUpperCase();
-            }
-            try {
-                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                userAddr = accounts[0];
-                provider = new ethers.BrowserProvider(window.ethereum);
-                signer = await provider.getSigner();
-                studioContract = new ethers.Contract(CONFIG.AIVM_ADDR, ABI, signer);
-                
-                document.getElementById('connect-btn').classList.add('hidden');
-                document.getElementById('wallet-pill').style.display = 'flex';
-                document.getElementById('address-display').innerText = `${userAddr.slice(0,6)}...${userAddr.slice(-4)}`;
-                const bal = await provider.getBalance(userAddr);
-                document.getElementById('balance-display').innerText = `${parseFloat(ethers.formatEther(bal)).toFixed(2)} LCAI`;
-                
-                document.getElementById('view-iam').classList.remove('hidden');
-                log(`Session Authorized: ${userAddr}`);
-                
-                if(!qrcode) qrcode = new QRCode(document.getElementById("qrcode"), { width: 120, height: 120 });
-                qrcode.makeCode(userAddr);
-                
-                checkAccess();
-            } catch (e) { log("Connection Failed", true); }
-        }
 
-async function checkAccess() {
-    const pill = document.getElementById('status-pill');
+async function connect() {
+    if (!window.ethereum) { alert("Please install MetaMask"); return; }
     try {
         const provider = new ethers.BrowserProvider(window.ethereum);
-        const accounts = await provider.send("eth_accounts", []);
-        if (accounts.length > 0) {
-            pill.style.display = 'block';
-            pill.innerText = "AIVM: ACTIVE";
-            
-            // Update balance in console
-            const bal = await provider.getBalance(accounts[0]);
-            log(`Wallet: ${accounts[0].slice(0,6)}... | Bal: ${ethers.formatEther(bal).slice(0,6)} LCAI`);
-        }
+        const accounts = await provider.send("eth_requestAccounts", []);
+        userAddress = accounts[0];
+        document.getElementById('wallet-pill').innerText = userAddress.slice(0,6).toUpperCase() + "..." + userAddress.slice(-4).toUpperCase();
+        
+        // Notify Iframe
+        document.getElementById('aivm-frame').contentWindow.postMessage({ type: 'WALLET_CONNECTED', address: userAddress }, '*');
     } catch (e) {
-        pill.innerText = "AIVM: OFFLINE";
+        console.error("Connection Failed", e);
+        document.getElementById('wallet-pill').innerText = "CONN FAILED";
     }
 }
-        async function withdraw() {
-            try {
-                const vBal = await provider.getBalance(CONFIG.AIVM_ADDR);
-                if (vBal === 0n) return notify("Vault is empty (0 LCAI)");
-                log("Requesting Vault Withdrawal...");
-                const tx = await studioContract.withdraw({ gasLimit: 150000 });
-                notify("Broadcasting to Testnet...");
-                await tx.wait();
-                log("Withdrawal Successful.");
-                notify("Funds Withdrawn!");
-                checkAccess();
-            } catch (e) { log("Withdraw Failed: Check contract balance", true); }
-        }
 
-        function downloadQR() {
-            const canvas = document.querySelector("#qrcode canvas");
-            if (!canvas) return;
-            const link = document.createElement("a");
-            link.href = canvas.toDataURL("image/png");
-            link.download = `lcai-qr-${userAddr.slice(0,6)}.png`;
-            link.click();
-            log("Identity QR Downloaded.");
-        }
+function toggleCluster() {
+    currentClusterIdx = (currentClusterIdx + 1) % clusters.length;
+    const newCluster = clusters[currentClusterIdx];
+    document.getElementById('c-name').innerText = newCluster;
+    // Notify Iframe to update model context if needed
+    document.getElementById('aivm-frame').contentWindow.postMessage({ type: 'CLUSTER_CHANGED', cluster: newCluster }, '*');
+}
 
-        function exportIdentity() {
-            const didDoc = { id: `did:lcai:eth:${userAddr}`, verified: true, network: "Lightchain Testnet" };
-            const blob = new Blob([JSON.stringify(didDoc, null, 2)], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `lcai-identity-${userAddr.slice(0,6)}.json`;
-            a.click();
-            log("DID Exported.");
-        }
-
-        async function queryAccess() {
-            const addr = document.getElementById('rec-addr').value;
-            if(!ethers.isAddress(addr)) return notify("Invalid Address");
-            try {
-                const status = await studioContract.manualVerified(addr);
-                log(`Query [${addr.slice(0,6)}]: Manual Verified = ${status}`);
-                notify(status ? "Verified" : "No Access");
-            } catch (e) { log("Query Failed", true); }
-        }
-
-        async function updateVerify(state) {
-            const addr = document.getElementById('rec-addr').value;
-            if(!ethers.isAddress(addr)) return notify("Invalid Address");
-            try {
-                log(`Updating access for ${addr.slice(0,6)}...`);
-                const tx = await studioContract.setVerification(addr, state, { gasLimit: 120000 });
-                await tx.wait();
-                log(`Success: Status = ${state}`);
-                notify("Status Updated");
-            } catch (e) { log("Action Denied", true); }
-        }
-
-        log("LCAI IAM Kernel Online...");
-    </script>
+window.addEventListener('message', (e) => {
+    if (e.data.type === 'AIVM_METRICS') {
+        document.getElementById('c-load').innerText = `LOAD: ${e.data.load}%`;
+        const stat = document.getElementById('c-status');
+        stat.innerText = e.data.status;
+        stat.style.color = (e.data.status === 'mining') ? '#ffcc00' : (e.data.status === 'error' ? '#ff4444' : '#fff');
+    }
+});
+</script>
 </body>
 </html>
-
-
