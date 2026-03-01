@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LCAI AI ART | Identity & Governance</title>
+    <title>LCAI AI ART | Control Center</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
     <style>
         :root {
@@ -24,72 +24,85 @@
             font-family: -apple-system, system-ui, sans-serif;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
+            height: 100vh;
+            overflow: hidden;
         }
 
-        /* TOP NAVIGATION */
+        /* TOP NAVIGATION (Release Version Style) */
         header {
             width: 100%;
             background: var(--nav-bg);
             border-bottom: 1px solid var(--border);
-            padding: 10px 0;
+            padding: 12px 24px;
             display: flex;
-            justify-content: center;
+            justify-content: space-between;
+            align-items: center;
+            box-sizing: border-box;
+            z-index: 100;
         }
 
-        .nav-container {
-            width: 90%;
-            max-width: 1200px;
+        .brand {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: white;
+            text-decoration: none;
+        }
+
+        /* LAYOUT WRAPPER */
+        .app-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* LEFT SIDEBAR MENU */
+        #sidebar {
+            width: 260px;
+            background: var(--nav-bg);
+            border-right: 1px solid var(--border);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .nav-item {
+            color: var(--text);
+            text-decoration: none;
+            font-size: 0.95rem;
+            padding: 12px 15px;
+            border-radius: 6px;
+            transition: 0.2s;
+            cursor: pointer;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        .brand {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: var(--accent);
-            text-decoration: none;
+        .nav-item:hover:not(.locked) {
+            background: var(--border);
         }
 
-        nav {
-            display: flex;
-            gap: 20px;
-        }
-
-        .nav-link {
-            color: var(--text);
-            text-decoration: none;
-            font-size: 0.9rem;
-            padding: 8px 12px;
-            border-radius: 6px;
-            transition: 0.2s;
-        }
-
-        .nav-link.locked {
+        .nav-item.locked {
             color: var(--locked);
             cursor: not-allowed;
         }
 
-        .nav-link:not(.locked):hover {
-            background: var(--border);
-        }
-
         .badge {
-            font-size: 0.6rem;
+            font-size: 0.7rem;
             background: #383e47;
-            padding: 2px 5px;
+            padding: 2px 6px;
             border-radius: 4px;
-            margin-left: 5px;
         }
 
-        /* MAIN BODY */
+        /* MAIN CONTENT AREA */
         main {
-            width: 90%;
-            max-width: 700px;
-            margin-top: 50px;
-            text-align: center;
+            flex: 1;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-y: auto;
         }
 
         .status-card {
@@ -98,6 +111,9 @@
             padding: 40px;
             border-radius: 12px;
             display: none;
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
@@ -119,7 +135,7 @@
         }
 
         button:hover { filter: brightness(1.1); }
-        button.secondary { background: var(--nav-bg); border: 1px solid var(--border); }
+        button.secondary { background: #21262d; border: 1px solid var(--border); }
 
         /* ADMIN & OWNER */
         .admin-section {
@@ -127,6 +143,7 @@
             border-top: 1px solid var(--border);
             padding-top: 20px;
             width: 100%;
+            max-width: 600px;
             display: none;
         }
 
@@ -138,13 +155,14 @@
             color: white;
             padding: 10px;
             border-radius: 6px;
-            width: 70%;
+            width: calc(100% - 22px);
             margin-bottom: 10px;
         }
 
         #toast {
             position: fixed;
             bottom: 20px;
+            right: 20px;
             background: #21262d;
             border: 1px solid var(--accent);
             padding: 15px 25px;
@@ -157,68 +175,74 @@
 <body>
 
     <header>
-        <div class="nav-container">
-            <a href="#" class="brand">LCAI AI ART</a>
-            <nav>
-                <a href="#" id="nav-gen" class="nav-link locked" onclick="handleLockedNav('AIVM Generator')">AIVM Generator 🔒</a>
-                <a href="#" id="nav-market" class="nav-link locked" onclick="handleLockedNav('Marketplace')">Marketplace <span class="badge">WIP</span> 🔒</a>
-                <button id="btn-connect" class="secondary" style="margin-top:0" onclick="connect()">Connect Wallet</button>
-            </nav>
-        </div>
+        <a href="#" class="brand">LCAI AI ART</a>
+        <button id="btn-connect" class="secondary" onclick="connect()">Connect Wallet</button>
     </header>
 
-    <main>
-        <div id="state-disconnected" class="status-card active">
-            <h2>Welcome to Lightchain AI</h2>
-            <p>Access the AIVM Generator and Marketplace by connecting your Lightchain Testnet wallet and verifying your identity.</p>
-            <button onclick="connect()">Connect Wallet</button>
-        </div>
-
-        <div id="state-register" class="status-card">
-            <h2>Identity Registration</h2>
-            <p>Your wallet is connected, but you are not yet part of the Lightchain Identity network.</p>
-            <button onclick="register()">Register Identity</button>
-        </div>
-
-        <div id="state-verify" class="status-card">
-            <h2>ZK-Verification Pending</h2>
-            <p>You have registered your identity. Please wait for an administrator to verify your ZK-proofs or refresh to check status.</p>
-            <button class="secondary" onclick="checkStatus()">Refresh Verification Status</button>
-        </div>
-
-        <div id="state-mint" class="status-card">
-            <h2>Verified! Mint your ZK-Pass</h2>
-            <p>Your identity is verified. To unlock full access to the AI Art Generator, mint your Soulbound Token (SBT).</p>
-            <button onclick="mintSBT()">Mint ZK-Pass SBT</button>
-        </div>
-
-        <div id="state-unlocked" class="status-card">
-            <h2 style="color: var(--accent)">Access Granted</h2>
-            <p>✅ Your ZK-Pass is active. Use the top navigation menu to access the LCAI AIVM Generator.</p>
-            <button onclick="window.location.reload()">Refresh System</button>
-        </div>
-
-        <div id="admin-panel" class="admin-section">
-            <h3>Admin Portal</h3>
-            <input type="text" id="admin-target" placeholder="0x target address">
-            <div>
-                <button class="secondary" onclick="adminAction('verify')">Verify User</button>
-                <button class="secondary" onclick="adminAction('revoke')" style="color:#ff7b72">Revoke</button>
+    <div class="app-container">
+        <aside id="sidebar">
+            <div id="nav-gen" class="nav-item locked" onclick="handleLockedNav('AIVM Generator')">
+                <span>AIVM Generator</span>
+                <span class="lock-icon">🔒</span>
             </div>
-            
-            <div id="owner-vault" style="display:none; margin-top:20px;">
-                <p>Owner Vault Balance: <span id="vault-bal">0</span> LCAI</p>
-                <button onclick="withdraw()">Withdraw to Vault</button>
+            <div id="nav-market" class="nav-item locked" onclick="handleLockedNav('Marketplace')">
+                <span>Marketplace <span class="badge">WIP</span></span>
+                <span class="lock-icon">🔒</span>
             </div>
-        </div>
-    </main>
+        </aside>
+
+        <main>
+            <div id="state-disconnected" class="status-card active">
+                <h2>Welcome to Lightchain AI</h2>
+                <p>Connect your wallet to begin the identity verification process and unlock the AIVM creative suite.</p>
+                <button onclick="connect()">Connect Wallet</button>
+            </div>
+
+            <div id="state-register" class="status-card">
+                <h2>Identity Registration</h2>
+                <p>Register your address on the Lightchain Identity network to proceed.</p>
+                <button onclick="register()">Register Identity</button>
+            </div>
+
+            <div id="state-verify" class="status-card">
+                <h2>ZK-Verification Pending</h2>
+                <p>Identity registered. Please wait for an administrator to verify your ZK-proofs.</p>
+                <button class="secondary" onclick="checkStatus()">Refresh Status</button>
+            </div>
+
+            <div id="state-mint" class="status-card">
+                <h2>Verification Confirmed</h2>
+                <p>Your ZK-proofs are verified. Mint your Soulbound Token (SBT) to activate your account.</p>
+                <button onclick="mintSBT()">Mint ZK-Pass SBT</button>
+            </div>
+
+            <div id="state-unlocked" class="status-card">
+                <h2 style="color: var(--accent)">System Active</h2>
+                <p>✅ Your ZK-Pass is active. The AIVM Generator and Marketplace are now accessible via the left menu.</p>
+            </div>
+
+            <div id="admin-panel" class="admin-section">
+                <h3>Admin Portal</h3>
+                <input type="text" id="admin-target" placeholder="User 0x address">
+                <div style="display: flex; gap: 10px;">
+                    <button class="secondary" style="flex:1" onclick="adminAction('verify')">Verify User</button>
+                    <button class="secondary" style="flex:1; color:#ff7b72" onclick="adminAction('revoke')">Revoke</button>
+                </div>
+                
+                <div id="owner-vault" style="display:none; margin-top:20px;">
+                    <p>Vault Balance: <span id="vault-bal">0</span> LCAI</p>
+                    <button onclick="withdraw()">Withdraw to Vault</button>
+                </div>
+            </div>
+        </main>
+    </div>
 
     <div id="toast">Message</div>
 
     <script>
         // CONTRACT CONFIGURATION
         const ADDR_IDENTITY = "0x8300C9072Bc9F926703f8E26Ff0a5D963d88Ae01";
-        const ADDR_SBT = "0xd71462F0002Ee9373fCe05B568583Ed13e75f600"; // Updated from your scan tab
+        const ADDR_SBT = "0xd711582E66699392603336feB27B8a83a5F600";
 
         const ABI_ID = [
             "function isVerified(address) view returns (bool)",
@@ -254,8 +278,6 @@
             try {
                 const verified = await idContract.isVerified(userAddress);
                 if (!verified) {
-                    // Note: Logic assumes if isVerified is false, user needs to reg or wait for verify
-                    // You can refine this by checking a separate 'isRegistered' mapping if your .sol has it
                     showState('state-verify'); 
                     return;
                 }
@@ -268,7 +290,6 @@
                     unlockNav();
                 }
 
-                // Check Admin/Owner
                 const admin = await idContract.isAdmin(userAddress);
                 if (admin) document.getElementById('admin-panel').classList.add('visible');
                 
@@ -278,7 +299,6 @@
                 }
 
             } catch (e) {
-                console.error(e);
                 showState('state-register');
             }
         }
@@ -309,16 +329,17 @@
         }
 
         function unlockNav() {
-            document.querySelectorAll('.nav-link').forEach(l => {
+            document.querySelectorAll('.nav-item').forEach(l => {
                 l.classList.remove('locked');
-                l.innerHTML = l.innerHTML.replace('🔒', '');
+                const icon = l.querySelector('.lock-icon');
+                if(icon) icon.style.display = 'none';
             });
         }
 
         function handleLockedNav(name) {
-            const el = event.target;
+            const el = event.currentTarget;
             if (el.classList.contains('locked')) {
-                notify(`Identity Verification required for ${name}`);
+                notify(`Verification required for ${name}`);
             } else {
                 notify(`Opening ${name}...`);
             }
