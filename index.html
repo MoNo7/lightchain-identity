@@ -114,54 +114,93 @@
     </div>
     <div id="toast"></div>
 
-    <script>
-        const CONFIG = { SBT_ADDR: "0xd71462F0002Ee9373fCe05B568583Ed13e75f600", AIVM_ADDR: "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB" };
-        const ABI = ["function isAdmin(address) view returns (bool)", "function owner() view returns (address)", "function setVerification(address,bool) external", "function withdraw() external"];
-        let provider, signer, userAddr, studioContract;
+  <script>
+    const CONFIG = { 
+        SBT_ADDR: "0xd71462F0002Ee9373fCe05B568583Ed13e75f600", 
+        AIVM_ADDR: "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB" 
+    };
+    // Refined ABI to match your AIArtStudio.sol
+    const ABI = [
+        "function isAdmin(address) view returns (bool)", 
+        "function owner() view returns (address)", 
+        "function setVerification(address,bool) external", 
+        "function withdraw() external"
+    ];
+    let provider, signer, userAddr, studioContract;
 
-        function log(m) { const out = document.getElementById('console-output'); const d = document.createElement('div'); d.innerText = `> ${m}`; out.appendChild(d); out.scrollTop = out.scrollHeight; }
-        function notify(m) { const t = document.getElementById('toast'); t.innerText = m; t.style.display = 'block'; setTimeout(()=>t.style.display='none', 3000); }
+    function log(m) { 
+        const out = document.getElementById('console-output'); 
+        const d = document.createElement('div'); 
+        d.innerText = `> ${m}`; 
+        out.appendChild(d); 
+        out.scrollTop = out.scrollHeight; 
+    }
 
-        function showView(viewId) {
-            ['iam', 'art', 'recovery'].forEach(v => {
-                document.getElementById('view-' + v).classList.add('hidden');
-                document.getElementById('nav-' + v).classList.remove('active');
-            });
-            document.getElementById('view-' + viewId).classList.remove('hidden');
-            document.getElementById('nav-' + viewId).classList.add('active');
-            log(`Navigation: Switched to ${viewId.toUpperCase()}`);
-        }
+    function notify(m) { 
+        const t = document.getElementById('toast'); 
+        t.innerText = m; t.style.display = 'block'; 
+        setTimeout(()=>t.style.display='none', 3000); 
+    }
 
-        async function connect() {
-            if (!window.ethereum) return notify("MetaMask Required");
+    function showView(viewId) {
+        ['iam', 'art', 'recovery'].forEach(v => {
+            document.getElementById('view-' + v).classList.add('hidden');
+            document.getElementById('nav-' + v).classList.remove('active');
+        });
+        document.getElementById('view-' + viewId).classList.remove('hidden');
+        document.getElementById('nav-' + viewId).classList.add('active');
+        log(`Navigation: Switched to ${viewId.toUpperCase()}`);
+    }
+
+    async function connect() {
+        if (!window.ethereum) return notify("MetaMask Required");
+        try {
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
             userAddr = accounts[0];
             provider = new ethers.BrowserProvider(window.ethereum);
             signer = await provider.getSigner();
             studioContract = new ethers.Contract(CONFIG.AIVM_ADDR, ABI, signer);
+
             document.getElementById('connect-btn').style.display = 'none';
             document.getElementById('wallet-pill').style.display = 'flex';
             document.getElementById('address-display').innerText = `${userAddr.slice(0,6)}...${userAddr.slice(-4)}`;
+            
             const bal = await provider.getBalance(userAddr);
             document.getElementById('balance-display').innerText = `${parseFloat(ethers.formatEther(bal)).toFixed(2)} LCAI`;
-            log(`Session Authorized: ${userAddr}`);
-            checkAccess();
-        }
+            
+            log(`Authorized: ${userAddr}`);
+            // Small timeout to ensure provider sync
+            setTimeout(checkAccess, 500);
+        } catch (e) { log("Connection Failed", true); }
+    }
 
-        async function checkAccess() {
+    async function checkAccess() {
+        try {
+            log("Running Access Validation...");
             const isA = await studioContract.isAdmin(userAddr);
             const ownerAddr = await studioContract.owner();
-            if (isA) { document.getElementById('admin-panel').classList.remove('hidden'); log("Admin Access Detected"); }
+            
+            if (isA) { 
+                document.getElementById('admin-panel').classList.remove('hidden'); 
+                log("Admin Access Verified."); 
+            }
             if (userAddr.toLowerCase() === ownerAddr.toLowerCase()) {
                 document.getElementById('owner-panel').classList.remove('hidden');
                 const vBal = await provider.getBalance(CONFIG.AIVM_ADDR);
                 document.getElementById('vault-balance').innerText = `${ethers.formatEther(vBal)} LCAI`;
+                log("Owner Identity Confirmed.");
             }
+        } catch (e) { 
+            console.error(e);
+            log("Access Check Error: Check Contract ABI/Network", true); 
         }
+    }
 
-        function copyAddress() { navigator.clipboard.writeText(userAddr); notify("Address Copied"); }
-        async function withdraw() { const tx = await studioContract.withdraw(); await tx.wait(); notify("Withdrawn"); }
-        log("LCAI IAM Kernel Online...");
-    </script>
+    function copyAddress() { navigator.clipboard.writeText(userAddr); notify("Address Copied"); }
+    async function withdraw() { try { const tx = await studioContract.withdraw(); await tx.wait(); notify("Withdrawn"); } catch(e){ log("Withdraw Failed", true); } }
+    
+    log("LCAI IAM Kernel Online...");
+</script>
 </body>
 </html>
+
