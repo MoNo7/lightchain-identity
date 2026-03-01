@@ -9,7 +9,6 @@
         :root { --accent: #0070ff; --bg: #020408; --panel: #0b0e14; --border: #1e2633; --text-dim: #6a768a; --console-bg: #05070a; }
         body { margin: 0; background: var(--bg); color: white; font-family: 'Inter', sans-serif; display: flex; height: 100vh; overflow: hidden; }
 
-        /* SIDEBAR */
         nav { width: 280px; border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 25px; background: var(--panel); box-sizing: border-box; }
         .nav-logo { font-weight: 900; letter-spacing: 2px; color: var(--accent); margin-bottom: 25px; font-size: 1.1rem; text-align: center; }
         .system-console { background: var(--console-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; height: 160px; overflow-y: auto; margin-bottom: 20px; color: #4e5d75; line-height: 1.5; }
@@ -20,7 +19,6 @@
         .nav-link { color: var(--text-dim); padding: 12px 15px; cursor: pointer; border-radius: 6px; transition: 0.2s; border: none; background: none; text-align: left; font-size: 0.75rem; font-family: monospace; font-weight: 600; width: 100%; }
         .nav-link:hover, .nav-link.active { color: white; background: var(--accent); }
 
-        /* VIEWPORT */
         .viewport { flex: 1; display: flex; flex-direction: column; }
         header { height: 80px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; position: relative; }
         .tickers { display: flex; gap: 25px; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; position: absolute; left: 50%; transform: translateX(-50%); }
@@ -42,12 +40,11 @@
         pre { background: var(--console-bg); padding: 20px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.75rem; color: var(--text-dim); margin: 20px 0; white-space: pre-wrap; word-break: break-all; }
         #qr-target { background: white; padding: 12px; display: inline-block; border-radius: 8px; margin-top: 20px; cursor: pointer; }
 
-        /* GALLERY STYLES */
         textarea.panel-input { resize: vertical; min-height: 80px; font-family: 'Inter', sans-serif; }
-        .art-preview { width: 100%; height: 250px; background: #000; border: 1px dashed var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-dim); font-size: 0.8rem; margin-bottom: 15px; }
+        .art-preview { width: 100%; height: 250px; background: #000; border: 1px dashed var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-dim); font-size: 0.8rem; margin-bottom: 15px; overflow: hidden; }
         .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; margin-top: 20px; }
         .gallery-item { background: #000; border: 1px solid var(--border); border-radius: 6px; padding: 10px; text-align: center; }
-        .gallery-item img { width: 100%; height: 120px; object-fit: cover; border-radius: 4px; background: #111; margin-bottom: 8px; opacity: 0.8; transition: 0.3s; }
+        .gallery-item img { width: 100%; height: 120px; object-fit: cover; border-radius: 4px; background: #111; margin-bottom: 8px; }
         .gallery-item .prompt { font-size: 0.6rem; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     </style>
 </head>
@@ -127,8 +124,9 @@
         <div class="card" style="max-width: 900px;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <h2>ON-CHAIN ART REGISTRY</h2>
-                <button class="action-btn alt" style="width: auto; padding: 5px 15px;" onclick="scanChainForArt()">REFRESH SCAN</button>
+                <button class="action-btn alt" style="width: auto; padding: 5px 15px;" onclick="scanChainForArt()">FORCE DEEP SCAN</button>
             </div>
+            <p style="font-size: 0.75rem; color: var(--text-dim); margin-top: 10px;">Scanning entire blockchain for AIVM Inference logs...</p>
             <div class="gallery-grid" id="gallery-grid"></div>
         </div>
     </div>
@@ -173,13 +171,13 @@ async function syncTickers() {
 setInterval(syncTickers, 5000); syncTickers();
 
 async function runAdmin(method, status = null) {
-    if(!contract) return log("ERR: NO CONTRACT");
+    if(!contract) return log("ERR: CONNECT WALLET");
     const target = document.getElementById('admin-addr').value || user;
     try {
         if(method === 'queryStatus') {
-            log(`QUERYING ${target.slice(0,10)}...`);
+            log(`QUERY: ${target.slice(0,10)}...`);
             const isVerified = await contract.manualVerified(target);
-            log(`RESULT: ${isVerified ? "VERIFIED" : "UNVERIFIED"}`, isVerified);
+            log(`STATUS: ${isVerified ? "VERIFIED" : "UNVERIFIED"}`, isVerified);
         } else {
             log(`ADMIN: ${method}...`);
             const tx = await contract.setVerification(target, status);
@@ -213,36 +211,47 @@ async function generateArt() {
     const prompt = document.getElementById('art-prompt').value;
     if(!prompt) return log("ERR: PROMPT EMPTY");
     try {
-        log(`AIVM: SENDING PROMPT...`);
+        log(`AIVM: REQUESTING INFERENCE...`);
         const tx = await contract.requestInference(prompt);
         await tx.wait();
         log("INFERENCE SUCCESS", true);
         document.getElementById('art-preview-box').innerHTML = `<img src="https://picsum.photos/seed/${Math.random()}/600/250" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">`;
+        scanChainForArt(); // Refresh gallery
     } catch(e) { log("ERR: TX FAILED"); }
 }
 
 async function scanChainForArt() {
     if(!contract) return;
     const grid = document.getElementById('gallery-grid');
-    grid.innerHTML = "Scanning chain logs...";
+    grid.innerHTML = `<div style="color:var(--accent);">SEARCHING ENTIRE CHAIN...</div>`;
     try {
-        log("SCANNING NETWORK GALLERY...");
+        log("DEEP SCAN: SEARCHING ALL BLOCKS...");
         const filter = contract.filters.InferenceRequested();
-        // Scanning from deployment block or a wide range to ensure results show
-        const events = await contract.queryFilter(filter, -100000); 
+        // Set to 0 to ensure we catch everything from deployment onwards
+        const events = await contract.queryFilter(filter, 0, "latest"); 
+        
         grid.innerHTML = "";
-        if(events.length === 0) { grid.innerHTML = "No on-chain art found in recent history."; return; }
+        if(events.length === 0) { 
+            grid.innerHTML = `<div style="color:var(--text-dim); padding:20px;">No on-chain requests found yet.</div>`;
+            log("SCAN: 0 RESULTS FOUND");
+            return; 
+        }
+
         events.reverse().forEach(ev => {
-            const prompt = ev.args[1] || "AIVM Art";
+            const prompt = ev.args[1] || "AIVM Request";
+            const sender = ev.args[0];
             grid.innerHTML += `
                 <div class="gallery-item">
-                    <img src="https://picsum.photos/seed/${ev.transactionHash}/150/120">
-                    <div class="prompt">${prompt}</div>
-                    <div class="prompt" style="color:var(--accent);">${ev.args[0].slice(0,6)}...</div>
+                    <img src="https://picsum.photos/seed/${ev.transactionHash}/150/120" loading="lazy">
+                    <div class="prompt" title="${prompt}">${prompt}</div>
+                    <div class="prompt" style="color:var(--accent);">${sender.slice(0,6)}...</div>
                 </div>`;
         });
-        log(`SCAN COMPLETE: ${events.length} LOGS`, true);
-    } catch(e) { log("ERR: SCAN FAILED"); grid.innerHTML = "Scan failed. Check contract connection."; }
+        log(`SCAN: FOUND ${events.length} HISTORICAL REQUESTS`, true);
+    } catch(e) { 
+        log("ERR: SCAN FAILED - CHECK NETWORK"); 
+        grid.innerHTML = `<div style="color:#ff4444;">Scan error. Ensure you are on the correct RPC network.</div>`;
+    }
 }
 
 async function connectWallet() {
@@ -260,7 +269,7 @@ async function connectWallet() {
         document.getElementById('side-menu').style.display = 'flex';
         document.getElementById('id-view').classList.add('connected');
         
-        // RESTORED FULL METADATA
+        // FULL METADATA RESTORED
         const now = new Date();
         const identityData = {
             "identity": {
@@ -272,12 +281,13 @@ async function connectWallet() {
             },
             "on_chain_meta": {
                 "address": user,
-                "contract": CONFIG.addr,
-                "verification": "zk-SNARK_SBT",
-                "network": "Lightchain_AIVM"
+                "contract_binding": CONFIG.addr,
+                "sbt_verification": "zk-SNARK_Verified",
+                "network": "Lightchain_AIVM_Mainnet"
             },
             "security": {
                 "protocol": "IAM_CORE_v2.1",
+                "hash_algorithm": "Keccak-256",
                 "status": "active"
             }
         };
@@ -287,7 +297,7 @@ async function connectWallet() {
         new QRCode(document.getElementById("qr-target"), { text: user, width: 140, height: 140 });
 
         refreshBalance();
-    } catch(e) { log("ERR: CONNECT FAIL"); }
+    } catch(e) { log("ERR: CONNECTION FAILED"); }
 }
 
 function showView(id, btn) {
