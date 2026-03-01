@@ -38,6 +38,8 @@
     </div>
 
     <script>
+        const CONTRACT_ADDRESS = ethers.getAddress("0xB6FbB06e865f1784A74F5953051C3782729FD04E");
+
         async function runInference() {
             const prompt = document.getElementById('prompt-input').value;
             const digest = document.getElementById('model-digest').value;
@@ -57,9 +59,14 @@
                 window.parent.postMessage({type: 'AIVM_METRICS', status: 'pending'}, '*');
 
                 const provider = new ethers.BrowserProvider(window.ethereum);
+                const network = await provider.getNetwork();
+                if (network.chainId !== 504n) {
+                    throw new Error("Wrong Network. Switch to Custom 504.");
+                }
+
                 const signer = await provider.getSigner();
                 const contract = new ethers.Contract(
-                    "0xB6FbB06e865f1784A74F5953051C3782729FD04E", 
+                    CONTRACT_ADDRESS, 
                     ["function generateArt(string prompt, bytes32 modelDigest) public payable"], 
                     signer
                 );
@@ -84,7 +91,7 @@
 
             } catch (err) {
                 console.error(err);
-                status.innerText = "Inference Rejected by Chain";
+                status.innerText = err.message || "Inference Rejected by Chain";
                 status.style.color = "#ff4444";
                 loader.style.display = 'none';
                 btn.disabled = false;
