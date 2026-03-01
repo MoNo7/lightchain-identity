@@ -120,7 +120,12 @@
 
     <script>
         const CONFIG = { SBT_ADDR: "0xd71462F0002Ee9373fCe05B568583Ed13e75f600", AIVM_ADDR: "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB" };
-        const ABI = ["function isAdmin(address) view returns (bool)", "function owner() view returns (address)", "function setVerification(address,bool) external", "function withdraw() external"];
+        const ABI = [
+            "function manualVerified(address) view returns (bool)",
+            "function owner() view returns (address)", 
+            "function setVerification(address,bool) external", 
+            "function withdraw() external"
+        ];
         let provider, signer, userAddr, studioContract;
 
         function log(m) { const out = document.getElementById('console-output'); const d = document.createElement('div'); d.innerText = `> ${m}`; out.appendChild(d); out.scrollTop = out.scrollHeight; }
@@ -188,15 +193,18 @@
             } catch (e) { log("Access Validation Error", true); }
         }
 
-        async function queryAccess() {
-            const addr = document.getElementById('rec-addr').value;
-            if(!ethers.isAddress(addr)) return notify("Invalid Address");
-            try {
+async function queryAccess() {
+    const addr = document.getElementById('rec-addr').value;
+    if(!ethers.isAddress(addr)) return notify("Invalid Address");
+    try {
                 const isA = await studioContract.isAdmin(addr);
-                log(`Query [${addr.slice(0,6)}]: Admin Status = ${isA}`);
-                notify(isA ? "Verified Admin" : "No Admin Access");
-            } catch (e) { log("Query Failed", true); }
-        }
+          const status = await studioContract.manualVerified(addr); 
+        log(`Query [${addr.slice(0,6)}]: Manual Verified = ${status}`);
+        notify(status ? "Address is Verified" : "No Access Detected");
+    } catch (e) { 
+        console.error(e);
+        log("Query Failed: Contract method mismatch", true); 
+    }
 
         async function updateVerify(state) {
             const addr = document.getElementById('rec-addr').value;
@@ -223,3 +231,4 @@
     </script>
 </body>
 </html>
+
