@@ -11,55 +11,50 @@
 
         /* SIDEBAR & CONSOLE */
         nav { width: 280px; border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 25px; background: var(--panel); box-sizing: border-box; }
-        .nav-logo { font-weight: 900; letter-spacing: 2px; color: var(--accent); margin-bottom: 25px; font-size: 1.1rem; text-align: center; height: 30px; }
-        
+        .nav-logo { font-weight: 900; letter-spacing: 2px; color: var(--accent); margin-bottom: 25px; font-size: 1.1rem; text-align: center; }
         .system-console { 
             background: var(--console-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; 
             font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; height: 180px; overflow-y: auto; 
-            margin-bottom: 20px; color: #4e5d75; line-height: 1.5; margin-top: 0px; 
+            margin-bottom: 20px; color: #4e5d75; line-height: 1.5; 
         }
         .console-line { margin-bottom: 4px; border-left: 2px solid #1a202c; padding-left: 8px; word-wrap: break-word; }
         .console-line.success { border-left-color: var(--accent); color: #fff; }
         .console-line.error { border-left-color: #ff4444; color: #ff4444; }
         
-        .nav-menu { display: none; flex-direction: column; gap: 5px; }
-        .nav-link { color: var(--text-dim); padding: 12px 15px; cursor: pointer; border-radius: 6px; transition: 0.2s; border: none; background: none; text-align: left; font-size: 0.75rem; font-family: monospace; font-weight: 600; width: 100%; }
+        .nav-menu { display: flex; flex-direction: column; gap: 5px; }
+        .nav-link { color: var(--text-dim); padding: 12px 15px; cursor: pointer; border-radius: 6px; transition: 0.2s; border: none; background: none; text-align: left; font-size: 0.75rem; font-family: monospace; font-weight: 600; }
         .nav-link:hover, .nav-link.active { color: white; background: var(--accent); }
 
         /* VIEWPORT */
         .viewport { flex: 1; display: flex; flex-direction: column; }
-        header { height: 80px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; box-sizing: border-box; position: relative; }
+        header { height: 80px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; box-sizing: border-box; }
         .tickers { display: flex; gap: 25px; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; position: absolute; left: 50%; transform: translateX(-50%); }
-        .ticker-item span { color: var(--accent); font-weight: bold; margin-right: 5px; }
-        
         .header-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
-        .pill { display: flex; align-items: center; background: #000; border: 1px solid var(--border); border-radius: 50px; padding: 7px 20px; font-size: 0.7rem; color: var(--accent); font-family: monospace; }
         
+        .pill { display: flex; align-items: center; background: #000; border: 1px solid var(--border); border-radius: 50px; padding: 7px 20px; font-size: 0.7rem; color: var(--accent); font-family: monospace; }
         .wallet-pill { background: var(--accent); color: white; border-radius: 50px; padding: 9px 20px; font-weight: 900; cursor: pointer; border: none; font-size: 0.75rem; }
-        .net-switch-btn { background: #1a202c; color: #cbd5e0; border: 1px solid var(--border); border-radius: 50px; padding: 9px 15px; font-size: 0.65rem; cursor: pointer; font-weight: bold; }
+        .net-switch-btn { background: #1a202c; color: #fff; border: 1px solid var(--border); border-radius: 50px; padding: 9px 15px; font-size: 0.65rem; cursor: pointer; font-weight: bold; }
 
         .view-pane { flex: 1; padding: 45px; display: none; overflow-y: auto; }
-        .view-pane.connected { display: block !important; }
+        .view-pane.active { display: block; }
 
         .card { background: var(--panel); border: 1px solid var(--border); padding: 35px; border-radius: 12px; max-width: 750px; border-top: 4px solid var(--accent); margin-bottom: 20px; }
         .panel-input { width: 100%; background: #000; border: 1px solid #333; color: white; padding: 12px; border-radius: 4px; font-size: 0.75rem; margin-bottom: 12px; box-sizing: border-box; }
         .action-btn { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; width: 100%; font-weight: bold; margin-bottom: 8px; }
         .action-btn.alt { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
         
-        pre { background: var(--console-bg); padding: 20px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.75rem; color: var(--text-dim); margin: 20px 0; white-space: pre-wrap; word-break: break-all; }
-        #qr-target { background: white; padding: 12px; display: inline-block; border-radius: 8px; }
+        pre { background: var(--console-bg); padding: 20px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.75rem; color: var(--text-dim); margin: 20px 0; white-space: pre-wrap; }
+        #qr-target { background: white; padding: 12px; display: inline-block; border-radius: 8px; margin-top: 20px; }
 
+        /* GALLERY & MODELS */
         .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; margin-top: 20px; }
         .gallery-item { background: #000; border: 1px solid var(--border); border-radius: 6px; padding: 10px; text-align: center; }
-        .gallery-item img { width: 100%; height: 110px; object-fit: cover; border-radius: 4px; background: #111; margin-bottom: 8px; }
+        .gallery-item img { width: 100%; height: 110px; object-fit: cover; border-radius: 4px; }
+        .model-select { width: 100%; background: #000; border: 1px solid #333; color: var(--accent); padding: 10px; border-radius: 4px; font-size: 0.75rem; margin-bottom: 15px; font-family: monospace; font-weight: bold; }
+        .art-preview { width: 100%; height: 250px; background: #000; border: 1px dashed var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-dim); margin-bottom: 15px; overflow: hidden; }
         
         .pagination-ctrl { display: flex; justify-content: center; align-items: center; gap: 20px; margin-top: 25px; font-family: monospace; font-size: 0.75rem; }
         .pg-btn { background: var(--border); color: white; border: none; padding: 8px 18px; border-radius: 4px; cursor: pointer; }
-        .pg-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-        .art-preview { width: 100%; height: 250px; background: #000; border: 1px dashed var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-dim); margin-bottom: 15px; overflow: hidden; }
-
-        .selector-label { font-size: 0.65rem; color: var(--text-dim); margin-bottom: 5px; display: block; font-family: monospace; }
-        .model-select { width: 100%; background: #000; border: 1px solid #333; color: var(--accent); padding: 10px; border-radius: 4px; font-size: 0.75rem; margin-bottom: 15px; cursor: pointer; font-family: monospace; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -67,10 +62,10 @@
 <nav>
     <div class="nav-logo">LCAI <span>IAM</span></div>
     <div class="system-console" id="console">
-        <div class="console-line">>> INITIALIZING LCAI_IAM_CORE...</div>
-        <div class="console-line">>> STATUS: DISCONNECTED</div>
+        <div class="console-line">>> INITIALIZING IAM_CORE...</div>
+        <div class="console-line" id="net-status">>> NETWORK: OFFLINE</div>
     </div>
-    <div class="nav-menu" id="side-menu">
+    <div class="nav-menu">
         <button class="nav-link active" onclick="showView('id-view', this)">ZK IDENTITY</button>
         <button class="nav-link" onclick="showView('recovery-view', this)">IDENTITY RECOVERY</button>
         <button class="nav-link" onclick="showView('aivm-view', this)">LCAI AIVM ART</button>
@@ -82,8 +77,8 @@
     <header>
         <div style="flex:1"></div>
         <div class="tickers">
-            <div class="ticker-item"><span>ETH:</span> <div id="eth-price">$---</div></div>
-            <div class="ticker-item"><span>LCAI:</span> <div id="lcai-price">$---</div></div>
+            <div class="ticker-item">ETH: <span id="eth-price">$---</span></div>
+            <div class="ticker-item">LCAI: <span id="lcai-price">$---</span></div>
         </div>
         <div class="header-right">
             <div class="pill">AIVM-THETA | <span id="load-num">0%</span> | <span id="status-txt">IDLE</span></div>
@@ -92,10 +87,10 @@
         </div>
     </header>
 
-    <div id="id-view" class="view-pane">
+    <div id="id-view" class="view-pane active">
         <div class="card">
             <h2>ZK-SBT IDENTITY</h2>
-            <pre id="id-json">{ "auth": "awaiting_handshake" }</pre>
+            <pre id="id-json">{ "auth": "awaiting_connection" }</pre>
             <button onclick="saveJSON()" class="action-btn alt" style="width: auto; padding: 10px 25px;">DOWNLOAD JSON</button>
             <br><br>
             <div id="qr-target"></div>
@@ -107,19 +102,19 @@
             <h2>IDENTITY RECOVERY</h2>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 25px;">
                 <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 20px; border-radius: 8px;">
-                    <h4 style="color:var(--accent); margin-top:0;">ADMIN</h4>
+                    <h4 style="color:var(--accent); margin-top:0;">ADMIN PANEL</h4>
                     <input type="text" class="panel-input" placeholder="User Address" id="admin-addr">
-                    <button class="action-btn" onclick="runAdmin('queryStatus')">QUERY STATUS</button>
-                    <button class="action-btn" onclick="runAdmin('setVerification', true)">VERIFY</button>
-                    <button class="action-btn alt" style="border-color:#ff4444; color:#ff4444;" onclick="runAdmin('setVerification', false)">REVOKE</button>
+                    <button class="action-btn" onclick="runAdmin('queryStatus')">QUERY VERIFICATION</button>
+                    <button class="action-btn" onclick="runAdmin('setVerification', true)">VERIFY USER</button>
+                    <button class="action-btn alt" style="border-color:#ff4444; color:#ff4444;" onclick="runAdmin('setVerification', false)">REVOKE USER</button>
                 </div>
                 <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 20px; border-radius: 8px;">
-                    <h4 style="color:var(--accent); margin-top:0;">OWNER</h4>
+                    <h4 style="color:var(--accent); margin-top:0;">OWNER VAULT</h4>
                     <div style="background:#000; padding:12px; border-radius:4px; margin-bottom:12px; border:1px solid var(--border);">
-                        <div style="font-size:0.6rem; color:var(--text-dim);">VAULT BALANCE</div>
+                        <div style="font-size:0.6rem; color:var(--text-dim);">TREASURY</div>
                         <div style="font-size:1.1rem; font-weight:bold;" id="revenue-val">0.00 ETH</div>
                     </div>
-                    <button class="action-btn" onclick="runOwner('withdraw')">WITHDRAW</button>
+                    <button class="action-btn" onclick="runOwner()">WITHDRAW ALL</button>
                 </div>
             </div>
         </div>
@@ -130,16 +125,14 @@
             <h2>LCAI AIVM INFERENCE</h2>
             <div class="art-preview" id="art-preview-box">[ RENDER TARGET ]</div>
             
-            <span class="selector-label">NEURAL ENGINE</span>
+            <label style="font-size: 0.65rem; color: var(--text-dim);">NEURAL ENGINE</label>
             <select id="model-selector" class="model-select">
-                <option value="Stable-Diffusion-XL">STABLE DIFFUSION XL (v1.0)</option>
+                <option value="Stable-Diffusion-XL">STABLE DIFFUSION XL</option>
                 <option value="Midjourney-V6-Bridge">MIDJOURNEY v6 BRIDGE</option>
-                <option value="LCAI-Theta-Latent">LCAI THETA LATENT (Custom)</option>
-                <option value="Dall-E-3-API">DALL-E 3 NEURAL</option>
+                <option value="LCAI-Theta-Latent">LCAI THETA LATENT</option>
             </select>
 
-            <span class="selector-label">PROMPT</span>
-            <textarea id="art-prompt" class="panel-input" placeholder="Enter prompt..." style="height: 100px;"></textarea>
+            <textarea id="art-prompt" class="panel-input" placeholder="Neural synthwave landscape..." style="height: 100px;"></textarea>
             <button class="action-btn" onclick="generateArt()">REQUEST INFERENCE</button>
         </div>
     </div>
@@ -148,7 +141,7 @@
         <div class="card" style="max-width: 950px;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <h2>NETWORK GALLERY</h2>
-                <button class="action-btn alt" style="width: auto; padding: 5px 15px;" onclick="initGallery()">REFRESH</button>
+                <button class="action-btn alt" style="width: auto; padding: 5px 15px;" onclick="initGallery()">SYNC</button>
             </div>
             <div class="gallery-grid" id="gallery-grid"></div>
             <div class="pagination-ctrl">
@@ -163,7 +156,8 @@
 <script>
 const CONFIG = {
     addr: "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB",
-    chainId: "0x539", // Standard Hardhat/Testnet 1337
+    chainId: "0x539", // 1337
+    rpc: "https://testnet-rpc.lightchain.ai", // Placeholder RPC
     abi: [
         "function setVerification(address user, bool status) external",
         "function withdraw() external",
@@ -173,7 +167,7 @@ const CONFIG = {
     ]
 };
 
-let user, provider, signer, contract;
+let user, provider, signer, contract, readOnlyContract;
 let allArtEvents = [];
 let currentPage = 1;
 const pageSize = 10;
@@ -187,118 +181,32 @@ const log = (msg, type = "info") => {
     cb.scrollTop = cb.scrollHeight;
 };
 
+// Fixed Switch Network Handshake
 async function switchNetwork() {
-    if(!window.ethereum) return;
+    if(!window.ethereum) return log("METAMASK NOT FOUND", "error");
     try {
         await window.ethereum.request({
             method: 'wallet_switchEthereumChain',
             params: [{ chainId: CONFIG.chainId }],
         });
-        log("NETWORK: LIGHTCHAIN_TESTNET ACTIVE", "success");
+        log("NETWORK SWITCHED", "success");
     } catch (e) {
-        log("NETWORK SWITCH FAILED", "error");
-    }
-}
-
-async function syncTickers() {
-    try {
-        const ethR = await fetch('https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD');
-        const ethD = await ethR.json();
-        document.getElementById('eth-price').innerText = `$${ethD.USD.toLocaleString()}`;
-        const lcaiR = await fetch('https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=0x9ca8530ca349c966fe9ef903df17a75b8a778927&vs_currencies=usd');
-        const lcaiD = await lcaiR.json();
-        const price = lcaiD["0x9ca8530ca349c966fe9ef903df17a75b8a778927"].usd;
-        document.getElementById('lcai-price').innerText = `$${price.toFixed(5)}`;
-    } catch(e) {}
-}
-setInterval(syncTickers, 10000); syncTickers();
-
-async function generateArt() {
-    if(!contract) return log("ERR: WALLET NOT CONNECTED", "error");
-    const prompt = document.getElementById('art-prompt').value;
-    const model = document.getElementById('model-selector').value;
-    if(!prompt) return;
-    
-    try {
-        document.getElementById('status-txt').innerText = "INFERENCE";
-        document.getElementById('load-num').innerText = "25%";
-        log(`AIVM: TRIGGERING ${model}...`, "info");
-        
-        const tx = await contract.requestInference(`[Model:${model}] ${prompt}`, { 
-            value: ethers.parseEther("0.001"), 
-            gasLimit: 800000 
-        });
-        
-        document.getElementById('load-num').innerText = "65%";
-        await tx.wait();
-        
-        document.getElementById('load-num').innerText = "100%";
-        document.getElementById('status-txt').innerText = "IDLE";
-        log("INFERENCE COMPLETE", "success");
-        document.getElementById('art-preview-box').innerHTML = `<img src="https://picsum.photos/seed/${Date.now()}/600/250" style="width:100%; height:100%; object-fit:cover;">`;
-    } catch(e) { 
-        document.getElementById('status-txt').innerText = "ERROR";
-        log("TX FAILED", "error"); 
-    }
-}
-
-async function runAdmin(method, status = null) {
-    if(!contract) return;
-    const target = document.getElementById('admin-addr').value || user;
-    try {
-        if(method === 'queryStatus') {
-            const isVerified = await contract.manualVerified(target);
-            log(`ADDRESS ${target.slice(0,6)}: ${isVerified ? "VERIFIED" : "UNVERIFIED"}`, "success");
-        } else {
-            const tx = await contract.setVerification(target, status);
-            await tx.wait(); log("IDENTITY UPDATED", "success");
+        if (e.code === 4902) {
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_addEthereumChain',
+                    params: [{
+                        chainId: CONFIG.chainId,
+                        chainName: 'Lightchain Testnet',
+                        nativeCurrency: { name: 'LCAI', symbol: 'LCAI', decimals: 18 },
+                        rpcUrls: [CONFIG.rpc],
+                        blockExplorerUrls: null
+                    }],
+                });
+            } catch (addE) { log("FAILED TO ADD NETWORK", "error"); }
         }
-    } catch(e) { log("ADMIN ACTION REJECTED", "error"); }
+    }
 }
-
-async function runOwner() {
-    if(!contract) return;
-    try {
-        const tx = await contract.withdraw();
-        await tx.wait(); log("VAULT WITHDRAWN", "success");
-        refreshBalance();
-    } catch(e) { log("OWNER ACTION REJECTED", "error"); }
-}
-
-async function refreshBalance() {
-    try {
-        const bal = await provider.getBalance(CONFIG.addr);
-        document.getElementById('revenue-val').innerText = `${ethers.formatEther(bal).slice(0,6)} ETH`;
-    } catch(e) {}
-}
-
-async function initGallery() {
-    if(!contract) return;
-    const grid = document.getElementById('gallery-grid');
-    grid.innerHTML = `<div style="color:var(--accent);">SYNCING...</div>`;
-    try {
-        const filter = contract.filters.InferenceRequested();
-        const currentBlock = await provider.getBlockNumber();
-        allArtEvents = await contract.queryFilter(filter, Math.max(0, currentBlock - 10000), "latest"); 
-        allArtEvents.reverse(); 
-        currentPage = 1; renderGalleryPage();
-    } catch(e) { log("GALLERY SCAN FAILED", "error"); }
-}
-
-function renderGalleryPage() {
-    const grid = document.getElementById('gallery-grid');
-    grid.innerHTML = "";
-    const start = (currentPage - 1) * pageSize;
-    const pageItems = allArtEvents.slice(start, start + pageSize);
-    pageItems.forEach(ev => {
-        grid.innerHTML += `<div class="gallery-item"><img src="https://picsum.photos/seed/${ev.transactionHash}/150/110"></div>`;
-    });
-    document.getElementById('pg-info').innerText = `PAGE ${currentPage} OF ${Math.ceil(allArtEvents.length/pageSize) || 1}`;
-    document.getElementById('pg-prev').disabled = currentPage === 1;
-    document.getElementById('pg-next').disabled = currentPage >= Math.ceil(allArtEvents.length/pageSize);
-}
-
-function changePage(dir) { currentPage += dir; renderGalleryPage(); }
 
 async function connectWallet() {
     if(!window.ethereum) return;
@@ -309,37 +217,123 @@ async function connectWallet() {
         contract = new ethers.Contract(CONFIG.addr, CONFIG.abi, signer);
         
         document.getElementById('wallet-btn').innerText = user.slice(0,6).toUpperCase();
-        log(`CORE CONNECTED: ${user.slice(0,10)}`, "success");
+        document.getElementById('net-status').innerText = ">> STATUS: ONLINE";
+        log(`AUTHENTICATED: ${user.slice(0,10)}`, "success");
         
-        document.getElementById('side-menu').style.display = 'flex';
-        document.getElementById('id-view').classList.add('connected');
-        
-        const now = new Date();
         const identityData = {
-            "identity": {
-                "operator": `Op_${user.slice(2, 6)}`,
-                "role": "LCAI_IAM_OPERATOR",
-                "tier": "Alpha_v1",
-                "timestamp": Math.floor(now.getTime() / 1000)
-            },
-            "on_chain": {
-                "address": user,
-                "verification": "zk-SNARK_SBT",
-                "network": "Lightchain_Testnet"
-            }
+            "operator": `Op_${user.slice(2, 6)}`,
+            "role": "LCAI_IAM_OPERATOR",
+            "address": user,
+            "timestamp": Math.floor(Date.now() / 1000)
         };
         document.getElementById('id-json').innerText = JSON.stringify(identityData, null, 4);
+        document.getElementById('qr-target').innerHTML = "";
         new QRCode(document.getElementById("qr-target"), { text: user, width: 140, height: 140 });
         refreshBalance();
-    } catch(e) { log("CONNECTION FAILED", "error"); }
+    } catch(e) { log("CONNECT FAILED", "error"); }
 }
 
+async function generateArt() {
+    if(!contract) return log("CONNECT WALLET FIRST", "error");
+    const prompt = document.getElementById('art-prompt').value;
+    const model = document.getElementById('model-selector').value;
+    if(!prompt) return;
+    
+    try {
+        document.getElementById('status-txt').innerText = "PROCESSING";
+        document.getElementById('load-num').innerText = "30%";
+        log(`REQUESTING ${model}...`);
+        
+        const tx = await contract.requestInference(`[${model}] ${prompt}`, { 
+            value: ethers.parseEther("0.001"), 
+            gasLimit: 800000 
+        });
+        
+        document.getElementById('load-num').innerText = "75%";
+        await tx.wait();
+        
+        document.getElementById('load-num').innerText = "100%";
+        document.getElementById('status-txt').innerText = "IDLE";
+        log("INFERENCE SUCCESS", "success");
+        document.getElementById('art-preview-box').innerHTML = `<img src="https://picsum.photos/seed/${Date.now()}/600/250" style="width:100%; height:100%; object-fit:cover;">`;
+    } catch(e) { 
+        document.getElementById('status-txt').innerText = "ERROR";
+        log("TRANSACTION FAILED", "error"); 
+    }
+}
+
+async function runAdmin(method, status = null) {
+    if(!contract) return log("CONNECT WALLET FOR ADMIN", "error");
+    const target = document.getElementById('admin-addr').value || user;
+    try {
+        if(method === 'queryStatus') {
+            const isVerified = await contract.manualVerified(target);
+            log(`ADDR ${target.slice(0,6)}: ${isVerified ? "VERIFIED" : "UNVERIFIED"}`, "success");
+        } else {
+            const tx = await contract.setVerification(target, status);
+            await tx.wait(); log("STATUS UPDATED", "success");
+        }
+    } catch(e) { log("ADMIN ACTION FAILED", "error"); }
+}
+
+async function runOwner() {
+    if(!contract) return;
+    try {
+        const tx = await contract.withdraw();
+        await tx.wait(); log("TREASURY WITHDRAWN", "success");
+        refreshBalance();
+    } catch(e) { log("OWNER ACTION REJECTED", "error"); }
+}
+
+async function initGallery() {
+    const grid = document.getElementById('gallery-grid');
+    grid.innerHTML = "SYNCING LEDGER...";
+    try {
+        // Fallback to signer contract or provider if signer not available
+        const targetContract = contract || new ethers.Contract(CONFIG.addr, CONFIG.abi, new ethers.JsonRpcProvider(CONFIG.rpc));
+        const filter = targetContract.filters.InferenceRequested();
+        allArtEvents = await targetContract.queryFilter(filter, -5000); 
+        allArtEvents.reverse(); 
+        currentPage = 1; renderGalleryPage();
+    } catch(e) { 
+        log("GALLERY SYNC FAILED - CHECK RPC", "error"); 
+        grid.innerHTML = "NO RECORDS FOUND ON THIS NETWORK";
+    }
+}
+
+function renderGalleryPage() {
+    const grid = document.getElementById('gallery-grid'); grid.innerHTML = "";
+    const items = allArtEvents.slice((currentPage-1)*pageSize, currentPage*pageSize);
+    items.forEach(ev => {
+        grid.innerHTML += `<div class="gallery-item"><img src="https://picsum.photos/seed/${ev.transactionHash}/150/110"></div>`;
+    });
+    document.getElementById('pg-info').innerText = `PAGE ${currentPage} OF ${Math.ceil(allArtEvents.length/pageSize) || 1}`;
+    document.getElementById('pg-prev').disabled = currentPage === 1;
+    document.getElementById('pg-next').disabled = currentPage >= Math.ceil(allArtEvents.length/pageSize);
+}
+
+function changePage(dir) { currentPage += dir; renderGalleryPage(); }
+
 function showView(id, btn) {
-    document.querySelectorAll('.view-pane').forEach(el => el.classList.remove('connected'));
+    document.querySelectorAll('.view-pane').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
-    document.getElementById(id).classList.add('connected');
+    document.getElementById(id).classList.add('active');
     btn.classList.add('active');
 }
+
+async function refreshBalance() {
+    if(!provider) return;
+    const bal = await provider.getBalance(CONFIG.addr);
+    document.getElementById('revenue-val').innerText = `${ethers.formatEther(bal).slice(0,6)} ETH`;
+}
+
+async function syncTickers() {
+    try {
+        const r = await fetch('https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD');
+        const d = await r.json(); document.getElementById('eth-price').innerText = `$${d.USD}`;
+    } catch(e) {}
+}
+syncTickers(); setInterval(syncTickers, 15000);
 
 function saveJSON() {
     const b = new Blob([document.getElementById('id-json').innerText], {type:"application/json"});
