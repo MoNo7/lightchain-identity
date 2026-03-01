@@ -156,57 +156,56 @@
             } catch (e) { log("Native Scan Failed.", true); }
         }
 
-        const GATEWAYS = [
-            "https://image.pollinations.ai/prompt/",
-            "https://api.pollinations.ai/prompt/"
-        ];
+JavaScript
+// 1. Updated to use Native LCAI AIVM Gateways
+const GATEWAYS = [
+    "https://api.lightchain.ai/v1/aivm/render/",
+    "https://gateway.lightchain.ai/ipfs/"
+];
 
-        function addToGallery(p) {
-            const gallery = document.getElementById('art-gallery');
-            const item = document.createElement('div');
-            item.className = 'gallery-item';
-            const seed = Math.floor(Math.random()*99999);
-            const promptEncoded = encodeURIComponent(p);
-            const url = `${GATEWAYS[0]}${promptEncoded}?width=512&height=512&nologo=true&seed=${seed}`;
-            
-            item.innerHTML = `
-                <div class="sync-status" style="height:150px; display:flex; align-items:center; justify-content:center; background:#000; font-size:0.6rem; color:var(--primary); animation:pulse 1s infinite">Syncing...</div>
-                <img src="${url}" class="gallery-img" style="display:none" 
-                     onload="this.style.display='block'; this.previousElementSibling.style.display='none'; this.nextElementSibling.style.display='flex';"
-                     onerror="this.src='${GATEWAYS[1]}${promptEncoded}?width=512&height=512&seed=${seed}';">
-                <div class="gallery-controls" style="display:none">
-                    <button class="btn-gallery" style="background:var(--primary);color:white" onclick="window.swapToMain(this.parentElement.previousElementSibling.src)">View</button>
-                    <button class="btn-gallery" style="background:var(--secondary);color:black" onclick="window.downloadImg(this.parentElement.previousElementSibling.src)">DL</button>
-                </div>`;
-            gallery.appendChild(item);
-        }
+// 2. Optimized Gallery for Native LCAI Proof-of-Inference
+function addToGallery(p, resultHash = null) {
+    const gallery = document.getElementById('art-gallery');
+    const item = document.createElement('div');
+    item.className = 'gallery-item';
+    
+    // Use the resultHash (IPFS) if available, otherwise fallback to live inference URL
+    const url = resultHash ? 
+        `${GATEWAYS[1]}${resultHash}` : 
+        `${GATEWAYS[0]}${encodeURIComponent(p)}?width=512&height=512&nologo=true&seed=${Math.floor(Math.random()*99999)}`;
+    
+    item.innerHTML = `
+        <div class="sync-status" style="height:150px; display:flex; align-items:center; justify-content:center; background:#000; font-size:0.6rem; color:var(--primary); animation:pulse 1s infinite">LCAI Syncing...</div>
+        <img src="${url}" class="gallery-img" style="display:none" 
+             onload="this.style.display='block'; this.previousElementSibling.style.display='none'; this.nextElementSibling.style.display='flex';"
+             onerror="this.src='https://image.pollinations.ai/prompt/${encodeURIComponent(p)}?width=512&height=512';">
+        <div class="gallery-controls" style="display:none">
+            <button class="btn-gallery" style="background:var(--primary);color:white" onclick="window.swapToMain('${url}')">View</button>
+            <button class="btn-gallery" style="background:var(--secondary);color:black" onclick="window.downloadImg('${url}')">DL</button>
+        </div>`;
+    gallery.appendChild(item);
+}
 
-        function renderArt(p) {
-            const out = document.getElementById('art-output');
-            out.innerHTML = `<div id="mint-status" class="mint-overlay" style="display:flex"><div class="mint-spinner"></div>Status: Manifesting Pixels...</div><div style="color:var(--primary); font-weight:bold; animation:pulse 1.5s infinite">AIVM Inference in Progress...</div>`;
-            
-            const promptEncoded = encodeURIComponent(p);
-            const seed = Date.now();
-            const url = `${GATEWAYS[0]}${promptEncoded}?width=1024&height=1024&nologo=true&seed=${seed}`;
-            
-            const img = new Image();
-            img.src = url;
-            img.onload = () => {
-                out.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:contain;">`;
-                addToGallery(p);
-                log("AIVM manifest complete.");
-            };
-            img.onerror = () => {
-                log("Primary Node Busy. Switching to Mirror...", false);
-                const fallbackUrl = `${GATEWAYS[1]}${promptEncoded}?width=1024&height=1024&seed=${seed}`;
-                const fallbackImg = new Image();
-                fallbackImg.src = fallbackUrl;
-                fallbackImg.onload = () => {
-                    out.innerHTML = `<img src="${fallbackUrl}" style="width:100%; height:100%; object-fit:contain;">`;
-                    addToGallery(p);
-                };
-            };
-        }
+// 3. Robust Native Render with State Handling
+function renderArt(p) {
+    const out = document.getElementById('art-output');
+    out.innerHTML = `<div id="mint-status" class="mint-overlay" style="display:flex"><div class="mint-spinner"></div>Status: AIVM Manifesting...</div><div style="color:var(--primary); font-weight:bold; animation:pulse 1.5s infinite">LCAI Native Inference in Progress...</div>`;
+    
+    const url = `${GATEWAYS[0]}${encodeURIComponent(p)}?width=1024&height=1024&nologo=true&seed=${Date.now()}`;
+    const img = new Image();
+    img.src = url;
+
+    img.onload = () => {
+        out.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:contain;">`;
+        addToGallery(p);
+        log("LCAI AIVM manifest complete.");
+    };
+
+    img.onerror = () => {
+        log("Native Node Latency. Retrying LCAI Gateway...", false);
+        setTimeout(() => renderArt(p), 5000);
+    };
+}
 
         async function checkIdentity() {
             try {
@@ -259,3 +258,4 @@
     </script>
 </body>
 </html>
+
