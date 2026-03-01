@@ -21,7 +21,7 @@
         header { height: 80px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; box-sizing: border-box; }
         .pill { background: #000; border: 1px solid var(--border); border-radius: 50px; padding: 7px 20px; font-size: 0.7rem; color: var(--accent); font-family: monospace; display: flex; align-items: center; gap: 8px; }
         .wallet-pill { background: var(--accent); color: white; border-radius: 50px; padding: 9px 24px; font-weight: 900; cursor: pointer; border: none; font-size: 0.75rem; font-family: monospace; letter-spacing: 1px; }
-        .view-pane { flex: 1; padding: 45px; display: none; overflow: hidden; } /* Changed to overflow hidden for iframe */
+        .view-pane { flex: 1; padding: 45px; display: none; overflow: hidden; }
         .view-pane.active { display: block !important; }
         .card { background: var(--panel); border: 1px solid var(--border); padding: 35px; border-radius: 12px; max-width: 850px; border-top: 4px solid var(--accent); margin-bottom: 20px; height: 90%; }
         .panel-input { width: 100%; background: #000; border: 1px solid #333; color: white; padding: 12px; border-radius: 4px; font-size: 0.75rem; margin-bottom: 12px; box-sizing: border-box; font-family: monospace; }
@@ -100,6 +100,7 @@
 <script>
 const CONFIG = {
     addr: "0xB6FbB06e865f1784A74F5953051C3782729FD04E",
+    chainId: "0x1f8", // 504 in hex
     abi: [
         "function owner() public view returns (address)",
         "function setVerification(address user, bool status) external",
@@ -111,6 +112,7 @@ const CONFIG = {
     ]
 };
 let user, provider, signer, contract, roles = { isOwner: false, isVerified: false };
+
 const log = (msg, type = "info") => {
     const cb = document.getElementById('console');
     const l = document.createElement('div');
@@ -120,7 +122,39 @@ const log = (msg, type = "info") => {
     cb.scrollTop = cb.scrollHeight;
 };
 
-// LISTEN FOR METRICS FROM ARTGENERATOR-UI.HTML
+async function connectWallet(auto = false) {
+    if (!window.ethereum) return log("METAMASK MISSING", "error");
+    try {
+        const accounts = auto ? await window.ethereum.request({ method: 'eth_accounts' }) : await window.ethereum.request({ method: 'eth_requestAccounts' });
+        if (auto && accounts.length === 0) return;
+
+        user = accounts[0];
+        provider = new ethers.BrowserProvider(window.ethereum);
+        
+        const network = await provider.getNetwork();
+        if (network.chainId !== 504n) {
+            log("WRONG NETWORK - SWITCH TO 504", "error");
+            return;
+        }
+
+        signer = await provider.getSigner();
+        contract = new ethers.Contract(CONFIG.addr, CONFIG.abi, signer);
+        
+        const ownerAddr = await contract.owner();
+        roles.isOwner = (user.toLowerCase() === ownerAddr.toLowerCase());
+        roles.isVerified = await contract.manualVerified(user);
+        
+        log(`CONNECTED: ${user.slice(0, 10)}`, "success");
+        updateMenu(); updateIdentity(); initGallery(); refreshBalance(); updateWalletPill(); probeModels(); 
+    } catch (e) { 
+        console.error(e);
+        log("HANDSHAKE FAILED", "error"); 
+    }
+}
+
+// Auto-connect on load
+window.addEventListener('load', () => connectWallet(true));
+
 window.addEventListener('message', (e) => {
     if (e.data.type === 'AIVM_METRICS') {
         document.getElementById('status-txt').innerText = e.data.status.toUpperCase();
@@ -130,22 +164,6 @@ window.addEventListener('message', (e) => {
         }
     }
 });
-
-async function connectWallet() {
-    if (!window.ethereum) return log("METAMASK MISSING", "error");
-    try {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        user = accounts[0];
-        provider = new ethers.BrowserProvider(window.ethereum);
-        signer = await provider.getSigner();
-        contract = new ethers.Contract(CONFIG.addr, CONFIG.abi, signer);
-        const ownerAddr = await contract.owner();
-        roles.isOwner = (user.toLowerCase() === ownerAddr.toLowerCase());
-        roles.isVerified = await contract.manualVerified(user);
-        log(`CONNECTED: ${user.slice(0, 10)}`, "success");
-        updateMenu(); updateIdentity(); initGallery(); refreshBalance(); updateWalletPill(); probeModels(); 
-    } catch (e) { log("HANDSHAKE FAILED", "error"); }
-}
 
 async function registerModelUI(status) {
     const hash = document.getElementById('admin-addr').value;
@@ -190,6 +208,7 @@ async function runAdmin(type) {
     } catch (e) { log("ADMIN ACTION FAILED", "error"); }
 }
 async function updateWalletPill() {
+    if(!provider || !user) return;
     const bal = await provider.getBalance(user);
     document.getElementById('wallet-btn').innerText = `${user.slice(0, 6).toUpperCase()} | ${ethers.formatEther(bal).slice(0, 4)} LCAI`;
 }
@@ -226,6 +245,7 @@ async function runOwner() {
     try { await contract.withdraw(); log("VAULT WITHDRAWN", "success"); refreshBalance(); } catch (e) { log("FAILED", "error"); }
 }
 async function refreshBalance() {
+    if(!provider) return;
     const bal = await provider.getBalance(CONFIG.addr);
     document.getElementById('revenue-val').innerText = `${ethers.formatEther(bal).slice(0, 6)} tLCAI`;
 }
