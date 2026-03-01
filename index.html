@@ -10,32 +10,47 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
         body { background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         
-        /* RELEASE VERSION TOP NAV */
-        header { height: 64px; background: var(--nav-bg); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; }
+        /* RELEASE TOP NAV */
+        header { height: 64px; background: var(--nav-bg); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; z-index: 100; }
         .header-left-group { display: flex; align-items: center; gap: 20px; }
         .brand-title { font-weight: 800; color: var(--primary); font-size: 1.1rem; letter-spacing: -0.5px; }
         .nav-identity-group { display: flex; align-items: center; gap: 10px; padding-left: 20px; border-left: 1px solid var(--border); }
-        .nav-sbt-svg { width: 26px; height: 26px; opacity: 0.3; transition: 0.3s; }
+        .nav-sbt-svg { width: 26px; height: 26px; opacity: 0.3; }
         .nav-sbt-svg.active { opacity: 1; filter: drop-shadow(0 0 8px var(--primary)); }
         
         .header-right { display: flex; align-items: center; gap: 16px; }
         .cluster-pill { background: #000; padding: 6px 14px; border-radius: 20px; border: 1px solid #1e293b; font-size: 0.75rem; display: flex; align-items: center; gap: 8px; }
         .status-dot { width: 8px; height: 8px; background: var(--secondary); border-radius: 50%; box-shadow: 0 0 6px var(--secondary); }
-        .load-text { color: var(--text-dim); }
-
-        .wallet-pill { background: #1e293b; padding: 6px 14px; border-radius: 8px; font-family: monospace; border: 1px solid var(--border); font-size: 0.75rem; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: 0.2s; }
-        .wallet-pill:hover { border-color: var(--primary); background: #252f41; }
+        .wallet-pill { background: #1e293b; padding: 6px 14px; border-radius: 8px; font-family: monospace; border: 1px solid var(--border); font-size: 0.75rem; display: flex; align-items: center; gap: 10px; cursor: pointer; }
         .balance-txt { color: var(--secondary); font-weight: 700; border-right: 1px solid var(--border); padding-right: 10px; }
-        .btn-connect { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.8rem; }
+        .btn-connect { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 700; cursor: pointer; }
 
-        /* LAYOUT CORE */
+        /* LAYOUT */
         .container { display: flex; flex: 1; overflow: hidden; }
-        .sidebar { width: 420px; background: var(--nav-bg); border-right: 1px solid var(--border); padding: 24px; display: flex; flex-direction: column; gap: 16px; }
-        .main-content { flex: 1; padding: 24px; display: flex; flex-direction: column; gap: 24px; overflow-y: auto; }
-        .console { height: 240px; background: #000; border: 1px solid var(--border); border-radius: 8px; padding: 14px; font-family: 'Fira Code', monospace; font-size: 0.75rem; color: #7dd3fc; overflow-y: auto; overflow-x: hidden; white-space: pre-wrap; word-break: break-all; line-height: 1.4; }
-        .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
-        .card-title { font-size: 0.65rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase; margin-bottom: 14px; letter-spacing: 1px; }
-        #toast { position: fixed; bottom: 24px; right: 24px; background: var(--nav-bg); border: 1px solid var(--primary); color: white; padding: 12px 20px; border-radius: 8px; display: none; font-size: 0.85rem; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+        .sidebar { width: 420px; background: var(--nav-bg); border-right: 1px solid var(--border); padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+        .main-content { flex: 1; padding: 32px; display: flex; flex-direction: column; gap: 24px; overflow-y: auto; background: radial-gradient(circle at top right, #1a1b26 0%, #0f1016 100%); }
+
+        /* NAVIGATION MENU */
+        .nav-menu { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+        .nav-item { padding: 12px 16px; border-radius: 8px; background: transparent; border: 1px solid transparent; color: var(--text-dim); text-decoration: none; font-size: 0.9rem; transition: 0.2s; display: flex; align-items: center; gap: 12px; }
+        .nav-item:hover { background: #1e2030; color: white; border-color: var(--border); }
+        .nav-item.active { background: rgba(88, 101, 242, 0.1); color: var(--primary); border-color: rgba(88, 101, 242, 0.3); font-weight: 600; }
+
+        /* COMPONENTS */
+        .console { height: 280px; background: #000; border: 1px solid var(--border); border-radius: 8px; padding: 16px; font-family: 'Fira Code', monospace; font-size: 0.75rem; color: #7dd3fc; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+        .card-title { font-size: 0.7rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase; margin-bottom: 20px; letter-spacing: 1px; display: flex; align-items: center; gap: 10px; }
+        .card-title::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+
+        /* DYNAMIC PANELS (Hidden by default) */
+        .access-panel { display: none; }
+        .admin-grid { display: grid; grid-template-columns: 1fr 200px; gap: 12px; }
+        .input-pro { background: #0f111a; border: 1px solid var(--border); border-radius: 6px; padding: 12px; color: white; font-size: 0.85rem; outline: none; }
+        .btn-pro { padding: 12px; border-radius: 6px; font-weight: 700; border: none; cursor: pointer; transition: 0.2s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-secondary { background: var(--secondary); color: black; }
+        
+        #toast { position: fixed; bottom: 24px; right: 24px; background: var(--nav-bg); border: 1px solid var(--primary); color: white; padding: 12px 20px; border-radius: 8px; display: none; z-index: 1000; }
     </style>
 </head>
 <body>
@@ -49,11 +64,7 @@
             </div>
         </div>
         <div class="header-right">
-            <div class="cluster-pill">
-                <span class="status-dot"></span>
-                <span>SDXL-Turbo Cluster</span>
-                <span class="load-text">Load: 14%</span>
-            </div>
+            <div class="cluster-pill"><span class="status-dot"></span><span>SDXL-Turbo Cluster</span><span style="color:var(--text-dim)">Load: 14%</span></div>
             <div class="wallet-pill" id="wallet-pill" onclick="copyAddress()" style="display:none">
                 <span id="balance-display" class="balance-txt">0.00 LCAI</span>
                 <span id="address-display">0x00...00</span>
@@ -63,46 +74,131 @@
 
     <div class="container">
         <aside class="sidebar">
-            <div class="card"><div class="card-title">System Status Window</div><div id="console-output" class="console"></div></div>
-            <div class="card">
-                <div class="card-title">Vault Control</div>
-                <div id="revenue-display" style="font-size: 1.4rem; font-weight: 800; color: var(--secondary);">0.00 LCAI</div>
-                <button class="btn-connect" style="width:100%; margin-top:12px; background:#f59e0b; color:black" onclick="withdraw()">Withdraw Revenue</button>
-            </div>
+            <div class="card-title">System Console</div>
+            <div id="console-output" class="console"></div>
+            
+            <div class="card-title">Navigation</div>
+            <nav class="nav-menu">
+                <a href="index.html" class="nav-item active"><span>🛡️</span> IAM Control Center</a>
+                <a href="artgenerator-ui.html" class="nav-item"><span>🎨</span> LCAI AIVM Art</a>
+                <a href="#" class="nav-item"><span>🛒</span> AIVM Marketplace <small style="color:var(--primary); font-size:0.6rem">WIP</small></a>
+                <a href="recovery.html" class="nav-item"><span>🔑</span> Identity Recovery</a>
+            </nav>
         </aside>
+
         <main class="main-content">
-            <div id="unlocked-notice" class="card" style="text-align:center; border-color:var(--secondary);">
-                <h2 style="color:var(--secondary)">Protocol Unlocked</h2>
-                <p style="color:var(--text-dim); font-size:0.9rem; margin-top:8px;">Native AIVM access is currently active via your ZK-Pass.</p>
+            <div class="card" style="border-left: 4px solid var(--primary)">
+                <h2 style="margin-bottom:8px;">Protocol Command Center</h2>
+                <p style="color:var(--text-dim); font-size:0.95rem">Manage your Soulbound Identity and decentralized AIVM permissions.</p>
+            </div>
+
+            <div id="admin-panel" class="card access-panel">
+                <div class="card-title">Admin Management Panel</div>
+                <div class="admin-grid">
+                    <input type="text" id="target-addr" class="input-pro" placeholder="Target Wallet Address (0x...)">
+                    <button class="btn-pro btn-secondary" onclick="setVerify(true)">Verify Identity</button>
+                    <div style="grid-column: span 2; display: flex; gap: 10px; margin-top: 10px;">
+                        <button class="btn-pro btn-primary" style="flex:1" onclick="queryStatus()">Query Access Status</button>
+                        <button class="btn-pro" style="background:var(--danger); color:white" onclick="setVerify(false)">Revoke Access</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="owner-panel" class="card access-panel" style="border-color: #f59e0b">
+                <div class="card-title" style="color:#f59e0b">Master Owner Vault</div>
+                <div style="display:flex; justify-content:space-between; align-items:center">
+                    <div>
+                        <div style="font-size:0.8rem; color:var(--text-dim)">Total Unclaimed Revenue</div>
+                        <div id="vault-balance" style="font-size: 2.2rem; font-weight: 900; color: #f59e0b">0.00 LCAI</div>
+                    </div>
+                    <button class="btn-pro" style="background:#f59e0b; color:black; padding: 15px 40px" onclick="withdraw()">Withdraw All Funds</button>
+                </div>
             </div>
         </main>
     </div>
+
     <div id="toast"></div>
 
     <script>
-        const CONFIG = { SBT_ADDR: "0xd71462F0002Ee9373fCe05B568583Ed13e75f600", AIVM_ADDR: "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB" };
-        let userAddr;
+        const CONFIG = { 
+            SBT_ADDR: "0xd71462F0002Ee9373fCe05B568583Ed13e75f600", 
+            AIVM_ADDR: "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB" 
+        };
+        const ABI = [
+            "function isAdmin(address) view returns (bool)",
+            "function owner() view returns (address)",
+            "function hasSBT(address) view returns (bool)",
+            "function setVerification(address,bool) external",
+            "function withdraw() external"
+        ];
+        
+        let provider, signer, userAddr, studioContract;
 
         function log(m) { const out = document.getElementById('console-output'); const d = document.createElement('div'); d.innerText = `> ${m}`; out.appendChild(d); out.scrollTop = out.scrollHeight; }
-        
+        function notify(m) { const t = document.getElementById('toast'); t.innerText = m; t.style.display = 'block'; setTimeout(()=>t.style.display='none', 3000); }
+
         async function connect() {
-            if (!window.ethereum) return notify("Install MetaMask");
+            if (!window.ethereum) return notify("MetaMask Required");
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
             userAddr = accounts[0];
+            provider = new ethers.BrowserProvider(window.ethereum);
+            signer = await provider.getSigner();
+            studioContract = new ethers.Contract(CONFIG.AIVM_ADDR, ABI, signer);
+
             document.getElementById('connect-btn').style.display = 'none';
             document.getElementById('wallet-pill').style.display = 'flex';
             document.getElementById('address-display').innerText = `${userAddr.slice(0,6)}...${userAddr.slice(-4)}`;
+            
+            const bal = await provider.getBalance(userAddr);
+            document.getElementById('balance-display').innerText = `${parseFloat(ethers.formatEther(bal)).toFixed(2)} LCAI`;
+            
             log(`Session Authorized: ${userAddr}`);
+            checkAccess();
         }
 
-        function copyAddress() {
-            navigator.clipboard.writeText(userAddr);
-            notify("Address Copied");
+        async function checkAccess() {
+            try {
+                const isA = await studioContract.isAdmin(userAddr);
+                const ownerAddr = await studioContract.owner();
+                const isO = (userAddr.toLowerCase() === ownerAddr.toLowerCase());
+
+                if (isA) {
+                    document.getElementById('admin-panel').style.display = 'block';
+                    log("Admin Privileges Detected.");
+                }
+                if (isO) {
+                    document.getElementById('owner-panel').style.display = 'block';
+                    const vBal = await provider.getBalance(CONFIG.AIVM_ADDR);
+                    document.getElementById('vault-balance').innerText = `${ethers.formatEther(vBal)} LCAI`;
+                    log("Owner Vault Access Unlocked.");
+                }
+            } catch (e) { log("Access Check Error", true); }
         }
 
-        function notify(m) { const t = document.getElementById('toast'); t.innerText = m; t.style.display = 'block'; setTimeout(() => t.style.display='none', 3000); }
-        
-        log("LCAI V2 Kernel Initialized...");
+        function copyAddress() { navigator.clipboard.writeText(userAddr); notify("Address Copied"); }
+
+        // Logic placeholders for Admin/Owner actions
+        async function setVerify(state) {
+            const target = document.getElementById('target-addr').value;
+            if(!ethers.isAddress(target)) return notify("Invalid Address");
+            try {
+                const tx = await studioContract.setVerification(target, state);
+                log(`Transaction Sent: ${tx.hash}`);
+                await tx.wait();
+                notify("Status Updated Successfully");
+            } catch (e) { log("Action Denied", true); }
+        }
+
+        async function withdraw() {
+            try {
+                const tx = await studioContract.withdraw();
+                await tx.wait();
+                notify("Funds Withdrawn");
+                checkAccess();
+            } catch (e) { log("Withdrawal Failed", true); }
+        }
+
+        log("LCAI IAM Kernel Online...");
     </script>
 </body>
 </html>
