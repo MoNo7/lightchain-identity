@@ -65,7 +65,7 @@ const CONFIG = {
 async function initHistory() {
     try {
         const provider = new ethers.BrowserProvider(window.ethereum);
-        // Correct ABI matching your AIArtStudio.sol file
+        // This ABI must match your AIArtStudio.sol exactly
         const contract = new ethers.Contract(CONFIG.AIVM_ADDR, [
             "event ArtGenerated(address indexed user, string prompt, bytes32 modelDigest, uint256 fee)"
         ], provider);
@@ -73,25 +73,29 @@ async function initHistory() {
         const accounts = await window.ethereum.request({ method: 'eth_accounts' });
         const user = accounts[0];
 
-        // Scan for your specific wallet's events
+        // Scan for your specific wallet's ArtGenerated events
         const filter = contract.filters.ArtGenerated(user);
-        const events = await contract.queryFilter(filter, -5000); 
+        const events = await contract.queryFilter(filter, -10000); 
 
-        history = events.map(e => {
-            // Ensure prompt is extracted correctly from the event arguments
-            const promptText = e.args && e.args.prompt ? e.args.prompt : "AIVM Generation";
-            return {
-                prompt: promptText,
-                digest: e.args.modelDigest ? e.args.modelDigest.slice(0, 10) : "0x0000...",
-                url: `https://image.pollinations.ai/prompt/${encodeURIComponent(promptText)}?nologo=true`
-            };
-        }).reverse().slice(0, 10);
+        history = events.map(e => ({
+            prompt: e.args.prompt,
+            // Grab the Model Digest for the badge
+            digest: e.args.modelDigest.slice(0, 10) + "...", 
+            url: `https://image.pollinations.ai/prompt/${encodeURIComponent(e.args.prompt)}?nologo=true`
+        })).reverse().slice(0, 10);
 
-        renderHistory();
-        window.parent.postMessage({ type: "LCAI_STATUS", message: `Gallery Refreshed: Found ${history.length} valid on-chain seeds.` }, "*");
-    } catch (e) {
-        console.error("Gallery Sync Error:", e);
-    }
+        const grid = document.getElementById('history-grid');
+        grid.innerHTML = history.map((item, i) => `
+            <div class="gallery-item" onclick="loadHistory(${i})" style="position:relative; width:80px; height:80px; border:1px solid var(--border); border-radius:8px; overflow:hidden;">
+                <img src="${item.url}" style="width:100%; height:100%; object-fit:cover;">
+                <div style="position:absolute; top:2px; right:2px; background:var(--primary); color:white; font-size:8px; padding:2px 4px; border-radius:3px; font-weight:bold;">
+                    ${item.digest}
+                </div>
+            </div>
+        `).join('');
+        
+        window.parent.postMessage({ type: "LCAI_STATUS", message: `Gallery Synced: ${history.length} on-chain items found.` }, "*");
+    } catch (e) { console.error(e); }
 }
         
         function updateHistory(prompt, url) {
