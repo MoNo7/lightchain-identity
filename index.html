@@ -10,7 +10,7 @@
         body { margin: 0; background: var(--bg); color: white; font-family: 'Inter', sans-serif; display: flex; height: 100vh; overflow: hidden; }
         nav { width: 280px; border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 25px; background: var(--panel); box-sizing: border-box; }
         .nav-logo { font-weight: 900; letter-spacing: 2px; color: var(--accent); margin-bottom: 25px; font-size: 1.1rem; text-align: center; height: 30px; }
-        .system-console { background: var(--console-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; height: 180px; overflow-y: auto; margin-bottom: 20px; color: #4e5d75; line-height: 1.5; }
+        .system-console { background: var(--console-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 0.65rem; height: 180px; overflow-y: auto; margin-bottom: 20px; color: #4e5d75; line-height: 1.5; }
         .console-line { margin-bottom: 4px; border-left: 2px solid #1a202c; padding-left: 8px; word-wrap: break-word; }
         .console-line.success { border-left-color: var(--accent); color: #fff; }
         .console-line.error { border-left-color: #ff4444; color: #ff4444; }
@@ -19,13 +19,13 @@
         .nav-link:hover, .nav-link.active { color: white; background: var(--accent); }
         .viewport { flex: 1; display: flex; flex-direction: column; }
         header { height: 80px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; box-sizing: border-box; position: relative; }
-        .tickers { display: flex; gap: 25px; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; position: absolute; left: 50%; transform: translateX(-50%); }
+        .tickers { display: flex; gap: 25px; font-family: monospace; font-size: 0.75rem; position: absolute; left: 50%; transform: translateX(-50%); }
         .ticker-item span { color: var(--accent); font-weight: bold; margin-right: 5px; }
         .header-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
         .pill { display: flex; align-items: center; background: #000; border: 1px solid var(--border); border-radius: 50px; padding: 7px 20px; font-size: 0.7rem; color: var(--accent); font-family: monospace; }
         .wallet-pill { background: var(--accent); color: white; border-radius: 50px; padding: 9px 20px; font-weight: 900; cursor: pointer; border: none; font-size: 0.75rem; }
         .view-pane { flex: 1; padding: 45px; display: none; overflow-y: auto; }
-        .view-pane.connected { display: block !important; }
+        .view-pane.active { display: block !important; }
         .card { background: var(--panel); border: 1px solid var(--border); padding: 35px; border-radius: 12px; max-width: 750px; border-top: 4px solid var(--accent); margin-bottom: 20px; }
         .panel-input { width: 100%; background: #000; border: 1px solid #333; color: white; padding: 12px; border-radius: 4px; font-size: 0.75rem; margin-bottom: 12px; box-sizing: border-box; }
         .action-btn { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; width: 100%; font-weight: bold; margin-bottom: 8px; }
@@ -35,8 +35,6 @@
         .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; margin-top: 20px; }
         .gallery-item { background: #000; border: 1px solid var(--border); border-radius: 6px; padding: 10px; text-align: center; }
         .gallery-item img { width: 100%; height: 110px; object-fit: cover; border-radius: 4px; background: #111; margin-bottom: 8px; }
-        .art-preview { width: 100%; height: 250px; background: #000; border: 1px dashed var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-dim); margin-bottom: 15px; overflow: hidden; }
-        .model-select { width: 100%; background: #000; border: 1px solid #333; color: var(--accent); padding: 10px; border-radius: 4px; font-size: 0.75rem; margin-bottom: 15px; cursor: pointer; font-family: monospace; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -45,7 +43,6 @@
     <div class="nav-logo">LCAI <span>IAM</span></div>
     <div class="system-console" id="console">
         <div class="console-line">>> INITIALIZING LCAI_IAM_CORE...</div>
-        <div class="console-line">>> TARGET_CONTRACT: 0xbcA3...D8FB</div>
     </div>
     <div class="nav-menu" id="side-menu">
         <button class="nav-link active" onclick="showView('id-view', this)">ZK IDENTITY</button>
@@ -68,12 +65,11 @@
         </div>
     </header>
 
-    <div id="id-view" class="view-pane">
+    <div id="id-view" class="view-pane active">
         <div class="card">
             <h2>ZK-SBT IDENTITY</h2>
-            <pre id="id-json">{ "status": "pending_auth" }</pre>
+            <pre id="id-json">{ "status": "awaiting_connection" }</pre>
             <button onclick="saveJSON()" class="action-btn alt" style="width: auto; padding: 10px 25px;">DOWNLOAD JSON</button>
-            <br><br>
             <div id="qr-target"></div>
         </div>
     </div>
@@ -81,36 +77,21 @@
     <div id="recovery-view" class="view-pane">
         <div class="card">
             <h2>IDENTITY RECOVERY (ADMIN)</h2>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 25px;">
-                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 20px; border-radius: 8px;">
-                    <h4 style="color:var(--accent); margin-top:0;">MODERATION</h4>
-                    <input type="text" class="panel-input" placeholder="User Address" id="admin-addr">
-                    <button class="action-btn" onclick="runAdmin('queryStatus')">QUERY STATUS</button>
-                    <button class="action-btn" onclick="runAdmin('setVerification', true)">VERIFY</button>
-                    <button class="action-btn alt" style="border-color:#ff4444; color:#ff4444;" onclick="runAdmin('setVerification', false)">REVOKE</button>
-                </div>
-                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 20px; border-radius: 8px;">
-                    <h4 style="color:var(--accent); margin-top:0;">TREASURY</h4>
-                    <div style="background:#000; padding:12px; border-radius:4px; margin-bottom:12px; border:1px solid var(--border);">
-                        <div style="font-size:0.6rem; color:var(--text-dim);">VAULT BALANCE</div>
-                        <div style="font-size:1.1rem; font-weight:bold;" id="revenue-val">0.00 tLCAI</div>
-                    </div>
-                    <button class="action-btn" onclick="runOwner()">WITHDRAW ALL</button>
-                </div>
+            <input type="text" class="panel-input" placeholder="User Address" id="admin-addr">
+            <button class="action-btn" onclick="runAdmin('queryStatus')">QUERY STATUS</button>
+            <button class="action-btn" onclick="runAdmin('setVerification', true)">VERIFY USER</button>
+            <div style="background:#000; padding:12px; margin-top:20px; border-radius:4px; border:1px solid var(--border);">
+                <div style="font-size:0.6rem; color:var(--text-dim);">VAULT BALANCE</div>
+                <div id="revenue-val">0.00 tLCAI</div>
             </div>
+            <button class="action-btn alt" onclick="runOwner()" style="margin-top:10px;">WITHDRAW ALL</button>
         </div>
     </div>
 
     <div id="aivm-view" class="view-pane">
         <div class="card">
             <h2>LCAI AIVM INFERENCE</h2>
-            <div class="art-preview" id="art-preview-box">[ RENDER TARGET ]</div>
-            <select id="model-selector" class="model-select">
-                <option value="Stable-Diffusion-XL">STABLE DIFFUSION XL (v1.0)</option>
-                <option value="LCAI-Theta-Latent">LCAI THETA LATENT (Custom)</option>
-                <option value="Dall-E-3-API">DALL-E 3 NEURAL</option>
-            </select>
-            <textarea id="art-prompt" class="panel-input" placeholder="Neural landscape..." style="height: 100px;"></textarea>
+            <textarea id="art-prompt" class="panel-input" placeholder="Enter prompt..."></textarea>
             <button class="action-btn" onclick="generateArt()">REQUEST INFERENCE (0.001 tLCAI)</button>
         </div>
     </div>
@@ -152,148 +133,103 @@ async function syncTickers() {
         const ethR = await fetch('https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD');
         const ethD = await ethR.json();
         document.getElementById('eth-price').innerText = `$${ethD.USD.toLocaleString()}`;
-        
         const lcaiR = await fetch('https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=0x9ca8530ca349c966fe9ef903df17a75b8a778927&vs_currencies=usd');
         const lcaiD = await lcaiR.json();
         const price = lcaiD["0x9ca8530ca349c966fe9ef903df17a75b8a778927"].usd;
         document.getElementById('lcai-price').innerText = `$${price.toFixed(5)}`;
     } catch(e) { document.getElementById('lcai-price').innerText = "$0.0024"; }
 }
-setInterval(syncTickers, 30000); syncTickers();
+syncTickers();
 
 async function connectWallet() {
-    if(!window.ethereum) return log("METAMASK MISSING", "error");
+    if (!window.ethereum) return log("NO WALLET DETECTED", "error");
+    log("REQUESTING CONNECTION...");
     try {
-        // Step 1: Request accounts and set provider
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        const rawOwner = await contract.owner();
-        const isOwner = (user.toLowerCase() === rawOwner.toLowerCase());
-        const isVerified = await contract.manualVerified(user);
         user = accounts[0];
         provider = new ethers.BrowserProvider(window.ethereum);
-        
-        // Step 2: Critical - Ensure network is ready before contract creation
-        await provider.getNetwork();
         signer = await provider.getSigner();
         contract = new ethers.Contract(CONFIG.addr, CONFIG.abi, signer);
         
-        log(`AUTH START: ${user.slice(0,10)}`, "info");
-
-        // Step 3: Verify contract on this network
-        let contractOwner = "0x...";
-        let isOwner = false;
-        let isVerified = false;
-        try {
-            contractOwner = await contract.owner();
-            isOwner = (user.toLowerCase() === contractOwner.toLowerCase());
-            isVerified = await contract.manualVerified(user);
-            log("LCAI NEXUS CONNECTED", "success");
-        } catch(e) {
-            log("CONTRACT NOT DETECTED (CHECK NETWORK)", "error");
-            console.error("Contract Error:", e);
-        }
-
+        log(`CONNECTED: ${user.slice(0,10)}`, "success");
         document.getElementById('wallet-btn').innerText = user.slice(0,6).toUpperCase();
         document.getElementById('side-menu').style.display = 'flex';
-        document.getElementById('id-view').classList.add('connected');
         
-        const identityData = {
-            "identity": {
-                "operator_id": `LCAI-${user.slice(2, 8).toUpperCase()}`,
-                "role": isOwner ? "SYSTEM_OWNER_ADMIN" : (isVerified ? "VERIFIED_OPERATOR" : "GUEST_NODE"),
-                "access_tier": isOwner ? "OMEGA_ACCESS" : "STANDARD",
-                "auth_method": "ZK_SBT_HANDSHAKE",
-                "timestamp": Math.floor(Date.now() / 1000)
-            },
-            "on_chain": { "address": user, "contract": CONFIG.addr, "owner": contractOwner }
-        };
-        document.getElementById('id-json').innerText = JSON.stringify(identityData, null, 4);
-        document.getElementById('qr-target').innerHTML = "";
-        new QRCode(document.getElementById("qr-target"), { text: user, width: 140, height: 140 });
+        // Initial Read
+        try {
+            const owner = await contract.owner();
+            const isOwner = user.toLowerCase() === owner.toLowerCase();
+            const identityData = {
+                "identity": { "operator_id": `LCAI-${user.slice(2,8).toUpperCase()}`, "role": isOwner ? "OWNER" : "OPERATOR" },
+                "network": { "address": user, "contract": CONFIG.addr }
+            };
+            document.getElementById('id-json').innerText = JSON.stringify(identityData, null, 4);
+            if(isOwner) log("ADMIN ACCESS GRANTED", "success");
+        } catch(re) { log("SYNC ERROR: WRONG NETWORK?", "error"); }
+
         refreshBalance();
-        initGallery(); // Trigger gallery sync on connect
-    } catch(e) { 
-        log("CONNECTION FAILED", "error"); 
-        console.error("Connect Error:", e);
+    } catch (e) {
+        log("CONNECTION FAILED: " + e.message, "error");
     }
 }
 
-async function runAdmin(method, status = null) {
+async function runAdmin(method, val) {
     if(!contract) return;
-    const target = document.getElementById('admin-addr').value || user;
     try {
+        const target = document.getElementById('admin-addr').value;
         if(method === 'queryStatus') {
             const res = await contract.manualVerified(target);
-            log(`STATUS [${target.slice(0,6)}]: ${res ? "VERIFIED" : "UNVERIFIED"}`, "success");
+            log(`USER ${target.slice(0,6)} VERIFIED: ${res}`);
         } else {
-            const tx = await contract.setVerification(target, status);
-            await tx.wait(); log("NETWORK SYNC COMPLETE", "success");
+            const tx = await contract.setVerification(target, val);
+            await tx.wait(); log("VERIFICATION UPDATED", "success");
         }
-    } catch(e) { log("REVERT: LACK OF PERMISSIONS", "error"); }
+    } catch(e) { log("ACTION DENIED", "error"); }
 }
 
 async function runOwner() {
     if(!contract) return;
     try {
         const tx = await contract.withdraw();
-        await tx.wait(); log("TREASURY WITHDRAWN", "success");
+        await tx.wait(); log("VAULT EMPTIED", "success");
         refreshBalance();
-    } catch(e) { log("REVERT: OWNER ONLY", "error"); }
+    } catch(e) { log("REVERT: NOT OWNER", "error"); }
 }
 
 async function generateArt() {
     if(!contract) return;
-    const prompt = document.getElementById('art-prompt').value;
-    const model = document.getElementById('model-selector').value;
     try {
-        document.getElementById('status-txt').innerText = "INFERENCE";
-        document.getElementById('load-num').innerText = "20%";
-        const tx = await contract.requestInference(`[${model}] ${prompt}`, { value: ethers.parseEther("0.001") });
-        await tx.wait();
-        document.getElementById('load-num').innerText = "100%";
-        document.getElementById('status-txt').innerText = "IDLE";
-        document.getElementById('art-preview-box').innerHTML = `<img src="https://picsum.photos/seed/${Date.now()}/600/250" style="width:100%; height:100%; object-fit:cover;">`;
-    } catch(e) { document.getElementById('status-txt').innerText = "ERROR"; }
+        const prompt = document.getElementById('art-prompt').value;
+        const tx = await contract.requestInference(prompt, { value: ethers.parseEther("0.001") });
+        await tx.wait(); log("INFERENCE COMPLETE", "success");
+    } catch(e) { log("INFERENCE FAILED", "error"); }
 }
 
 async function initGallery() {
     if(!contract) return;
     const grid = document.getElementById('gallery-grid');
-    grid.innerHTML = "SYNCING...";
+    grid.innerHTML = "LOADING...";
     try {
-        // FIX: Changed block range to be more compatible with Testnet RPCs
-        const filter = contract.filters.InferenceRequested();
-        const events = await contract.queryFilter(filter, -5000); 
-        
-        grid.innerHTML = events.length === 0 ? "NO RECORDS FOUND" : "";
+        const events = await contract.queryFilter("InferenceRequested", -5000);
+        grid.innerHTML = "";
         events.reverse().forEach(ev => {
             grid.innerHTML += `<div class="gallery-item"><img src="https://picsum.photos/seed/${ev.transactionHash}/150/110"></div>`;
         });
-    } catch(e) { 
-        log("GALLERY SYNC FAILED", "error");
-        grid.innerHTML = "OFFLINE";
-    }
+    } catch(e) { grid.innerHTML = "EMPTY"; }
 }
+
 async function refreshBalance() {
     if(!provider) return;
-    try {
-        const bal = await provider.getBalance(CONFIG.addr);
-        document.getElementById('revenue-val').innerText = `${ethers.formatEther(bal).slice(0,6)} tLCAI`;
-    } catch(e) {}
+    const bal = await provider.getBalance(CONFIG.addr);
+    document.getElementById('revenue-val').innerText = `${ethers.formatEther(bal).slice(0,6)} tLCAI`;
 }
 
 function showView(id, btn) {
-    document.querySelectorAll('.view-pane').forEach(el => el.classList.remove('connected'));
+    document.querySelectorAll('.view-pane').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
-    document.getElementById(id).classList.add('connected');
+    document.getElementById(id).classList.add('active');
     btn.classList.add('active');
-}
-
-function saveJSON() {
-    const b = new Blob([document.getElementById('id-json').innerText], {type:"application/json"});
-    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download="id.json"; a.click();
 }
 </script>
 </body>
 </html>
-
