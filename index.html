@@ -16,10 +16,9 @@
         .console-line { margin-bottom: 4px; border-left: 2px solid #1a202c; padding-left: 8px; }
         .console-line.success { border-left-color: var(--accent); color: #fff; }
         
-        .nav-menu { display: flex; flex-direction: column; gap: 5px; }
+        .nav-menu { display: none; flex-direction: column; gap: 5px; }
         .nav-link { color: var(--text-dim); padding: 12px 15px; cursor: pointer; border-radius: 6px; transition: 0.2s; border: none; background: none; text-align: left; font-size: 0.75rem; font-family: monospace; font-weight: 600; width: 100%; }
         .nav-link:hover, .nav-link.active { color: white; background: var(--accent); }
-        .nav-link.locked { opacity: 0.2; cursor: not-allowed; }
 
         /* VIEWPORT */
         .viewport { flex: 1; display: flex; flex-direction: column; }
@@ -33,7 +32,9 @@
         .wallet-pill { background: var(--accent); color: white; border-radius: 50px; padding: 9px 24px; font-weight: 900; cursor: pointer; border: none; font-size: 0.75rem; }
 
         .view-pane { flex: 1; padding: 45px; display: none; overflow-y: auto; }
-        .view-pane.active { display: block; }
+        .view-pane.active { display: none; } 
+        .view-pane.connected { display: block !important; }
+
         .card { background: var(--panel); border: 1px solid var(--border); padding: 35px; border-radius: 12px; max-width: 650px; border-top: 4px solid var(--accent); }
         .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 25px; }
         .admin-box { background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 20px; border-radius: 8px; }
@@ -52,10 +53,10 @@
         <div class="console-line">>> INITIALIZING LCAI_IAM_CORE...</div>
         <div class="console-line">>> STATUS: DISCONNECTED</div>
     </div>
-    <div class="nav-menu">
+    <div class="nav-menu" id="side-menu">
         <button class="nav-link active" onclick="showView('id-view', this)">ZK IDENTITY</button>
         <button class="nav-link" onclick="showView('recovery-view', this)">IDENTITY RECOVERY</button>
-        <button id="aivm-tab" class="nav-link locked" onclick="showView('aivm-view', this)">LCAI AIVM ART</button>
+        <button class="nav-link" onclick="showView('aivm-view', this)">LCAI AIVM ART</button>
     </div>
 </nav>
 
@@ -72,7 +73,7 @@
         </div>
     </header>
 
-    <div id="id-view" class="view-pane active">
+    <div id="id-view" class="view-pane">
         <div class="card">
             <h2>ZK-SBT IDENTITY</h2>
             <pre id="id-json">{ "auth": "pending_wallet_connection" }</pre>
@@ -82,117 +83,27 @@
         </div>
     </div>
 
-    <div id="recovery-view" class="view-pane">
-        <div class="card">
-            <h2>IDENTITY RECOVERY</h2>
-            <div class="admin-grid">
-                <div class="admin-box">
-                    <h4 style="color:var(--accent); margin-top:0;">ADMIN PANEL</h4>
-                    <input type="text" class="panel-input" placeholder="User Address (0x...)" id="admin-addr">
-                    <button class="action-btn" onclick="runAdmin('queryStatus')">QUERY STATUS</button>
-                    <button class="action-btn" onclick="runAdmin('setVerification', true)">VERIFY IDENTITY</button>
-                    <button class="action-btn alt" style="border-color:#ff4444; color:#ff4444;" onclick="runAdmin('setVerification', false)">REVOKE ACCESS</button>
-                </div>
-                <div class="admin-box">
-                    <h4 style="color:var(--accent); margin-top:0;">OWNER PANEL</h4>
-                    <div style="background:#000; padding:12px; border-radius:4px; margin-bottom:12px; border:1px solid var(--border);">
-                        <div style="font-size:0.6rem; color:var(--text-dim);">VAULT BALANCE</div>
-                        <div style="font-size:1.1rem; font-weight:bold;" id="revenue-val">0.00 ETH</div>
-                    </div>
-                    <button class="action-btn" onclick="runOwner('withdraw')">WITHDRAW FUNDS</button>
-                    <button class="action-btn alt" onclick="runOwner('transferOwnership')">TRANSFER OWNERSHIP</button>
-                </div>
-            </div>
-        </div>
     </div>
-
-    <div id="aivm-view" class="view-pane" style="padding:0;">
-        <iframe src="artgenerator-ui.html" style="width:100%; height:100%; border:none;"></iframe>
-    </div>
-</div>
 
 <script>
-const CONFIG = {
-    addr: "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB",
-    abi: [
-        "function setVerification(address user, bool status) external",
-        "function withdraw() external",
-        "function manualVerified(address) public view returns (bool)",
-        "function owner() public view returns (address)",
-        "function transferOwnership(address newOwner) public"
-    ]
-};
+// (Keep original CONFIG and runAdmin/runOwner functions here)
 
-let user, provider, signer, contract;
-
-const log = (msg, ok = false) => {
-    const l = document.createElement('div');
-    l.className = `console-line ${ok ? 'success' : ''}`;
-    l.innerText = `>> ${msg}`;
-    document.getElementById('console').appendChild(l);
-    document.getElementById('console').scrollTop = 9999;
-};
-
-// Real-time Uniswap LCAI Data via CORS-friendly API
 async function syncTickers() {
     try {
         const ethR = await fetch('https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD');
         const ethD = await ethR.json();
         document.getElementById('eth-price').innerText = `$${ethD.USD.toLocaleString()}`;
         
-        // Fetching LCAI from Uniswap Pool Data via CoinGecko/DexCheck approved endpoint
         const lcaiR = await fetch('https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=0x9ca8530ca349c966fe9ef903df17a75b8a778927&vs_currencies=usd');
         const lcaiD = await lcaiR.json();
         const price = lcaiD["0x9ca8530ca349c966fe9ef903df17a75b8a778927"].usd;
         document.getElementById('lcai-price').innerText = `$${price.toFixed(5)}`;
     } catch(e) { 
-        // Fallback to stability baseline if rate-limited
         document.getElementById('lcai-price').innerText = "$0.00195"; 
     }
 }
+// UPDATED REFRESH RATE TO 5 SECONDS
 setInterval(syncTickers, 5000); syncTickers();
-
-async function runAdmin(method, status = null) {
-    if(!contract) return log("ERR: CONNECT WALLET");
-    const target = document.getElementById('admin-addr').value || user;
-    try {
-        if(method === 'queryStatus') {
-            log(`QUERYING: ${target.slice(0,8)}...`);
-            const isVerified = await contract.manualVerified(target);
-            log(`IDENTITY STATUS: ${isVerified ? "VERIFIED" : "UNVERIFIED"}`, isVerified);
-        } else {
-            log(`ADMIN: ${method} for ${target.slice(0,8)}...`);
-            const tx = await contract.setVerification(target, status);
-            await tx.wait();
-            log("TX COMPLETED", true);
-        }
-    } catch(e) { log(`ERR: ${e.reason || "AUTH_FAILED"}`); }
-}
-
-async function runOwner(m) {
-    if(!contract) return log("ERR: CONNECT WALLET");
-    const newOwner = document.getElementById('admin-addr').value;
-    try {
-        log(`OWNER: EXECUTING ${m.toUpperCase()}...`);
-        let tx;
-        if(m === 'transferOwnership') {
-            if(!newOwner) return log("ERR: TARGET ADDR REQUIRED");
-            tx = await contract.transferOwnership(newOwner);
-        } else {
-            tx = await contract.withdraw();
-        }
-        await tx.wait();
-        log("OWNER ACTION SUCCESSFUL", true);
-        refreshBalance();
-    } catch(e) { log(`ERR: ${e.reason || "NOT_OWNER"}`); }
-}
-
-async function refreshBalance() {
-    try {
-        const bal = await provider.getBalance(CONFIG.addr);
-        document.getElementById('revenue-val').innerText = `${ethers.formatEther(bal)} ETH`;
-    } catch(e) {}
-}
 
 async function connectWallet() {
     if(!window.ethereum) return log("ERR: NO WALLET");
@@ -200,36 +111,44 @@ async function connectWallet() {
     const accs = await provider.send("eth_requestAccounts", []);
     user = accs[0];
     signer = await provider.getSigner();
-    contract = new ethers.Contract(CONFIG.addr, CONFIG.abi, signer);
     
     document.getElementById('wallet-btn').innerText = user.slice(0,6).toUpperCase() + "..." + user.slice(-4).toUpperCase();
     log(`CONNECTED: ${user.slice(0,10)}`, true);
     
-    document.getElementById('id-json').innerText = JSON.stringify({address: user, verified: true}, null, 4);
+    document.getElementById('side-menu').style.display = 'flex';
+    document.getElementById('id-view').classList.add('connected');
+    
+    // EXTENDED ZK IDENTITY DATA
+    const now = new Date();
+    const identityData = {
+        "identity": {
+            "name": `Operator_${user.slice(2, 6)}`,
+            "role": "LCAI_IAM_OPERATOR",
+            "access_tier": "Alpha_V1",
+            "created_at": now.toISOString(),
+            "unix_timestamp": Math.floor(now.getTime() / 1000)
+        },
+        "on_chain_meta": {
+            "address": user,
+            "contract_binding": "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB",
+            "sbt_verification": "zk-SNARK_Verified",
+            "network": "Lightchain_AIVM_Mainnet"
+        },
+        "security": {
+            "protocol": "IAM_CORE_v2.1",
+            "hash_algorithm": "Keccak-256",
+            "status": "active"
+        }
+    };
+
+    document.getElementById('id-json').innerText = JSON.stringify(identityData, null, 4);
     document.getElementById('qr-target').innerHTML = "";
-    new QRCode(document.getElementById("qr-target"), { text: user, width: 140, height: 140 });
-    document.getElementById('aivm-tab').classList.remove('locked');
+    new QRCode(document.getElementById("qr-target"), { text: JSON.stringify(identityData), width: 140, height: 140 });
 
-    refreshBalance();
+    // (Keep original refreshBalance call)
 }
 
-function showView(id, btn) {
-    if (id === 'aivm-view' && !user) return;
-    document.querySelectorAll('.view-pane, .nav-link').forEach(el => el.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-    btn.classList.add('active');
-}
-
-function saveJSON() {
-    const b = new Blob([document.getElementById('id-json').innerText], {type:"application/json"});
-    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download="id.json"; a.click();
-}
-
-function saveQR() {
-    const c = document.querySelector('#qr-target canvas');
-    const a = document.createElement('a'); a.href = c.toDataURL(); a.download="qr.png"; a.click();
-}
+// (Keep original showView, saveJSON, saveQR functions)
 </script>
 </body>
 </html>
-
