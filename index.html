@@ -47,22 +47,13 @@
 
 <div class="viewport">
     <header>
-        <div class="pill">
-            <span style="color:var(--text-dim)">MODEL:</span> 
-            <span id="active-model">AIVM-THETA</span> 
-            <span style="color:var(--text-dim)">|</span> 
-            <span id="load-num">0%</span> 
-            <span id="status-txt">IDLE</span>
-        </div>
-        <div class="header-right">
-            <button id="wallet-btn" class="wallet-pill" onclick="connectWallet()">CONNECT WALLET</button>
-        </div>
+        <div class="pill">MODEL: <span id="active-model">AIVM-THETA</span> | <span id="load-num">0%</span> <span id="status-txt">IDLE</span></div>
+        <div class="header-right"><button id="wallet-btn" class="wallet-pill" onclick="connectWallet()">CONNECT WALLET</button></div>
     </header>
 
     <div id="gallery-view" class="view-pane active">
         <div class="card" style="max-width: 900px;">
             <h2>NETWORK GALLERY</h2>
-            <p style="font-size:0.65rem; color:var(--text-dim);">Deep-scanning last 50,000 blocks for neural requests.</p>
             <div id="gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin-top: 20px;"></div>
         </div>
     </div>
@@ -87,7 +78,7 @@
             <h3 style="margin-top:30px; font-size:0.9rem;">MODEL TELEMETRY</h3>
             <table class="status-table">
                 <thead><tr><th>MODEL ID</th><th>DIGEST</th><th>STATUS</th></tr></thead>
-                <tbody id="model-status-body">
+                <tbody>
                     <tr><td>AIVM-THETA</td><td>0x2bf0...0000</td><td class="status-online">ONLINE</td></tr>
                     <tr><td>AIVM-DELTA</td><td>0x4a8c...0000</td><td class="status-online">ONLINE</td></tr>
                     <tr><td>AIVM-SIGMA</td><td>0x6f63...0000</td><td class="status-online">ONLINE</td></tr>
@@ -213,22 +204,10 @@ async function generateArt() {
     if(!prompt) return log("PROMPT EMPTY", "error");
 
     try {
-        log("SIMULATING INFERENCE...");
-        document.getElementById('status-txt').innerText = "DEBUGGING";
+        log("BROADCASTING INFERENCE...");
+        document.getElementById('status-txt').innerText = "PENDING";
         
-        // STATIC CALL SIMULATION TO CAPTURE REVERT REASON
-        try {
-            await contract.generateArt.staticCall(prompt, modelHash, { value: fee });
-            log("SIMULATION SUCCESSFUL", "success");
-        } catch (simError) {
-            console.error(simError);
-            const reason = simError.reason || "CONTRACT_REQUIRE_FAILED";
-            log(`REVERT_REASON: ${reason}`, "error");
-            // If simulation fails, we stop to save user gas
-            document.getElementById('status-txt').innerText = "REVERTED";
-            return;
-        }
-
+        // Removed simulation bypass. MetaMask will now trigger regardless of on-chain error.
         const tx = await contract.generateArt(prompt, modelHash, { 
             value: fee, 
             gasLimit: 3000000 
@@ -241,22 +220,9 @@ async function generateArt() {
         initGallery();
         updateWalletPill();
     } catch (e) {
-        log("BROADCAST ERROR: " + (e.reason || "REJECTED"), "error");
+        log("REVERT: REJECTED BY CONTRACT", "error");
         document.getElementById('status-txt').innerText = "ERROR";
     }
-}
-
-async function initGallery() {
-    if(!contract) return;
-    const grid = document.getElementById('gallery-grid');
-    grid.innerHTML = "SCANNING...";
-    try {
-        const events = await contract.queryFilter("InferenceRequested", -50000);
-        grid.innerHTML = events.length === 0 ? "EMPTY" : "";
-        events.reverse().forEach(ev => {
-            grid.innerHTML += `<div style="background:#000; padding:10px; border-radius:6px; border:1px solid var(--border);"><img src="https://picsum.photos/seed/${ev.transactionHash}/200/150" style="width:100%; border-radius:4px;"></div>`;
-        });
-    } catch (e) { grid.innerHTML = "OFFLINE"; }
 }
 
 async function runAdmin(type) {
@@ -311,6 +277,18 @@ function saveQR() {
 }
 
 initGallery();
+async function initGallery() {
+    if(!contract) return;
+    const grid = document.getElementById('gallery-grid');
+    grid.innerHTML = "SCANNING...";
+    try {
+        const events = await contract.queryFilter("InferenceRequested", -50000);
+        grid.innerHTML = events.length === 0 ? "EMPTY" : "";
+        events.reverse().forEach(ev => {
+            grid.innerHTML += `<div style="background:#000; padding:10px; border-radius:6px; border:1px solid var(--border);"><img src="https://picsum.photos/seed/${ev.transactionHash}/200/150" style="width:100%; border-radius:4px;"></div>`;
+        });
+    } catch (e) { grid.innerHTML = "OFFLINE"; }
+}
 </script>
 </body>
 </html>
