@@ -9,22 +9,19 @@
         :root { --accent: #0070ff; --bg: #020408; --panel: #0b0e14; --border: #1e2633; --text-dim: #6a768a; --console-bg: #05070a; }
         body { margin: 0; background: var(--bg); color: white; font-family: 'Inter', sans-serif; display: flex; height: 100vh; overflow: hidden; }
 
-        /* SIDEBAR */
         nav { width: 280px; border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 25px; background: var(--panel); box-sizing: border-box; }
         .nav-logo { font-weight: 900; letter-spacing: 2px; color: var(--accent); margin-bottom: 25px; font-size: 1.1rem; text-align: center; }
         .system-console { background: var(--console-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; height: 160px; overflow-y: auto; margin-bottom: 20px; color: #4e5d75; line-height: 1.5; }
         .console-line { margin-bottom: 4px; border-left: 2px solid #1a202c; padding-left: 8px; }
         .console-line.success { border-left-color: var(--accent); color: #fff; }
         
+        /* HIDDEN UNTIL CONNECT */
         .nav-menu { display: none; flex-direction: column; gap: 5px; }
         .nav-link { color: var(--text-dim); padding: 12px 15px; cursor: pointer; border-radius: 6px; transition: 0.2s; border: none; background: none; text-align: left; font-size: 0.75rem; font-family: monospace; font-weight: 600; width: 100%; }
         .nav-link:hover, .nav-link.active { color: white; background: var(--accent); }
-        .nav-link.locked { opacity: 0.2; cursor: not-allowed; }
-   
-        /* VIEWPORT */
+
         .viewport { flex: 1; display: flex; flex-direction: column; }
         header { height: 80px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; position: relative; }
-        
         .tickers { display: flex; gap: 25px; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; position: absolute; left: 50%; transform: translateX(-50%); }
         .ticker-item span { color: var(--accent); font-weight: bold; margin-right: 5px; }
         
@@ -33,7 +30,6 @@
         .wallet-pill { background: var(--accent); color: white; border-radius: 50px; padding: 9px 24px; font-weight: 900; cursor: pointer; border: none; font-size: 0.75rem; }
 
         .view-pane { flex: 1; padding: 45px; display: none; overflow-y: auto; }
-        .view-pane.active { display: none; } 
         .view-pane.connected { display: block !important; }
 
         .card { background: var(--panel); border: 1px solid var(--border); padding: 35px; border-radius: 12px; max-width: 650px; border-top: 4px solid var(--accent); }
@@ -84,8 +80,6 @@
         </div>
     </div>
 
-    </div>
-
     <div id="recovery-view" class="view-pane">
         <div class="card">
             <h2>IDENTITY RECOVERY</h2>
@@ -108,6 +102,13 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <div id="aivm-view" class="view-pane" style="padding:0;">
+        <iframe src="artgenerator-ui.html" style="width:100%; height:100%; border:none;"></iframe>
+    </div>
+</div>
+
 <script>
 const CONFIG = {
     addr: "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB",
@@ -126,11 +127,10 @@ const log = (msg, ok = false) => {
     const l = document.createElement('div');
     l.className = `console-line ${ok ? 'success' : ''}`;
     l.innerText = `>> ${msg}`;
-    document.getElementById('console').appendChild(l);
-    document.getElementById('console').scrollTop = 9999;
+    const consoleBox = document.getElementById('console');
+    consoleBox.appendChild(l);
+    consoleBox.scrollTop = consoleBox.scrollHeight;
 };
-
-    
 
 async function syncTickers() {
     try {
@@ -146,8 +146,9 @@ async function syncTickers() {
         document.getElementById('lcai-price').innerText = "$0.00195"; 
     }
 }
-// UPDATED REFRESH RATE TO 5 SECONDS
-setInterval(syncTickers, 5000); syncTickers();
+setInterval(syncTickers, 5000); 
+syncTickers();
+
 async function runAdmin(method, status = null) {
     if(!contract) return log("ERR: CONNECT WALLET");
     const target = document.getElementById('admin-addr').value || user;
@@ -196,22 +197,16 @@ async function connectWallet() {
     const accs = await provider.send("eth_requestAccounts", []);
     user = accs[0];
     signer = await provider.getSigner();
+    contract = new ethers.Contract(CONFIG.addr, CONFIG.abi, signer);
     
     document.getElementById('wallet-btn').innerText = user.slice(0,6).toUpperCase() + "..." + user.slice(-4).toUpperCase();
     log(`CONNECTED: ${user.slice(0,10)}`, true);
-
-    document.getElementById('id-json').innerText = JSON.stringify({address: user, verified: true}, null, 4);
-    document.getElementById('qr-target').innerHTML = "";
-    new QRCode(document.getElementById("qr-target"), { text: user, width: 140, height: 140 });
-    document.getElementById('aivm-tab').classList.remove('locked');
-
-    refreshBalance();
-}
     
+    // UI REVEAL
     document.getElementById('side-menu').style.display = 'flex';
     document.getElementById('id-view').classList.add('connected');
     
-    // EXTENDED ZK IDENTITY DATA
+    // EXTENDED DATA GENERATION
     const now = new Date();
     const identityData = {
         "identity": {
@@ -223,7 +218,7 @@ async function connectWallet() {
         },
         "on_chain_meta": {
             "address": user,
-            "contract_binding": "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB",
+            "contract_binding": CONFIG.addr,
             "sbt_verification": "zk-SNARK_Verified",
             "network": "Lightchain_AIVM_Mainnet"
         },
@@ -234,26 +229,32 @@ async function connectWallet() {
         }
     };
 
-function showView(id, btn) {
-    if (id === 'aivm-view' && !user) return;
-    document.querySelectorAll('.view-pane, .nav-link').forEach(el => el.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-    btn.classList.add('active');
-}
-    
     document.getElementById('id-json').innerText = JSON.stringify(identityData, null, 4);
     document.getElementById('qr-target').innerHTML = "";
     new QRCode(document.getElementById("qr-target"), { text: JSON.stringify(identityData), width: 140, height: 140 });
+
+    refreshBalance();
+}
+
+function showView(id, btn) {
+    document.querySelectorAll('.view-pane').forEach(el => el.classList.remove('connected'));
+    document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+    document.getElementById(id).classList.add('connected');
+    btn.classList.add('active');
+}
+
 function saveJSON() {
-    const b = new Blob([document.getElementById('id-json').innerText], {type:"application/json"});
+    const content = document.getElementById('id-json').innerText;
+    const b = new Blob([content], {type:"application/json"});
     const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download="id.json"; a.click();
 }
 
-    function saveQR() {
+function saveQR() {
     const c = document.querySelector('#qr-target canvas');
-    const a = document.createElement('a'); a.href = c.toDataURL(); a.download="qr.png"; a.click();
+    if(c) {
+        const a = document.createElement('a'); a.href = c.toDataURL(); a.download="qr.png"; a.click();
+    }
 }
-
 </script>
 </body>
 </html>
