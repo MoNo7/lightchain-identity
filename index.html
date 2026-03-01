@@ -21,15 +21,16 @@
         header { height: 80px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; box-sizing: border-box; }
         .pill { background: #000; border: 1px solid var(--border); border-radius: 50px; padding: 7px 20px; font-size: 0.7rem; color: var(--accent); font-family: monospace; display: flex; align-items: center; gap: 8px; }
         .wallet-pill { background: var(--accent); color: white; border-radius: 50px; padding: 9px 24px; font-weight: 900; cursor: pointer; border: none; font-size: 0.75rem; font-family: monospace; letter-spacing: 1px; }
-        .view-pane { flex: 1; padding: 45px; display: none; overflow-y: auto; }
+        .view-pane { flex: 1; padding: 45px; display: none; overflow: hidden; } /* Changed to overflow hidden for iframe */
         .view-pane.active { display: block !important; }
-        .card { background: var(--panel); border: 1px solid var(--border); padding: 35px; border-radius: 12px; max-width: 750px; border-top: 4px solid var(--accent); margin-bottom: 20px; }
+        .card { background: var(--panel); border: 1px solid var(--border); padding: 35px; border-radius: 12px; max-width: 850px; border-top: 4px solid var(--accent); margin-bottom: 20px; height: 90%; }
         .panel-input { width: 100%; background: #000; border: 1px solid #333; color: white; padding: 12px; border-radius: 4px; font-size: 0.75rem; margin-bottom: 12px; box-sizing: border-box; font-family: monospace; }
         .action-btn { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; width: 100%; font-weight: bold; }
         .action-btn.alt { background: transparent; border: 1px solid var(--accent); color: var(--accent); margin-top: 8px; }
         .status-table { width: 100%; font-size: 0.7rem; border-collapse: collapse; margin-top: 15px; font-family: monospace; }
         .status-table td, .status-table th { border: 1px solid var(--border); padding: 8px; text-align: left; }
         .status-online { color: #00c853; }
+        #aivm-frame { width: 100%; height: 100%; border: none; background: transparent; }
     </style>
 </head>
 <body>
@@ -46,7 +47,7 @@
         <div class="header-right"><button id="wallet-btn" class="wallet-pill" onclick="connectWallet()">CONNECT WALLET</button></div>
     </header>
     <div id="gallery-view" class="view-pane active">
-        <div class="card" style="max-width: 900px;">
+        <div class="card">
             <h2>NETWORK GALLERY</h2>
             <div id="gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin-top: 20px;"></div>
         </div>
@@ -91,21 +92,14 @@
         </div>
     </div>
     <div id="aivm-view" class="view-pane">
-        <div class="card">
-            <h2>AIVM INFERENCE</h2>
-            <select id="model-select" class="panel-input" onchange="document.getElementById('active-model').innerText=this.value">
-                <option value="AIVM-THETA" data-hash="0x2bf0539500000000000000000000000000000000000000000000000000000000">AIVM-THETA (Standard)</option>
-                <option value="AIVM-DELTA" data-hash="0x4a8c30d500000000000000000000000000000000000000000000000000000000">AIVM-DELTA (High Speed)</option>
-                <option value="AIVM-SIGMA" data-hash="0x6f63a19b3cf48600000000000000000000000000000000000000000000000000">AIVM-SIGMA (Neural)</option>
-            </select>
-            <textarea id="art-prompt" class="panel-input" placeholder="Neural landscape..." style="height:120px;"></textarea>
-            <button class="action-btn" onclick="generateArt()">REQUEST INFERENCE (0.25 tLCAI)</button>
+        <div class="card" style="max-width: 1000px; padding: 10px;">
+            <iframe id="aivm-frame" src="artgenerator-ui.html"></iframe>
         </div>
     </div>
 </div>
 <script>
 const CONFIG = {
-    addr: "0xB6f1E497D6879C325c65fa77cB717227976fd04E", // NEW ADDRESS UPDATED
+    addr: "0xB6FbB06e865f1784A74F5953051C3782729FD04E",
     abi: [
         "function owner() public view returns (address)",
         "function setVerification(address user, bool status) external",
@@ -125,6 +119,18 @@ const log = (msg, type = "info") => {
     cb.appendChild(l);
     cb.scrollTop = cb.scrollHeight;
 };
+
+// LISTEN FOR METRICS FROM ARTGENERATOR-UI.HTML
+window.addEventListener('message', (e) => {
+    if (e.data.type === 'AIVM_METRICS') {
+        document.getElementById('status-txt').innerText = e.data.status.toUpperCase();
+        if(e.data.status === 'success') {
+            log("INFERENCE SUCCESSFUL", "success");
+            initGallery();
+        }
+    }
+});
+
 async function connectWallet() {
     if (!window.ethereum) return log("METAMASK MISSING", "error");
     try {
@@ -140,6 +146,7 @@ async function connectWallet() {
         updateMenu(); updateIdentity(); initGallery(); refreshBalance(); updateWalletPill(); probeModels(); 
     } catch (e) { log("HANDSHAKE FAILED", "error"); }
 }
+
 async function registerModelUI(status) {
     const hash = document.getElementById('admin-addr').value;
     if(!hash.startsWith('0x') || hash.length !== 66) return log("INVALID HASH", "error");
@@ -169,17 +176,6 @@ async function probeModels() {
             el.innerText = "LOCKED"; el.style.color = "#ff4444";
         }
     }
-}
-async function generateArt() {
-    const prompt = document.getElementById('art-prompt').value;
-    const sel = document.getElementById('model-select');
-    const modelHash = sel.options[sel.selectedIndex].getAttribute('data-hash');
-    try {
-        log("SENDING INFERENCE...");
-        const tx = await contract.generateArt(prompt, modelHash, { value: ethers.parseEther("0.25"), gasLimit: 3000000 });
-        await tx.wait(); log("INFERENCE SUCCESS", "success");
-        initGallery();
-    } catch (e) { log("REJECTED BY CONTRACT", "error"); }
 }
 async function runAdmin(type) {
     const target = document.getElementById('admin-addr').value;
@@ -243,4 +239,3 @@ initGallery();
 </script>
 </body>
 </html>
-
