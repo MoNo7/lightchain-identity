@@ -62,30 +62,26 @@ const CONFIG = {
         ];
         let history = JSON.parse(localStorage.getItem('ai_history') || '[]');
       
-        async function initHistory() {
-            try {
-                const provider = new ethers.BrowserProvider(window.ethereum);
-                const contract = new ethers.Contract(CONFIG.AIVM_ADDR, ABI, provider);
-                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-                const user = accounts[0];
+async function initHistory() {
+    try {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const contract = new ethers.Contract(CONFIG.AIVM_ADDR, ABI, provider);
         
-                window.parent.postMessage({ type: "LCAI_STATUS", message: "Syncing On-Chain Gallery..." }, "*");
+        // Remove the user filter for a "global" test scan
+        const events = await contract.queryFilter("ArtGenerated", -50000); 
+
+        history = events.map(e => ({
+            prompt: e.args.prompt,
+            url: `https://image.pollinations.ai/prompt/${encodeURIComponent(e.args.prompt)}?nologo=true`
+        })).reverse().slice(0, 10);
+
+        renderHistory();
+        window.parent.postMessage({ type: "LCAI_STATUS", message: `On-Chain Scan: ${events.length} total items found.` }, "*");
+    } catch (e) {
+        window.parent.postMessage({ type: "LCAI_STATUS", message: "History Sync: Contract Event Mismatch" }, "*");
+    }
+}
         
-                // Filter events where 'user' is the connected wallet
-                const filter = contract.filters.ArtGenerated(user);
-                const events = await contract.queryFilter(filter, -10000); // Scan last 10k blocks
-        
-                history = events.map(e => ({
-                    prompt: e.args.prompt,
-                    url: `https://image.pollinations.ai/prompt/${encodeURIComponent(e.args.prompt)}?nologo=true`
-                })).reverse().slice(0, 10);
-        
-                renderHistory();
-                window.parent.postMessage({ type: "LCAI_STATUS", message: `Gallery Synced: ${history.length} items found.` }, "*");
-            } catch (e) {
-                console.error("History Sync Failed", e);
-            }
-        }
         function updateHistory(prompt, url) {
             history.unshift({ prompt, url });
             if(history.length > 10) history.pop();
