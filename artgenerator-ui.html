@@ -76,40 +76,51 @@
             document.getElementById('mint-btn').style.display = 'block';
         }
 
-        async function generate() {
-            const prompt = document.getElementById('prompt-input').value;
-            if(!prompt || !window.ethereum) return;
+async function generate() {
+    const prompt = document.getElementById('prompt-input').value;
+    if(!prompt) return;
 
-            document.getElementById('status').innerText = "Anchoring to LCAI AIVM...";
-            document.getElementById('result-img').style.display = 'none';
-            document.getElementById('mint-btn').style.display = 'none';
+    // Send status to Parent System Console
+    window.parent.postMessage({ type: "LCAI_STATUS", message: `Inference Initiated: "${prompt}"` }, "*");
+    
+    document.getElementById('status').innerText = "Processing..."; // Local minimal status
+    document.getElementById('result-img').style.display = 'none';
 
-            try {
-                const provider = new ethers.BrowserProvider(window.ethereum);
-                const signer = await provider.getSigner();
-                const contract = new ethers.Contract(CONFIG.AIVM_ADDR, ["function generateArt(string) external payable"], signer);
-                
-                const tx = await contract.generateArt(prompt, { value: ethers.parseEther("1.0") });
-                document.getElementById('status').innerText = "Transaction Anchored. Processing...";
-                await tx.wait();
+    try {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner();
+        const contract = new ethers.Contract(CONFIG.AIVM_ADDR, ["function generateArt(string) external payable"], signer);
+        
+        const tx = await contract.generateArt(prompt, { value: ethers.parseEther("1.0") });
+        window.parent.postMessage({ type: "LCAI_STATUS", message: "Transaction Anchored. Awaiting Reveal..." }, "*");
+        await tx.wait();
 
-                // Simulation of worker reveal - in production this uses PoI Attestation
-                setTimeout(() => {
-                    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?nologo=true`;
-                    const img = document.getElementById('result-img');
-                    img.src = url;
-                    img.onload = () => {
-                        img.style.display = 'block';
-                        document.getElementById('status').style.display = 'none';
-                        document.getElementById('mint-btn').style.display = 'block';
-                        updateHistory(prompt, url);
-                    };
-                }, 1500);
-            } catch (e) {
-                document.getElementById('status').innerText = "Error: Inference Interrupted.";
-            }
-        }
-
+        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?nologo=true`;
+        const img = document.getElementById('result-img');
+        img.src = url;
+        img.onload = () => {
+            img.style.display = 'block';
+            document.getElementById('status').style.display = 'none';
+            document.getElementById('mint-btn').style.display = 'block';
+            
+            // Notify parent to sync history
+            window.parent.postMessage({ type: "LCAI_GEN_SUCCESS" }, "*");
+            saveToLocalHistory(prompt, url);
+        };
+    } catch (e) {
+        window.parent.postMessage({ type: "LCAI_STATUS", message: "AIVM Error: Inference Aborted" }, "*");
+    }
+}
+// Render History as thumbnails
+function renderHistory() {
+    const list = document.getElementById('history-list');
+    list.innerHTML = history.map((item, i) => `
+        <div class="history-item" onclick="loadHistory(${i})" style="display:flex; gap:10px; align-items:center;">
+            <img src="${item.url}" style="width:40px; height:40px; border-radius:4px; object-fit:cover;">
+            <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${item.prompt}</div>
+        </div>
+    `).join('');
+}
         async function mintNFT() {
             try {
                 const provider = new ethers.BrowserProvider(window.ethereum);
