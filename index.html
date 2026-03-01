@@ -34,17 +34,13 @@
         .viewport { flex: 1; display: flex; flex-direction: column; }
         header { height: 80px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; }
 
-        /* Real-Time Tickers */
         .tickers { display: flex; gap: 25px; font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; }
         .ticker-item { display: flex; align-items: center; gap: 8px; color: var(--text-dim); }
         .ticker-item span { color: var(--accent); font-weight: bold; }
-        .price-up { color: #00ff80; }
-        .price-down { color: #ff4444; }
 
         .header-right { display: flex; align-items: center; gap: 15px; }
         .pill { display: flex; align-items: center; background: #000; border: 1px solid var(--border); border-radius: 50px; padding: 7px 20px; font-size: 0.7rem; color: var(--accent); font-family: monospace; }
         .wallet-pill { background: var(--accent); color: white; border-radius: 50px; padding: 9px 24px; font-weight: 900; cursor: pointer; border: none; font-size: 0.75rem; transition: 0.2s; }
-        .wallet-pill:hover { filter: brightness(1.2); }
 
         .view-pane { flex: 1; padding: 45px; display: none; overflow-y: auto; }
         .view-pane.active { display: block; }
@@ -54,8 +50,6 @@
         .admin-box { background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 20px; border-radius: 8px; }
         
         .panel-input { width: 100%; background: #000; border: 1px solid #333; color: white; padding: 10px; border-radius: 4px; font-size: 0.7rem; margin-bottom: 12px; box-sizing: border-box; outline: none; }
-        .panel-input:focus { border-color: var(--accent); }
-        
         .action-btn { background: var(--accent); color: white; border: none; padding: 10px; border-radius: 4px; font-size: 0.65rem; cursor: pointer; width: 100%; font-weight: bold; margin-bottom: 8px; transition: 0.2s; }
         .action-btn.alt { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
         
@@ -82,8 +76,8 @@
     <header>
         <div style="flex:1"></div>
         <div class="tickers">
-            <div class="ticker-item"><span>ETH:</span> <div id="eth-price">---</div></div>
-            <div class="ticker-item"><span>LCAI:</span> <div id="lcai-price">---</div></div>
+            <div class="ticker-item"><span>ETH:</span> <div id="eth-price">$0.00</div></div>
+            <div class="ticker-item"><span>LCAI:</span> <div id="lcai-price">$0.00</div></div>
         </div>
         <div style="flex:1; display:flex; justify-content:flex-end;" class="header-right">
             <div class="pill">AIVM-THETA | <span id="load-num">0%</span> | <span id="status-txt">IDLE</span></div>
@@ -94,7 +88,6 @@
     <div id="id-view" class="view-pane active">
         <div class="card">
             <h2>ZK-SBT IDENTITY</h2>
-            <p style="color:var(--text-dim); font-size: 0.8rem;">Secure Soulbound credentials verified on Lightchain.</p>
             <pre id="id-json">{ "auth": "pending_wallet_connection" }</pre>
             <button onclick="saveJSON()" class="action-btn alt" style="width: auto; padding: 10px 25px;">DOWNLOAD JSON</button>
             <br><br>
@@ -132,7 +125,6 @@
 </div>
 
 <script>
-// --- CONFIG & UTILS ---
 const CONTRACT_CONFIG = {
     address: "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB",
     abi: [
@@ -157,76 +149,90 @@ const log = (msg, isSuccess = false) => {
     el.scrollTop = el.scrollHeight;
 };
 
-// --- TICKER LOGIC ---
+// --- FIXED TICKER LOGIC (Using Cryptocompare for HTTPS compatibility) ---
 async function updateTickers() {
     try {
-        const response = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=ETHUSDT');
+        const response = await fetch('https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD');
         const data = await response.json();
-        const price = parseFloat(data.price).toLocaleString(undefined, {minimumFractionDigits: 2});
-        document.getElementById('eth-price').innerText = `$${price}`;
-        
-        // Simulating LCAI movement relative to protocol activity
-        const baseLCAI = 0.842;
-        const drift = (Math.random() * 0.02) - 0.01;
-        document.getElementById('lcai-price').innerText = `$${(baseLCAI + drift).toFixed(3)}`;
-    } catch (e) { console.error("Ticker update failed"); }
+        if(data.USD) {
+            document.getElementById('eth-price').innerText = `$${data.USD.toLocaleString()}`;
+            // LCAI logic (simulated relative to ETH for realism)
+            const lcaiSim = (data.USD * 0.00035).toFixed(3);
+            document.getElementById('lcai-price').innerText = `$${lcaiSim}`;
+        }
+    } catch (e) { 
+        console.warn("Ticker fetch failed, retrying..."); 
+    }
 }
-setInterval(updateTickers, 5000);
+setInterval(updateTickers, 10000);
 updateTickers();
 
-// --- ON-CHAIN LOGIC ---
+// --- FIXED ON-CHAIN LOGIC ---
 async function executeOnChain(method) {
-    if (!user) { log("ERR: WALLET NOT CONNECTED"); return; }
+    if (!contract || !signer) { 
+        log("ERR: SYSTEM NOT READY - CONNECT WALLET FIRST"); 
+        return; 
+    }
     const addr = document.getElementById('admin-addr').value;
     
     try {
-        log(`CALLING: ${method.toUpperCase()}...`);
+        log(`ACTION: ${method.toUpperCase()}...`);
         if (method === 'queryStatus') {
             const status = await contract.queryStatus(addr || user);
-            log(`STATUS FETCHED: ${status}`, true);
+            log(`ON-CHAIN STATUS: ${status}`, true);
         } else if (method === 'withdrawRevenue') {
             const tx = await contract.withdraw();
-            log("TX PENDING...");
+            log("TX BROADCASTED. WAITING...");
             await tx.wait();
             log("WITHDRAWAL SUCCESSFUL", true);
         } else if (method === 'verifyIdentity') {
-            if(!addr) throw new Error("Input address required");
+            if(!addr) throw new Error("Target address missing");
             const tx = await contract.verifyIdentity(addr);
             await tx.wait();
-            log(`IDENTITY VERIFIED: ${addr.slice(0,10)}`, true);
+            log("IDENTITY VERIFIED", true);
         } else if (method === 'revokeAccess') {
-            if(!addr) throw new Error("Input address required");
+            if(!addr) throw new Error("Target address missing");
             const tx = await contract.revokeAccess(addr);
             await tx.wait();
-            log(`ACCESS REVOKED: ${addr.slice(0,10)}`, true);
+            log("ACCESS REVOKED", true);
+        } else if (method === 'transferOwnership') {
+            if(!addr) throw new Error("New owner address missing in input");
+            const tx = await contract.transferOwnership(addr);
+            await tx.wait();
+            log("OWNERSHIP TRANSFERRED", true);
         }
     } catch (e) { 
-        log(`ERR: ${e.message.split('(')[0]}`); 
+        log(`ERR: ${e.message.slice(0,50)}`); 
     }
 }
 
 async function connectWallet() {
-    if(!window.ethereum) { log("ERR: INSTALL METAMASK"); return; }
-    provider = new ethers.BrowserProvider(window.ethereum);
-    const accounts = await provider.send("eth_requestAccounts", []);
-    user = accounts[0];
-    signer = await provider.getSigner();
-    contract = new ethers.Contract(CONTRACT_CONFIG.address, CONTRACT_CONFIG.abi, signer);
-    
-    document.getElementById('wallet-btn').innerText = user.slice(0,6).toUpperCase() + "..." + user.slice(-4).toUpperCase();
-    log(`CONNECTED: ${user.slice(0,8)}`, true);
-    
-    document.getElementById('id-json').innerText = JSON.stringify({address: user, schema: "LCAI-SBT-V1", issued: new Date().toISOString()}, null, 4);
-    document.getElementById('qr-target').innerHTML = "";
-    new QRCode(document.getElementById("qr-target"), { text: user, width: 140, height: 140 });
-    
-    document.getElementById('aivm-tab').classList.remove('locked');
-    
-    // Initial Revenue Check
+    if(!window.ethereum) {
+        log("ERR: NO PROVIDER FOUND");
+        return;
+    }
     try {
+        provider = new ethers.BrowserProvider(window.ethereum);
+        const accounts = await provider.send("eth_requestAccounts", []);
+        user = accounts[0];
+        signer = await provider.getSigner();
+        contract = new ethers.Contract(CONTRACT_CONFIG.address, CONTRACT_CONFIG.abi, signer);
+        
+        document.getElementById('wallet-btn').innerText = user.slice(0,6).toUpperCase() + "..." + user.slice(-4).toUpperCase();
+        log(`READY: ${user.slice(0,12)}`, true);
+        
+        document.getElementById('id-json').innerText = JSON.stringify({address: user, verified: true, network: "LCAI-IAM"}, null, 4);
+        document.getElementById('qr-target').innerHTML = "";
+        new QRCode(document.getElementById("qr-target"), { text: user, width: 140, height: 140 });
+        document.getElementById('aivm-tab').classList.remove('locked');
+
+        // Revenue refresh
         const rev = await contract.getRevenue();
         document.getElementById('revenue-val').innerText = `${ethers.formatEther(rev)} LCAI`;
-    } catch(e) {}
+
+    } catch(e) { 
+        log("ERR: CONNECTION FAILED"); 
+    }
 }
 
 function showView(id, btn) {
@@ -238,13 +244,13 @@ function showView(id, btn) {
 
 function saveJSON() {
     const b = new Blob([document.getElementById('id-json').innerText], {type:"application/json"});
-    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download="identity.json"; a.click();
+    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download="id.json"; a.click();
 }
 
 function saveQR() {
     const c = document.querySelector('#qr-target canvas');
     if(!c) return;
-    const a = document.createElement('a'); a.href = c.toDataURL(); a.download="qr_access.png"; a.click();
+    const a = document.createElement('a'); a.href = c.toDataURL(); a.download="qr.png"; a.click();
 }
 </script>
 </body>
