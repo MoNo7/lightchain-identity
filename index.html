@@ -56,7 +56,6 @@
     <div class="nav-logo">LCAI <span>IAM</span></div>
     <div class="system-console" id="console">
         <div class="console-line">>> INITIALIZING LCAI_IAM_CORE...</div>
-        <div class="console-line">>> TARGET: LIGHTCHAIN_AIVM_TESTNET</div>
     </div>
     <div class="nav-menu" id="side-menu">
         <button class="nav-link active" onclick="showView('id-view', this)">ZK IDENTITY</button>
@@ -160,65 +159,64 @@ const log = (msg, type = "info") => {
     cb.scrollTop = cb.scrollHeight;
 };
 
-// FIX: Real-time Tickers for LCAI (Uniswap Pair) and ETH
+// Real-time Tickers
 async function syncTickers() {
     try {
         const ethR = await fetch('https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD');
         const ethD = await ethR.json();
         document.getElementById('eth-price').innerText = `$${ethD.USD.toLocaleString()}`;
         
-        // LCAI Live Price (Mainnet Proxy for UI)
         const lcaiR = await fetch('https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=0x9ca8530ca349c966fe9ef903df17a75b8a778927&vs_currencies=usd');
         const lcaiD = await lcaiR.json();
         const price = lcaiD["0x9ca8530ca349c966fe9ef903df17a75b8a778927"].usd;
         document.getElementById('lcai-price').innerText = `$${price.toFixed(5)}`;
-    } catch(e) { 
-        document.getElementById('lcai-price').innerText = "$0.00241"; // Hard fallback
-    }
+    } catch(e) { document.getElementById('lcai-price').innerText = "$0.0024"; }
 }
 setInterval(syncTickers, 30000); syncTickers();
 
 async function connectWallet() {
-    if(!window.ethereum) return log("METAMASK NOT DETECTED", "error");
+    if(!window.ethereum) return log("METAMASK MISSING", "error");
     try {
+        // Fix: Explicitly create provider on click to capture active session
         provider = new ethers.BrowserProvider(window.ethereum);
-        const accs = await provider.send("eth_requestAccounts", []);
-        user = accs[0]; signer = await provider.getSigner();
+        const accounts = await provider.send("eth_requestAccounts", []);
+        user = accounts[0];
+        signer = await provider.getSigner();
         contract = new ethers.Contract(CONFIG.addr, CONFIG.abi, signer);
         
-        // Ownership & Permission Sync
         const contractOwner = await contract.owner();
         const isOwner = (user.toLowerCase() === contractOwner.toLowerCase());
         const isVerified = await contract.manualVerified(user);
         
         document.getElementById('wallet-btn').innerText = user.slice(0,6).toUpperCase();
-        log(`AUTH: ${user.slice(0,10)}`, "success");
-        if(isOwner) log("ADMIN ACCESS GRANTED", "success");
+        log(`AUTH SUCCESS: ${user.slice(0,10)}`, "success");
+        if(isOwner) log("ADMIN PRIVILEGES ACTIVE", "success");
         
         document.getElementById('side-menu').style.display = 'flex';
         document.getElementById('id-view').classList.add('connected');
         
-        // RESTORED FULL METADATA
         const identityData = {
             "identity": {
                 "operator_id": `LCAI-${user.slice(2, 8).toUpperCase()}`,
-                "role": isOwner ? "SYSTEM_OWNER_ADMIN" : (isVerified ? "VERIFIED_OPERATOR" : "NODE_GUEST"),
-                "access_tier": isOwner ? "OMEGA_ACCESS" : (isVerified ? "ALPHA_ACCESS" : "RESTRICTED"),
+                "role": isOwner ? "SYSTEM_OWNER_ADMIN" : (isVerified ? "VERIFIED_OPERATOR" : "GUEST_NODE"),
+                "access_tier": isOwner ? "OMEGA_ACCESS" : "STANDARD",
                 "auth_method": "ZK_SBT_HANDSHAKE",
                 "timestamp": Math.floor(Date.now() / 1000)
             },
             "on_chain": {
                 "address": user,
-                "contract_nexus": CONFIG.addr,
-                "owner": contractOwner,
-                "network": "Lightchain_AIVM_Testnet"
+                "contract": CONFIG.addr,
+                "owner": contractOwner
             }
         };
         document.getElementById('id-json').innerText = JSON.stringify(identityData, null, 4);
         document.getElementById('qr-target').innerHTML = "";
         new QRCode(document.getElementById("qr-target"), { text: user, width: 140, height: 140 });
         refreshBalance();
-    } catch(e) { log("HANDSHAKE FAILED", "error"); }
+    } catch(e) { 
+        log("CONNECTION FAILED", "error"); 
+        console.error(e);
+    }
 }
 
 async function runAdmin(method, status = null) {
@@ -230,10 +228,10 @@ async function runAdmin(method, status = null) {
             log(`STATUS [${target.slice(0,6)}]: ${res ? "VERIFIED" : "UNVERIFIED"}`, "success");
         } else {
             const tx = await contract.setVerification(target, status);
-            log("BROADCASTING PERMISSION CHANGE...");
-            await tx.wait(); log("NETWORK UPDATED", "success");
+            log("BROADCASTING TX...");
+            await tx.wait(); log("ON-CHAIN SYNC COMPLETE", "success");
         }
-    } catch(e) { log("REVERTED: ADMIN PERMISSIONS REQUIRED", "error"); }
+    } catch(e) { log("REVERT: LACK OF PERMISSIONS", "error"); }
 }
 
 async function runOwner() {
@@ -242,7 +240,7 @@ async function runOwner() {
         const tx = await contract.withdraw();
         await tx.wait(); log("TREASURY WITHDRAWN", "success");
         refreshBalance();
-    } catch(e) { log("REVERTED: OWNER ONLY", "error"); }
+    } catch(e) { log("REVERT: OWNER ONLY", "error"); }
 }
 
 async function generateArt() {
@@ -251,30 +249,27 @@ async function generateArt() {
     const model = document.getElementById('model-selector').value;
     try {
         document.getElementById('status-txt').innerText = "INFERENCE";
-        document.getElementById('load-num').innerText = "40%";
+        document.getElementById('load-num').innerText = "20%";
         const tx = await contract.requestInference(`[${model}] ${prompt}`, { value: ethers.parseEther("0.001") });
-        log("INFERENCE REQ SUBMITTED", "info");
         await tx.wait();
         document.getElementById('load-num').innerText = "100%";
         document.getElementById('status-txt').innerText = "IDLE";
         document.getElementById('art-preview-box').innerHTML = `<img src="https://picsum.photos/seed/${Date.now()}/600/250" style="width:100%; height:100%; object-fit:cover;">`;
-        initGallery();
     } catch(e) { document.getElementById('status-txt').innerText = "ERROR"; }
 }
 
 async function initGallery() {
     if(!contract) return;
     const grid = document.getElementById('gallery-grid');
-    grid.innerHTML = "SYNCING LEDGER...";
+    grid.innerHTML = "SCANNING LEDGER...";
     try {
         const filter = contract.filters.InferenceRequested();
-        const events = await contract.queryFilter(filter, -10000); 
+        const events = await contract.queryFilter(filter, -15000); 
         grid.innerHTML = "";
         events.reverse().forEach(ev => {
             grid.innerHTML += `<div class="gallery-item"><img src="https://picsum.photos/seed/${ev.transactionHash}/150/110"></div>`;
         });
-        log(`GALLERY SYNCED: ${events.length} RECORDS`, "success");
-    } catch(e) { log("SYNC FAIL", "error"); }
+    } catch(e) { log("GALLERY SCAN FAIL", "error"); }
 }
 
 async function refreshBalance() {
