@@ -4,34 +4,34 @@
     <meta charset="UTF-8">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.11.1/ethers.umd.min.js"></script>
     <style>
-        body { font-family: monospace; background: transparent; color: white; margin: 0; display: flex; height: 100vh; }
+        body { font-family: monospace; background: transparent; color: white; margin: 0; display: flex; height: 100vh; overflow: hidden; }
         .workspace { flex: 1; display: flex; flex-direction: column; gap: 20px; padding: 20px; }
         .input-group { display: flex; flex-direction: column; gap: 12px; }
-        .prompt-input { width: 100%; background: var(--card, #111); border: 1px solid #444; border-radius: 8px; padding: 15px; color: white; box-sizing: border-box; }
-        .controls-row { display: flex; gap: 12px; }
-        select { flex: 1; background: #111; color: #00ff80; border: 1px solid #444; border-radius: 8px; padding: 10px; }
-        .btn-gen { background: #00ff80; color: black; border: none; border-radius: 8px; padding: 0 30px; font-weight: bold; cursor: pointer; }
+        .prompt-input { width: 100%; background: #111; border: 1px solid #444; border-radius: 10px; padding: 18px; color: white; font-size: 1rem; box-sizing: border-box; }
+        .controls-row { display: flex; gap: 12px; width: 100%; }
+        select { flex: 1; background: #111; color: #00ff80; border: 1px solid #444; border-radius: 8px; padding: 10px; font-weight: bold; }
+        .btn-gen { height: 50px; padding: 0 40px; background: #00ff80; color: black; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; letter-spacing: 1px; }
         .btn-gen:hover { background: #00cc66; }
         .output-view { flex: 1; background: #000; border: 1px solid #333; border-radius: 12px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
         .output-img { max-width: 100%; max-height: 100%; display: none; }
-        .status-txt { color: #888; }
+        .status-txt { color: #888; text-align: center; padding: 20px; }
         .history-sidebar { width: 260px; border-left: 1px solid #333; background: rgba(0,0,0,0.3); padding: 20px; display: flex; flex-direction: column; }
-        #history-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; overflow-y: auto; }
-        .gallery-item { position: relative; aspect-ratio: 1/1; background: #111; border: 1px solid #444; border-radius: 6px; cursor: pointer; overflow: hidden; }
+        #history-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; overflow-y: auto; padding-right: 5px; }
+        .gallery-item { position: relative; aspect-ratio: 1/1; background: #080808; border: 1px solid #444; border-radius: 8px; cursor: pointer; overflow: hidden; transition: 0.2s; }
+        .gallery-item:hover { border-color: #00ff80; }
         .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
-        .gallery-item .digest { position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.7); color: #00ff80; font-size: 8px; text-align: center; padding: 3px 0; }
+        .gallery-item .digest { position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.8); color: #00ff80; font-size: 8px; text-align: center; padding: 4px 0; }
     </style>
 </head>
 <body>
 
 <div class="workspace">
     <div class="input-group">
-        <input type="text" id="prompt-input" class="prompt-input" placeholder="Enter your AIVM instruction...">
+        <input type="text" id="prompt-input" class="prompt-input" placeholder="A futuristic cyberpunk city in neon lights...">
         <div class="controls-row">
             <select id="model-select">
-                <option value="SDXL-Turbo">SDXL-Turbo (LCAI Default)</option>
-                <option value="Flux.1">Flux.1-Lightning</option>
-                <option value="SD3">Stable Diffusion 3</option>
+                <option value="0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef">SDXL-Turbo (LCAI Default)</option>
+                <option value="0x8888888888888888888888888888888888888888888888888888888888888888">Flux.1-Lightning</option>
             </select>
             <button class="btn-gen" onclick="generate()">GENERATE</button>
         </div>
@@ -44,33 +44,35 @@
 
 <div class="history-sidebar">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h3 style="font-size: 0.8rem; color: #00ff80; margin: 0;">ON-CHAIN REVEALS</h3>
-        <button onclick="initHistory()" style="background: #333; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.7rem;">SYNC ↻</button>
+        <h3 style="font-size: 0.7rem; color: #00ff80; letter-spacing: 1px; font-weight: 900; margin:0;">ON-CHAIN REVEALS</h3>
+        <button onclick="initHistory()" style="background: #333; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.6rem; cursor: pointer;">SYNC ↻</button>
     </div>
     <div id="history-grid"></div>
 </div>
 
 <script>
-const CONFIG = { AIVM_ADDR: "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB" };
+const CONFIG = { 
+    AIVM_ADDR: "0xbcA38515887Dc3Ca163398C0Ef7bF02dd156D8FB" 
+};
 
-// We define BOTH event types here so ethers doesn't crash regardless of which contract version is active
+// FULL ABI MATCHING AIARTSTUDIO.SOL
 const ABI = [
-    "function generateArt(string prompt) public payable",
-    "event ArtGenerated(address indexed user, string prompt, uint256 timestamp)",
+    "function generateArt(string prompt, bytes32 modelDigest) public payable",
     "event ArtGenerated(address indexed user, string prompt, bytes32 modelDigest, uint256 fee)"
 ];
 
 let history = [];
 
 async function generate() {
-    const promptStr = document.getElementById('prompt-input').value;
-    if (!promptStr) return;
-
+    const promptInput = document.getElementById('prompt-input');
+    const modelSelect = document.getElementById('model-select');
     const statusEl = document.getElementById('status');
     const imgEl = document.getElementById('result-img');
 
+    if (!promptInput.value) return;
+
     try {
-        statusEl.innerText = "Requesting MetaMask Signature...";
+        statusEl.innerText = "Initializing Inference Transaction...";
         statusEl.style.display = "block";
         imgEl.style.display = "none";
 
@@ -78,25 +80,27 @@ async function generate() {
         const signer = await provider.getSigner();
         const contract = new ethers.Contract(CONFIG.AIVM_ADDR, ABI, signer);
 
-        // FIX: Only passing ONE argument (the prompt) to match your Solidity contract
-        const tx = await contract.generateArt(promptStr, { value: ethers.parseEther("0.1") }); // Adjust to 0.25 if your contract requires it
+        // CORRECTED: Passing TWO arguments (prompt, modelDigest)
+        const tx = await contract.generateArt(
+            promptInput.value, 
+            modelSelect.value, 
+            { value: ethers.parseEther("0.1") }
+        );
         
         statusEl.innerText = "Anchoring on Lightchain... Waiting for block.";
         window.parent.postMessage({ type: "LCAI_STATUS", message: "Inference Broadcasted..." }, "*");
 
         await tx.wait();
         
-        // Block confirmed, fetch and display image instantly
-        const cleanPrompt = promptStr.trim().replace(/\s+/g, '-');
-        imgEl.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(cleanPrompt)}?nologo=true&seed=${Date.now()}`;
-        
+        // Immediate UI Update
+        const safePrompt = encodeURIComponent(promptInput.value.trim());
+        imgEl.src = `https://image.pollinations.ai/prompt/${safePrompt}?nologo=true&seed=${Date.now()}`;
         imgEl.onload = () => {
             statusEl.style.display = "none";
             imgEl.style.display = "block";
         };
 
-        setTimeout(initHistory, 2000); // Trigger sidebar refresh
-
+        setTimeout(initHistory, 2000);
     } catch (e) {
         console.error(e);
         statusEl.innerText = "Inference Failed: Check Console or LCAI Balance.";
@@ -106,50 +110,45 @@ async function generate() {
 async function initHistory() {
     try {
         const provider = new ethers.BrowserProvider(window.ethereum);
-        const contract = new ethers.Contract(CONFIG.AIVM_ADDR, ABI, provider);
         const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        if (!accounts[0]) return;
+
+        const contract = new ethers.Contract(CONFIG.AIVM_ADDR, ABI, provider);
         
-        window.parent.postMessage({ type: "LCAI_STATUS", message: "Deep-Scanning Lightchain..." }, "*");
-
+        // Reduced range for reliability: last 10,000 blocks
         const filter = contract.filters.ArtGenerated(accounts[0]);
-        const events = await contract.queryFilter(filter, -50000); 
+        const events = await contract.queryFilter(filter, -10000); 
 
-        history = events.map(e => {
-            // FIX: Safely extract prompt. If e.args.prompt fails, it grabs it by index.
-            const p = e.args.prompt || (e.args.length > 1 ? e.args[1] : "AIVM Art");
-            const cleanUrlPrompt = p.trim().replace(/\s+/g, '-');
-            
-            return {
-                prompt: p,
-                url: `https://image.pollinations.ai/prompt/${encodeURIComponent(cleanUrlPrompt)}?nologo=true&seed=${e.blockNumber}`
-            };
-        }).reverse();
+        history = events.map(e => ({
+            prompt: e.args.prompt,
+            digest: e.args.modelDigest.slice(0, 10),
+            url: `https://image.pollinations.ai/prompt/${encodeURIComponent(e.args.prompt)}?nologo=true&seed=${e.blockNumber}`
+        })).reverse();
 
         renderHistory();
-        window.parent.postMessage({ type: "LCAI_STATUS", message: `Gallery Refreshed: ${history.length} Inferences Found.` }, "*");
-    } catch (e) {
-        console.error("Sync Failed:", e);
-    }
+        window.parent.postMessage({ type: "LCAI_STATUS", message: `Gallery Refreshed: ${history.length} inferences found.` }, "*");
+    } catch (e) { console.error("Sync Error:", e); }
 }
 
 function renderHistory() {
     const grid = document.getElementById('history-grid');
-    if (!history.length) return grid.innerHTML = "<div style='color:#888; grid-column:span 2;'>No inferences found.</div>";
-
+    if (!history.length) {
+        grid.innerHTML = "<div style='color:#555; grid-column:span 2; font-size:0.7rem;'>No reveals found yet.</div>";
+        return;
+    }
     grid.innerHTML = history.map((item, i) => `
         <div class="gallery-item" onclick="loadHistory(${i})">
-            <img src="${item.url}" onerror="this.src='https://placehold.co/150x150/111/00ff80?text=AIVM'">
-            <div class="digest">LCAI-GEN</div>
+            <img src="${item.url}" onerror="this.src='https://placehold.co/150x150/111/00ff80?text=REVEALING...'">
+            <div class="digest">${item.digest}</div>
         </div>
     `).join('');
 }
 
 function loadHistory(index) {
     const item = history[index];
+    document.getElementById('prompt-input').value = item.prompt;
     const imgEl = document.getElementById('result-img');
     const statusEl = document.getElementById('status');
-    
-    document.getElementById('prompt-input').value = item.prompt;
     statusEl.style.display = "none";
     imgEl.style.display = "block";
     imgEl.src = item.url;
